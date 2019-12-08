@@ -159,7 +159,7 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
         //global.log("timer:: ", timerTicker, renderList, animList)
         //const z = 10 * Math.sin(2 * Math.PI * (timerTicker % 100 / 100));
         //this.xdx.isoMap.setTilesProperty(renderList, "z", z); 
-        animList && animList.forEach(item => item.z = mapConfig.paddingBottom * Math.sin(2 * Math.PI * (timerTicker % 500) / 500)); // move z-axis in a sinus-wave by time
+        animList && animList.forEach(item => item.z = mapConfig.paddingBottom * Math.sin(2 * Math.PI * ((timerTicker + (item.tileX + item.tileY) * 100) % 500) / 500)); // move z-axis in a sinus-wave by time
       })
       .addTimer({ name: "animate", fps: 15 }, (timerTicker, preUpdateTicker, preUpdateTime, childList, renderList, animList) => { // set a periodic timer
         if (animList && animList.length > 0) {
