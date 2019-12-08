@@ -1,0 +1,7 @@
+{
+  "name": "xdx",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "react"
+}

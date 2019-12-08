@@ -1,0 +1,7 @@
+{
+  "appId": "com.xdx.app",
+  "appName": "xdx",
+  "bundledWebRuntime": false,
+  "npmClient": "npm",
+  "webDir": "build"
+}

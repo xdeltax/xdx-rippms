@@ -1,0 +1,2 @@
+cd client
+c.bat
