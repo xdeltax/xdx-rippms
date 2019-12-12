@@ -56,7 +56,7 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
 
     // small overview camera
     this.cameras.minimap = this.cameras
-      .add(5, this.cameras.main.height - 200 - 15, this.cameras.main.width -5 -5, 200)
+      .add(5, this.cameras.main.height - 130 - 15, this.cameras.main.width -5 -5, 130)
       .setName('worldcam')
       .setZoom(0.025)
       .setOrigin(0.5) 
@@ -105,8 +105,8 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
 
     
     const map = {
-      width : 20,
-      height: 20,
+      width : 500,
+      height: 500,
       data2D: null,
     };
 

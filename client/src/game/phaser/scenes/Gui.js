@@ -44,15 +44,15 @@ const SceneClass = class Gui extends Phaser.Scene { // https://github.com/photon
       .setDepth(1)
       .setScrollFactor(0) // fix to absolute position, dont move with camera
 
-    this.xdx.textFps   = this.add.text(10, screenHeight-215, "", { font: "12px Arial", fill: "rgba(255, 200, 255, 1.0)" })
+    this.xdx.textFps   = this.add.text(10, screenHeight-140, "", { font: "12px Arial", fill: "rgba(255, 200, 255, 1.0)" })
       .setName("fps")
       .setScrollFactor(0) // fix to absolute position, dont move with camera
 
-    this.xdx.textDebug1 = this.add.text(10, screenHeight-190, "", { font: "12px Arial", fill: "rgba(200, 200, 255, 1.0)" })
+    this.xdx.textDebug1 = this.add.text(10, screenHeight-120, "", { font: "12px Arial", fill: "rgba(200, 200, 255, 1.0)" })
       .setName("debug1")
       .setScrollFactor(0) // fix to absolute position, dont move with camera
 
-    this.xdx.textDebug2 = this.add.text(10, screenHeight-90, "", { font: "12px Arial", fill: "rgba(200, 200, 255, 1.0)" })
+    this.xdx.textDebug2 = this.add.text(10, screenHeight-70, "", { font: "12px Arial", fill: "rgba(200, 200, 255, 1.0)" })
       .setName("debug2")
       .setScrollFactor(0) // fix to absolute position, dont move with camera
 
