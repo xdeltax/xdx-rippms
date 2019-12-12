@@ -48,9 +48,11 @@ export default ( observer( class extends React.Component {
     global.info(`INFO:: process.env.NODE_ENV is set to "${process.env.NODE_ENV}".`,);
     global.info(`INFO:: process.env.REACT_APP_SERVERURL is set to "${process.env.REACT_APP_SERVERURL}".`,); // for socket.io
     // attn: socket.io:: .env-file needs url to nodejs-server for socket-connection
-    if (!process.env.REACT_APP_SERVERURL) global.warn(`ATTN:: process.env.REACT_APP_SERVERURL no found! set it in .env`);
+    if (!process.env.REACT_APP_SERVERURL ) global.warn(`ATTN:: process.env.REACT_APP_SERVERURL no found! set it in .env`);
     // attn.: facebookAPI:: if you forgot to setup REACT_APP_FB_APPID in .env the facebookAPI will fail silent but you get messages like: "FB.login() called before FB.init()""
-    if (!process.env.REACT_APP_FB_APPID ) global.warn(`ATTN:: process.env.REACT_APP_FB_APPID no found! set it in .env`);
+    if (!process.env.REACT_APP_FB_APPID  ) global.warn(`ATTN:: process.env.REACT_APP_FB_APPID no found! set it in .env`);
+
+    if (!process.env.REACT_APP_APPVERSION) global.warn(`ATTN:: process.env.REACT_APP_APPVERSION no found! set it in .env`);
   }
 
   /*
@@ -180,7 +182,7 @@ export default ( observer( class extends React.Component {
           <DEBUGOBJECTPRETTY startHidden opacity={0.5}
             style={{ zIndex: '98765', /*minHeight: 32,*/ maxHeight: "75%", overflow: "auto", textAlign: "left", position: "absolute", top: "auto", bottom: 0, width: "100%", }}
             title={[
-              "DEBUG", ``,
+              "DEBUG", ` v01 ${process.env.REACT_APP_APPVERSION} ${Math.floor(99*Math.random())}`,
               " s:", `${store.socketio.isConnected?1:0}`,
               " c:", `${store.loadingNowStatus?1:0}`,
 
@@ -198,6 +200,7 @@ export default ( observer( class extends React.Component {
             ]}
             titleColors={["white", "cyan", "yellow", "cyan", ]}
             data={{
+            	appVersion: process.env.REACT_APP_APPVERSION,
               l: store.loadingNowStatus,
               isConnected: Boolean(store.socketio.isConnected),
               isAuthenticated: this.isAuthenticated,

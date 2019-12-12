@@ -22,20 +22,13 @@
 export default (renderer, src, interpolationPercentage, camera, parentMatrix) => {
     var list = src.getRenderList();
 
-    if (list.length === 0)
-    {
-        return;
-    }
+    if (list.length === 0) return;
 
     var ctx = renderer.currentContext;
 
     var alpha = camera.alpha * src.alpha;
 
-    if (alpha === 0)
-    {
-        //  Nothing to see, so abort early
-        return;
-    }
+    if (alpha === 0) return;
 
     //  Blend Mode + Scale Mode
     ctx.globalCompositeOperation = renderer.blendModes[src.blendMode];
@@ -47,74 +40,56 @@ export default (renderer, src, interpolationPercentage, camera, parentMatrix) =>
 
     ctx.save();
 
-    if (parentMatrix)
-    {
-        parentMatrix.copyToContext(ctx);
+    if (parentMatrix) {
+    	parentMatrix.copyToContext(ctx);
     }
 
     var roundPixels = camera.roundPixels;
 
-    //  Render bobs
-    for (var i = 0; i < list.length; i++)
-    {
-        var bob = list[i];
-        var flip = (bob.flipX || bob.flipY);
-        var frame = bob.frame;
-        var cd = frame.canvasData;
-        var dx = frame.x;
-        var dy = frame.y;
-        var fx = 1;
-        var fy = 1;
+    const _pipe = (itemX, itemY, itemZ, frame, itemAlpha, flipX, flipY) => {
+      const cd = frame.canvasData;
+      let dx = frame.x;
+      let dy = frame.y;
+      let fx = 1;
+      let fy = 1;
 
-        var bobAlpha = bob.alpha * alpha;
-
-        if (bobAlpha === 0)
-        {
-            continue;
+      if (itemAlpha > 0) {
+	      ctx.globalAlpha = itemAlpha;
+  
+	      if (!(flipX || flipY)) {
+          if (roundPixels) {
+            dx = Math.round(dx);
+            dy = Math.round(dy);
+          }
+          ctx.drawImage(frame.source.image, cd.x, cd.y, cd.width, cd.height, dx + itemX + cameraScrollX, dy + itemY + cameraScrollY - itemZ, cd.width, cd.height);
+	      } else {
+          if (flipX) { fx = -1; dx -= cd.width; }
+          if (flipY) { fy = -1; dy -= cd.height;}
+          ctx.save();
+          ctx.translate(itemX + cameraScrollX, itemY + cameraScrollY - itemZ); // XDX-MOD
+          ctx.scale(fx, fy);
+          ctx.drawImage(frame.source.image, cd.x, cd.y, cd.width, cd.height, dx, dy, cd.width, cd.height);
+          //ctx.restore();
         }
+      }
+    }
 
-        ctx.globalAlpha = bobAlpha;
-    
-        if (!flip)
-        {
-            if (roundPixels)
-            {
-                dx = Math.round(dx);
-                dy = Math.round(dy);
-            }
+    for (let i = 0; i < list.length; i++) {
+      const item = list[i];
+      const frame = item.frame;
 
-            ctx.drawImage(
-                frame.source.image,
-                cd.x,
-                cd.y,
-                cd.width,
-                cd.height,
-                dx + bob.x + cameraScrollX,
-                dy + bob.y + cameraScrollY - bob.z, // XDX-MOD
-                cd.width,
-                cd.height
-            );
-        }
-        else
-        {
-            if (bob.flipX)
-            {
-                fx = -1;
-                dx -= cd.width;
-            }
+      let itemAlpha = item.alpha * alpha;
 
-            if (bob.flipY)
-            {
-                fy = -1;
-                dy -= cd.height;
-            }
+      if (itemAlpha > 0) _pipe(item.x, item.y, item.z, item.frame, itemAlpha, item.flipX, item.flipY);
 
-            ctx.save();
-            ctx.translate(bob.x + cameraScrollX, bob.y + cameraScrollY - bob.z); // XDX-MOD
-            ctx.scale(fx, fy);
-            ctx.drawImage(frame.source.image, cd.x, cd.y, cd.width, cd.height, dx, dy, cd.width, cd.height);
-            ctx.restore();
-        }
+      if (item.hasOwnProperty("objectLayer") && item.objectLayer && item.objectLayer.visible === true && item.objectLayer.alpha > 0) {
+      	const obj = item.objectLayer;
+      	itemAlpha *= obj.alpha;
+      	const objX = item.centerX - obj.originX * obj.frame.width; // center origin of object to tile 
+      	const objY = item.tileBottomY - obj.originY * obj.frame.height; // center origin of object to tile 
+
+      	if (itemAlpha > 0) _pipe(objX + obj.x, objY + obj.y, item.z + obj.z, obj.frame, itemAlpha, obj.flipX, obj.flipY);
+      }
     }
     
     ctx.restore();

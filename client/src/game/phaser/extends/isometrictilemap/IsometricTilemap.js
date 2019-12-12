@@ -79,23 +79,12 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
     this.anims.destroy();
     this.anims = undefined;
 
-    this.children.destroy();
+    this.children = [];
     this.animList = [];
     this.cullList = [];
     this.renderList = [];
     super.preDestroy();
   }
-
-  /*
-  preload(...props) {
-    const res = super.preload(...props)
-
-    return res;
-  }
-  */
-
-  get data()   { return this.map.data2D; }
-  get data2D() { return this.map.data2D; }
 
   ///////////////////////////////////////////////////////////
   ///                                                     
@@ -120,16 +109,16 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
     return this.map.data2D[tileY][tileX];
   }
 
-  setTileVisible= (tile, value) => { return this.setTilesProperty(tile, "visible", value); } // this prop needs this.triggerRender(); 
-  setTileDepth  = (tile, value) => { return this.setTilesProperty(tile, "depth"  , value); } // this prop needs this.triggerRender(); 
-  setTileAlpha  = (tile, value) => { return this.setTilesProperty(tile, "alpha"  , value); } 
-  setTileTint   = (tile, value) => { return this.setTilesProperty(tile, "tint"   , value); }
-  setTileFlipX  = (tile, value) => { return this.setTilesProperty(tile, "flipX"  , value); }
-  setTileFlipY  = (tile, value) => { return this.setTilesProperty(tile, "flipY"  , value); }
-  setTileZ      = (tile, value) => { return this.setTilesProperty(tile, "z"      , value); }
-  setTileIsRunning = (tile, value) => { return this.setTilesProperty(tile, "isRunning", value); }
+  setTileVisible  = (tile, value) => { return this.setTilesProperty(tile, "visible", value); } // this prop needs this.triggerRender(); 
+  setTileDepth    = (tile, value) => { return this.setTilesProperty(tile, "depth"  , value); } // this prop needs this.triggerRender(); 
+  setTileAlpha    = (tile, value) => { return this.setTilesProperty(tile, "alpha"  , value); } 
+  setTileTint     = (tile, value) => { return this.setTilesProperty(tile, "tint"   , value); }
+  setTileFlipX    = (tile, value) => { return this.setTilesProperty(tile, "flipX"  , value); }
+  setTileFlipY    = (tile, value) => { return this.setTilesProperty(tile, "flipY"  , value); }
+  setTileZ        = (tile, value) => { return this.setTilesProperty(tile, "z"      , value); }
+  setTileIsRunning= (tile, value) => { return this.setTilesProperty(tile, "isRunning", value); }
 
-  setTilesProperty = (tileList, property, value) => { // tileList:: tile or array of tiles
+  setTilesProperty= (tileList, property, value) => { // tileList:: tile or array of tiles
     if (tileList && property) {
       if (!Array.isArray(tileList)) tileList = [tileList];
       tileList && tileList.forEach(item => {
@@ -142,7 +131,7 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
           this.map.data2D[item.tileY][item.tileX].isAnimatable && property === "isRunning" && this._modifyAnimList(this.map.data2D[item.tileY][item.tileX], value);
         };
       });
-      this._checkPropertyRerender(property) && this.triggerRender();
+      this._checkTriggerRenderByProperty(property) && this.triggerRender();
     };
     return this; 
   }
@@ -155,14 +144,95 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
     }
   }
 
-  _checkPropertyRerender = (property) => {
-   return (property === "visible" 
-        || property === "depth"
-        || property === "alpha"
-        || property === "isRunning"
+  _checkTriggerRenderByProperty = (property) => { // renderer is only dirty if something inside of getRenderList() change
+   return (property === "visible"   // change item-count in getRenderList()
+        || property === "alpha"     // change item-count in getRenderList()
+        || property === "depth"     // trigger sort-algo in getRenderList()
+        //|| property === "isRunning"
     );
   }
 
+  /*
+  setTileAssetkeyByTileCoords = (tileX, tileY, assetkey, frameID, isAnimatable, isRunning, animFrameIDStart, animFrameIDEnd) => {
+    return this.isValidTileCoords(tileX, tileY) ? this.setTileAssetkey(this.map.data2D[tileY][tileX], assetkey, frameID, isAnimatable, isRunning, animFrameIDStart, animFrameIDEnd) : null;
+  }
+
+  // change texture (not just the frame of a texture) of tile
+  setTilesAssetkey = (itemList, assetkey, frameID, isAnimatable, isRunning, animFrameIDStart, animFrameIDEnd) => {
+    if (!itemList) return null;
+    if (!Array.isArray(itemList)) itemList = [itemList];
+    if (!assetkey) assetkey = ""; // key of texture to use 
+    if (!frameID) frameID = 0;
+    if (!isAnimatable) isAnimatable = false;
+    if (!isRunning) isRunning = false;
+    const texture = this.getTextureByKey(assetkey); // get texture from texturemanager (this.scene.textures)
+    const frameTotal = this.getFrameCountByTexture(texture) || 0; // framecount used for boundary-checks (and animation-stuff)
+    if (frameID < frameTotal) frameID = 0;
+    const frame = this.getFrameFromTexture(texture, frameID);
+    itemList.forEach(item => {
+      item.assetkey = assetkey;
+      item.frameTotal = frameTotal;
+      item.isAnimatable = isAnimatable;
+      item.isRunning = isRunning;
+      item.animFrameIDStart = animFrameIDStart ? animFrameIDStart : 0;
+      item.animFrameIDEnd = animFrameIDEnd ? animFrameIDEnd : item.frameTotal - 1;
+      item.frameID = frameID;
+      item.frame = frame;
+      if (item.frame && (item.frame.width !== item.width || item.frame.height !== item.height)) {
+        item.width = (item.frame) ? item.frame.width  : this.tileWidth;  
+        item.height= (item.frame) ? item.frame.height : this.tileHeight; 
+        item.centerX = item.x + item.width / 2;
+        item.centerY = item.y + item.height/ 2;
+        item.tileCenterX = item.centerX;
+        item.tileCenterY = item.y + item.height - this.tileHeight2 - this.tilePaddingBottom;
+      }
+      this.map.data2D[item.tileY][item.tileX] = item;
+    })
+    return this;
+  }
+	*/
+  setTileXYObjectLayer = (tileX, tileY, newObject) => {
+  	return this.setTilesObjectLayer(this.map.data2D[tileY][tileX], newObject);
+  }
+
+  setTilesObjectLayer = (itemList, newObject) => {
+    if (!itemList) return null;
+    if (!Array.isArray(itemList)) itemList = [itemList];
+
+    itemList.forEach(item => {
+    	item.objectLayer = newObject;
+      if (item.objectLayer) {
+      	const obj = item.objectLayer;
+        if (!obj.hasOwnProperty("assetkey")) obj.assetkey = ""; // key of texture to use 
+        if (!obj.hasOwnProperty("frameID")) obj.frameID = 0;
+        const objtexture = this.getTextureByKey(obj.assetkey);
+        obj.frameTotal = this.getFrameCountByTexture(objtexture);
+        obj.frame = this.getFrameFromTexture(objtexture, obj.frameID);
+
+        if (!obj.hasOwnProperty("x")) obj.x = 0; // relative to item.tileCenterX
+        if (!obj.hasOwnProperty("y")) obj.y = 0; // relative to item.tileCenterY
+        if (!obj.hasOwnProperty("z")) obj.z = 0; // relative to item.z
+        if (!obj.hasOwnProperty("visible")) obj.visible = true;
+        if (!obj.hasOwnProperty("alpha"  )) obj.alpha = 1;
+        if (!obj.hasOwnProperty("tint"   )) obj.tint = 0xffffff;
+        if (!obj.hasOwnProperty("flipX"  )) obj.flipX = false;
+        if (!obj.hasOwnProperty("flipY"  )) obj.flipY = false;
+        if (!obj.hasOwnProperty("originX")) obj.originX = 0.5;
+        if (!obj.hasOwnProperty("originY")) obj.originY = 1.0;
+
+        if (!obj.hasOwnProperty("isAnimatable"    )) obj.isAnimatable = false;
+        if (!obj.hasOwnProperty("isRunning"       )) obj.isRunning = false;
+        if (!obj.hasOwnProperty("animFrameIDStart")) obj.animFrameIDStart = 0;
+        if (!obj.hasOwnProperty("animFrameIDEnd"  )) obj.animFrameIDEnd = obj.frameTotal - 1;
+      }
+      this.map.data2D[item.tileY][item.tileX] = item;
+    });
+    
+    return this;
+	}
+
+
+  /*
   setXYProperty = (tileX, tileY, property, value) => { 
     if (this.isValidTileCoords(tileX, tileY) && property) this.setTilesProperty(this.map.data2D[tileY][tileX], property, value);
     return this;
@@ -171,18 +241,18 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
   setXYProperty_unsafe = (tileX, tileY, property, value) => { // this is faster
     this.map.data2D[tileY][tileX][property] = value;
   }
+  */
 
-
-  getTextureByKey = (key) => {
-    const texture = this.scene.textures.get(key);
+  getTextureByKey = (key) => { // imput:: key (name of texture / asset) OR texture
+    const texture = this.scene.textures.get(key); // phaser/textures/textureManager:: fallback to __MISSING
     texture.frameNames = this.getFrameNamesByTexture(texture, true, false);
     return texture;
     //return this.scene.sys.textures.get(key);
   }
 
-  getFrameCountByKey = (key) => {
-    return this.getFrameCountByTexture( this.getTexture(key) );
-  }
+  /*
+  getFrameCountByKey = (key) => { return this.getFrameCountByTexture( this.getTexture(key) ); }
+  */
 
   getFrameCountByTexture = (texture) => {
     return (texture) ? texture.frameTotal - 1 : 0; // return without __BASE-frame
@@ -190,14 +260,7 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
 
   getFrameNamesByTexture = (texture, doSort, includeBase) => {
     if (!texture || !texture.frames || texture.frames.length <= 0) return [];
-    if (includeBase === undefined) includeBase = false;
-    var out = Object.keys(texture.frames);
-    if (!includeBase) {
-      var idx = out.indexOf('__BASE');
-      if (idx !== -1) {
-        out.splice(idx, 1);
-      }
-    }
+    const out = texture.getFrameNames(includeBase);
     return (doSort) ? out.sort() : out;
   } 
 
@@ -267,22 +330,12 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
     //this.map = Object.assign( {}, layer);
     //this.map = Object.assign( Object.create( Object.getPrototypeOf(layer)), layer);
 
-    //if (this.mapConfig.hasOwnProperty("assetkey")) this.mapConfig.assetkeys = [this.mapConfig.assetkey];
-    //if (!Array.isArray(this.mapConfig.assetkeys )) this.mapConfig.assetkeys = [this.mapConfig.assetkeys];
-
     if (!this.map.hasOwnProperty("width" )) this.map.width = 0;
     if (!this.map.hasOwnProperty("height")) this.map.height = 0;
     if (!this.map.hasOwnProperty("data2D") || !Array.isArray(this.map.data2D)) this.map.data2D = [];
 
     this.tilePaddingBottom= mapConfig.hasOwnProperty("paddingBottom") ? mapConfig.paddingBottom : 0; // y-position of bottom-spike in pixels, messured from bottom
-    /*
-    if (!mapConfig.tileWidth || !mapConfig.tileHeight) { // fallback:: autodetect from first frame if not provided in mapConfig
-      const item = (this.map.data2d.length > 0) ? this.map.data2D[0] : null;
-      const frame = this.getFrameFromTexture(this.getTextureByKey((item && item.hasOwnProperty("assetkey")) ? item.assetkey : ""));
-      mapConfig.tileWidth = frame.width || 0;
-      mapConfig.tileHeight= frame.height|| 0;
-    }
-    */
+
     this.tileWidth  = mapConfig.tileWidth;
     this.tileHeight = mapConfig.tileHeight;
 
@@ -299,35 +352,29 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
         for (let tileX = 0; tileX < this.map.width; tileX++) {
           let item = this.map.data2D[tileY][tileX];
           if (!item) continue;
-
+          // used in renderer:: item.assetkey, item.frame, item.frame,sourceIndex, item.frame.x, item.frame.y, item.frame.width, item.frame.height, item.x, item.y, item.z, item.flipX, item.flipY, item.alpha, item.tint
           if (!item.hasOwnProperty("assetkey")) item.assetkey = ""; // key of texture to use 
-
-          // tile-properties. if you change one of these at runtime you need to call this.triggerRedner()
+          if (!item.hasOwnProperty("z"      )) item.z = 0;
           if (!item.hasOwnProperty("visible")) item.visible = true;
-          if (!item.hasOwnProperty("depth"  )) item.depth = 0;
           if (!item.hasOwnProperty("alpha"  )) item.alpha = 1;
-          if (!item.hasOwnProperty("isRunning")) item.isRunning = false;
+          if (!item.hasOwnProperty("tint"   )) item.tint = 0xffffff;
+          if (!item.hasOwnProperty("flipX"  )) item.flipX = false;
+          if (!item.hasOwnProperty("flipY"  )) item.flipY = false;
 
-          // tile-properties. if you change one of these at runtime you do NOT need to call this.triggerRedner()
-          if (!item.hasOwnProperty("z")) item.z = 0;
-          if (!item.hasOwnProperty("tint"   )) item.tint =  0xffffff;
-          if (!item.hasOwnProperty("flipX"  )) item.flipX =  0xffffff;
-          if (!item.hasOwnProperty("flipY"  )) item.flipY =  0xffffff;
-          if (!item.hasOwnProperty("isAnimatable")) item.isAnimatable = false;
+          if (!item.hasOwnProperty("depth"  )) item.depth = 0;
 
           if (item.assetkey !== lastKey) { // get texture
             texture = this.getTextureByKey(item.assetkey);
             frameTotal = this.getFrameCountByTexture(texture);
             lastKey = item.assetkey;
           }
-
           item.frameTotal = frameTotal || 0; // framecount used for boundary-checks (and animation-stuff)
-
-          if (!item.hasOwnProperty("animFrameIDStart")) item.animFrameIDStart = 0;
-          if (!item.hasOwnProperty("animFrameIDEnd"  )) item.animFrameIDEnd   = frameTotal - 1;
-
-          // number of the frame inside the texture (random if not set)
           if (!item.hasOwnProperty("frameID")) item.frameID = Phaser.Math.Between(0, item.frameTotal - 1); // randomize if not present
+
+          if (!item.hasOwnProperty("isAnimatable"    )) item.isAnimatable = false;
+          if (!item.hasOwnProperty("isRunning"       )) item.isRunning = false;
+          if (!item.hasOwnProperty("animFrameIDStart")) item.animFrameIDStart = 0;
+          if (!item.hasOwnProperty("animFrameIDEnd"  )) item.animFrameIDEnd = item.frameTotal - 1;
 
           // get frame from texture
           item.frame = this.getFrameFromTexture(texture, item.frameID);
@@ -345,14 +392,22 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
           item.centerX = item.x + item.width / 2;
           item.centerY = item.y + item.height/ 2;
 
+          item.tileBottomX = item.centerX;
+          item.tileBottomY = item.y + item.height - this.tilePaddingBottom;
+
           // center of the tile-diamaond. tile-center is not equal frame-center for "3D"-tiles or tiles with asymetric padding
           item.tileCenterX = item.centerX;
-          item.tileCenterY = item.y + item.height - this.tileHeight2 - this.tilePaddingBottom;
+          item.tileCenterY = item.tileBottomY - this.tileHeight2;
+
+          item.tileTopX = item.centerX;
+          item.tileTopY = item.tileCenterY - this.tileHeight2;
 
           item.tileX = tileX;
           item.tileY = tileY;
 
           item.uid = i++;
+
+          this.setTilesObjectLayer(item, item.objectLayer);
 
           this.children.push(item);
 
@@ -379,6 +434,7 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
     this.triggerRender(); // trigger new render
     return this;
   }
+
 
 
   ///////////////////////////////////////////////////////////

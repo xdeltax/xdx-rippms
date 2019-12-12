@@ -26,7 +26,7 @@ let phaserConfig = {
   //height: 480,
   //zoom: 1,
 
-  type: Phaser.AUTO,
+  type: Phaser.AUTO, //Phaser.CANVAS, Phaser.AUTO, Phaser.WEBGL, Phaser.HEADLESS,
   //type: customCanvas.type,
   //canvas: customCanvas.canvas,
   //context: customCanvas.context,

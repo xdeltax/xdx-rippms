@@ -2,8 +2,17 @@ import * as Phaser from 'phaser'
 
 import IsometricTilemap from "../extends/isometrictilemap/IsometricTilemap";
 
+// tiles:: 3079 x 3079; 1 px padding; 6 x 6; frame 512 x 512; isotile: 512 x 256, bottomPadding: 140 px;
 import Asset_ISO60_Texturepack__JSON from "../assets/Tilemap/xdx_isocam60_anim_texturepack.json";
 import Asset_ISO60_Texturepack__PNG  from "../assets/Tilemap/xdx_isocam60_anim_texturepack.png";
+
+// tile:: frame 512 x 512; isotile: 512 x 256, bottomPadding: 140 px;
+import Asset_xdx_isocam60_single_block_1000  from "../assets/Tilemap/xdx_isocam60_single_block_1000.png";
+
+// object:: frame 512 x 512; 
+import Asset_watchtower_lvl2_512x512  from "../assets/Tilemap/objects/watchtower_lvl2_512x512.png";
+import Asset_isometric_house_1024x868  from "../assets/Tilemap/objects/isometric_house_1024x868.png";
+
 
 const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/photonstorm/phaser/blob/v3.20.0/src/scene/Scene.js
   xdx = { }
@@ -60,7 +69,11 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
 
   // scene step 2 (once)
   preload = (data) => {
-    //this.load.image('Asset_ISO60_Image_Bricks1024', Asset_ISO60_Image_Bricks1024);
+    this.load.image('Asset_watchtower_lvl2_512x512', Asset_watchtower_lvl2_512x512);
+    this.load.image('Asset_isometric_house_1024x868', Asset_isometric_house_1024x868);
+
+    this.load.image('Asset_xdx_isocam60_single_block_1000', Asset_xdx_isocam60_single_block_1000);
+
     //this.load.spritesheet('spritesheetGroundLayer', assetTilesetOcean, { frameWidth: 96, frameHeight: 48 });
 
     this.load.atlas('Asset_ISO60_Texturepack', Asset_ISO60_Texturepack__PNG, Asset_ISO60_Texturepack__JSON);
@@ -91,56 +104,96 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       .setDepth(100)
 
     
+    const map = {
+      width : 20,
+      height: 20,
+      data2D: null,
+    };
+
     const mapConfig = {
       tileWidth : 512, // 256,
       tileHeight: 256, // 128,
       paddingBottom: 512 - 372, //19, // -1: sprite verticaly centered; 0: sprite bottom-based; >0: 
-      // Asset_ISO60_Texturepack / Asset_ISO60_Single_Block_Empty
-    };
-
-    const map = {
-      width : 500,
-      height: 500,
-      data2D: null,
+      //
+      // assetkey: "Asset_xdx_isocam60_single_block_1000" 
+      //        -> tile 512 x 256, paddingBottom: 140, frames: 33,
+      //        -> frame 0 to 30: animated boy
+      //        -> frame 31: boy with arms outspread
+      //        -> frame 32: empty base-tile
+      //        -> 33, 34, 35: unused place in textureAtlas
+      //
+      // assetkey: "Asset_xdx_isocam60_single_block_1000" 
+      //        -> tile 512 x 256, paddingBottom: 140, frames: 1,
+      //        -> frame 0: empty base-tile
     };
 
     map.data2D = new Array(map.height);
     for (let tileY = 0; tileY < map.height; tileY++) {
       map.data2D[tileY] = new Array(map.width);
       for (let tileX = 0; tileX < map.width; tileX++) {
-        map.data2D[tileY][tileX] = /*(tileX % 2 === 0) ? null : */{
-          assetkey: "Asset_ISO60_Texturepack",  // texture to use for frameselection; defaults to assetkeys[0]
 
-          //frameID: 0,                   // framenumber in texture; defaults to random
-          depth: 0,                       // rendering sort-order; defaults to 0 (no sorting === faster)
+        map.data2D[tileY][tileX] = {
           visible: true,
+          assetkey: "Asset_ISO60_Texturepack",  // texture to use for frameselection; defaults to assetkeys[0]
+          frameID: 0,                     // framenumber in texture; defaults to random
+          depth: 0,                       // rendering sort-order; defaults to 0 (no sorting === faster)
+          tint: Phaser.Math.Between(0xdddddd, 0xeeeeee),
           z: 0,                           // z-coordinate of tile (technically its y' = y - z)
-          alpha: 1,
-          tint: 0xffffff,
-          flipX: false,
-          flipY: false,
+          isAnimatable: false,            // if true: item will be addable to "animList" at setTilemapLayer(); defaults to false
+          isRunning : false,              // if true && item.aniateable -> item will be addaed to "animList"; defaults to false
+        };
 
-          isAnimatable: false,            // if true: item will be addable to "animList" at setTilemapLayer();
-          isRunning : false,              // if true && item.aniateable -> item will be addaed to "animList"
+        if (tileX === Math.floor(map.width / 2) && tileY === Math.floor(map.height / 2)) {
+          const objectLayerHouse = {
+            visible: true,
+            assetkey: "Asset_isometric_house_1024x868",
+            frameID: 0,
+            alpha: 0.75,
+            originX: 0.5,
+            originY: 1.0, // origin of object:: origin=1 -> y=0 is bottom of tile; origin=0 -> y=0 is top;
+            x: 0, // relative to origin
+            y: 0, // relative to origin
+            z: 0, // relative to origin
+            isAnimatable: false,            
+            isRunning : false,              
+          };
+          map.data2D[tileY][tileX].objectLayer = objectLayerHouse;
+        } else {
+          if (Phaser.Math.Between(0, 50) === 0) {
+            const objectLayerTower = {
+              visible: true,
+              assetkey: "Asset_watchtower_lvl2_512x512",
+              frameID: 0,
+              alpha: 1.0,
+              originX: 0.5,
+              originY: 1.0, // origin of object:: origin=1 -> y=0 is bottom of tile; origin=0 -> y=0 is top;
+              x: -15, // relative to origin
+              y: 0, // relative to origin
+              z: 50, // relative to origin
+              isAnimatable: false,            
+              isRunning : false,              
+            };
+          map.data2D[tileY][tileX].objectLayer = objectLayerTower;
+          }
+        }
+                
 
-          //todo: animFrameRate: 10,
-          animFrameIDStart: 0,
-          animFrameIDEnd: 30,
-        }
-        if ( map.data2D[tileY][tileX]) {
-          // randomize
-          switch (Phaser.Math.Between(0,9)) {
-            case 0: map.data2D[tileY][tileX].frameID = null; break; //Phaser.Math.Between(0, 30); break; // animation state of boy (0 .. 30)
-            case 1: map.data2D[tileY][tileX].frameID = 31; break; // boy, not animatable
-            default:map.data2D[tileY][tileX].frameID = 32; break; // empty block
-          }
-          if (map.data2D[tileY][tileX].frameID <= 30) { 
-            map.data2D[tileY][tileX].isAnimatable = true; 
-            map.data2D[tileY][tileX].isRunning = Boolean(Phaser.Math.Between(0,1)); 
-          }
-        }
-      }
-    }
+        // randomize some layer 1 frames
+        switch (Phaser.Math.Between(0,9)) {
+          case 0: map.data2D[tileY][tileX].frameID = null; break; //Phaser.Math.Between(0, 30); break; // animation state of boy (0 .. 30)
+          case 1: map.data2D[tileY][tileX].frameID = 31; break; // boy, not animatable
+          default:map.data2D[tileY][tileX].frameID = 32; break; // empty block
+        };
+        // animate some layers        
+        if (map.data2D[tileY][tileX].frameID <= 30) { // if animated ...
+          map.data2D[tileY][tileX].animFrameIDStart = 0;
+          map.data2D[tileY][tileX].animFrameIDEnd = 30;
+          map.data2D[tileY][tileX].isAnimatable = true; 
+          map.data2D[tileY][tileX].isRunning = Boolean(Phaser.Math.Between(0,1)); 
+        };
+        
+      } // of for X
+    } // of for Y
 
 
     this.xdx.isoMap = new IsometricTilemap(this, 0, 0, map, mapConfig); // (scene, x, y, mapData, mapConfig)
@@ -156,19 +209,21 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       //.setPosition(this.cameras.main.centerX, this.cameras.main.centerY) // center map-object in viewport
       .setPosition(this.cameras.main.centerX - this.xdx.isoMap.width2, this.cameras.main.centerY - this.xdx.isoMap.height2) // center map-object in viewport
       .addTimer({ name: "moveZ@10fps", fps: 10 }, (timerTicker, preUpdateTicker, preUpdateTime, childList, renderList, animList) => {  // set a periodic timer
-        //global.log("timer:: ", timerTicker, renderList, animList)
-        //const z = 10 * Math.sin(2 * Math.PI * (timerTicker % 100 / 100));
-        //this.xdx.isoMap.setTilesProperty(renderList, "z", z); 
-        animList && animList.forEach(item => item.z = mapConfig.paddingBottom * Math.sin(2 * Math.PI * ((timerTicker + (item.tileX + item.tileY) * 100) % 500) / 500)); // move z-axis in a sinus-wave by time
+        //animList && animList.forEach(item => item.z = mapConfig.paddingBottom * Math.sin(2 * Math.PI * ((timerTicker + (item.tileX + item.tileY) * 100) % 500) / 500)); // move z-axis in a sinus-wave by time
+
+        renderList && renderList.forEach(item => { if (item.isAnimatable) item.z = mapConfig.paddingBottom * Math.sin(2 * Math.PI * ((timerTicker + (item.tileX + item.tileY) * 100) % 500) / 500) }); // move z-axis in a sinus-wave by time
       })
       .addTimer({ name: "animate", fps: 15 }, (timerTicker, preUpdateTicker, preUpdateTime, childList, renderList, animList) => { // set a periodic timer
         if (animList && animList.length > 0) {
-          //const animListCulled = renderList.filter(item => item.isRunning === true);
-          renderList && renderList.forEach(item => { 
-            if (item.isRunning) {
-             if (item.isAnimatable) this.xdx.isoMap.shrTileFrame(item, item.animFrameIDStart, item.animFrameIDEnd);
-            }
-          });
+          //slow: always animate visible and invisible tiles
+          //animList && animList.forEach(item => { if (item.isRunning && item.isAnimatable) this.xdx.isoMap.shrTileFrame(item, item.animFrameIDStart, item.animFrameIDEnd) });
+
+          //faster: animate visible only
+          //const animListCulled = renderList.filter(item => item.isRunning === true); // filter is slow
+          //animListCulled && animListCulled.forEach(item => { if (item.isRunning && item.isAnimatable) this.xdx.isoMap.shrTileFrame(item, item.animFrameIDStart, item.animFrameIDEnd) });
+
+          //fastest: animate visible only
+          renderList && renderList.forEach(item => { item.isAnimatable && item.isRunning && this.xdx.isoMap.shrTileFrame(item, item.animFrameIDStart, item.animFrameIDEnd); });
         }
       })
     
@@ -273,8 +328,9 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       const tileXY  = this.xdx.isoMap.localCoordsToTileCoords(localXY.x, localXY.y);  // convert pixel-coords to tile-coords (array data2D[tileY][tileX])
       const tile    = this.xdx.isoMap.getTileByTileCoords(tileXY.x, tileXY.y);        // get tile (item)
 
+      global.log("click ::tile:: ", pointer, this.xdx.isoMap, tile, tile && tile.tileX, tile && tile.tileY, tile && tile.x, tile && tile.y)
+
       if (tile) {
-        global.log("click tile:: ", tile, tile.tileX, tile.tileY, tile.x, tile.y)
         if (this.xdx.isoMap.isDebug) {
           const world = this.xdx.isoMap.localCoordsToWorldCoords(tile.x, tile.y);
           this.xdx.debugGraphics.clear().lineStyle(1, 0x00ff00, 0.5).strokeRectShape({x: world.x, y: world.y, width: tile.width, height: tile.height,});
@@ -287,9 +343,23 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
         //this.xdx.isoMap.shlTileFrame(tile); // manual animate: cycle to prev frame
         //this.xdx.isoMap.setTilesProperty(tile, "zPixel", tile.zPixel + 10);
         //this.xdx.isoMap.setTilesProperty(tile, "depth", tile.depth > 0 ? 1 : 0); 
-        this.xdx.isoMap.setTileIsRunning(tile, !tile.isRunning);
+        //this.xdx.isoMap.setTileIsRunning(tile, !tile.isRunning);
 
-        global.log("::tileXY::",this.xdx.isoMap, tile, pointer, tileXY.x, tileXY.y, );
+        //this.xdx.isoMap.setTilesAssetkey(tile, "Asset_xdx_isocam60_single_block_1000"); // change texture (not just the frame of a texture) of tile
+        //this.xdx.isoMap.setTilesAssetkey(tile, "Asset_watchtower_lvl2_512x512"); // change texture (not just the frame of a texture) of tile
+        //this.xdx.isoMap.setTilesProperty(tile, "z", 200)
+
+        const objectLayer = {
+          assetkey: "Asset_watchtower_lvl2_512x512",
+          originX: 0.5, // origin of object
+          originY: 1.0, // origin of object
+          x: -15,
+          y: 0,
+          z: 50,
+          visible: true,
+        }
+        this.xdx.isoMap.setTilesObjectLayer(tile, (tile.objectLayer) ? null : objectLayer); // change texture (not just the frame of a texture) of tile
+
       }
 
       //const localXYcenter = this.xdx.isoMap.tileCoordsToLocalCoords(tileXY.tileX, tileXY.tileY);
