@@ -42,6 +42,11 @@ const styles = theme => ({
 export default ( withStyles(styles)( observer( class extends React.Component {
   state = {  }
 
+  onAuthSuccess = (socketid, provider, userdata) => {
+  	global.log("OAuth:: Callback:: ", socketid, provider, userdata);
+  	//store.user.loginWithProvider
+  }
+
   render() {
     global.log("RouteLogin:: render:: ", this.props);
     const {
@@ -50,11 +55,6 @@ export default ( withStyles(styles)( observer( class extends React.Component {
       //location, // location: {pathname: "/login", search: "", hash: "", state: undefined, key: "whjdry"}
       //match,    // match: {path: "/login", url: "/login", isExact: true, params: {…}}
     } = this.props;
-
-    const onAuthSuccess = (socketid, provider, userdata) => {
-    	global.log("OAuth:: Callback:: ", socketid, provider, userdata);
-    	//store.user.loginWithProvider
-    }
 
     return (
       <div className={classes.root} style={{
@@ -80,9 +80,9 @@ export default ( withStyles(styles)( observer( class extends React.Component {
 
 
         <div>
-					<OAuth onAuthSuccess={this.onAuthSuccess} buttonText="bind with" provider="facebook" providerLogo={FacebookLogo} server={global.serverURL} socket={store.socketio.socket} />
-					<OAuth onAuthSuccess={this.onAuthSuccess} buttonText="bind with" provider="google" providerLogo={GoogleLogo} server={global.serverURL} socket={store.socketio.socket} />
-					<OAuth onAuthSuccess={this.onAuthSuccess} buttonText="" provider="test" server={global.serverURL} socket={store.socketio.socket} />
+					<OAuth onAuthSuccess={this.onAuthSuccess} buttonText="bind with" provider="facebook" providerLogo={FacebookLogo} server={global.serverURL} socket={store.socketio.socket} fingerprint={global.fingerprint} />
+					<OAuth onAuthSuccess={this.onAuthSuccess} buttonText="bind with" provider="google" providerLogo={GoogleLogo} server={global.serverURL} socket={store.socketio.socket} fingerprint={global.fingerprint} />
+					<OAuth onAuthSuccess={this.onAuthSuccess} buttonText="" provider="test" server={global.serverURL} socket={store.socketio.socket} fingerprint={global.fingerprint} />
 				</div>
 
 

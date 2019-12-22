@@ -12,6 +12,7 @@ export default class OAuth extends React.Component {
     const { socket, provider, onAuthSuccess } = this.props;
     
     socket && socket.on(provider, userdata => { // get reply with logindata from server (provider/callback) via socket
+    	//global.log("oAuth:: incomming socket message:: ", socket.id, provider, userdata)
       if (this.state && this.state.windowOpen) this.closeWindow();
       onAuthSuccess && onAuthSuccess(socket.id, provider, userdata)
     });
@@ -32,16 +33,22 @@ export default class OAuth extends React.Component {
   };
 
   render() {
-    const { server, buttonText, provider, providerLogo, socket, onWindowBlocked, onAuthSuccess, onWindowOpen, onWindowClose, } = this.props;
+    const { server, buttonText, provider, providerLogo, socket, fingerprint, onWindowBlocked, onAuthSuccess, onWindowOpen, onWindowClose, } = this.props;
     const { windowOpen, disabled, } = this.state;
 
-    const url = `${server}/${provider}.io?socketid=${socket.id}`;
+    const fphash = (fingerprint && fingerprint.hash) ? fingerprint.hash : "";
+    const socketid = (socket && socket.id) ? socket.id : "";
+
+    const url = `${server}/${provider}.io?socketid=${socketid}&fp=${fphash}`;
+
     const width = window.innerWidth;
     const height= window.innerHeight;
-    //const left= (window.innerWidth / 2) - (width / 2);
-    //const top = (window.innerHeight / 2) - (height / 2);
+    const left= (window.innerWidth / 2) - (width / 2);
+    const top = (window.innerHeight / 2) - (height / 2);
+
     const windowFeatures = {width: width, height: height, center: true, toolbar: false, location: false, directories: false, status: false, menubar: false, scrollbars: false, resizable: false, copyhistory: false, };
-    return (
+
+    return (!fphash || !socketid) ? null : (
     	<React.Fragment>
     	 	{windowOpen && <NewWindow url={url} name={provider || "oAuthWindow"} features={windowFeatures} onUnload={ () => { this.closeWindow(); }} onBlock={onWindowBlocked} /> }
         <Button disabled={windowOpen} style={{ margin: 5, }} variant="outlined" color="primary" onClick={this.clickStartAuthProcess}>

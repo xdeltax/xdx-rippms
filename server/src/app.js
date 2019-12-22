@@ -238,7 +238,9 @@ module.exports = async (config) => {
 	// custom middleware allows us to attach the socket id to the session. with the socket id attached we can send back the right user info to the right socket
 	const passportInjectSocket = (req, res, next) => {
   	const socketid = (req && req.query) ? req.query.socketid : null; // from client http://serverurl:serverport/facebook.io?socketid={socket.id}
+  	const fingerprinthash = (req && req.query) ? req.query.fp : null; // from client http://serverurl:serverport/facebook.io?socketid={socket.id}&fp={fphash}
   	req.session.socketid = socketid;
+  	req.session.fingerprinthash = fingerprinthash;
 		//global.log("****passportInjectSocket:: ", req.query, socketid, req.session)
   	next();
 	};
@@ -276,17 +278,15 @@ module.exports = async (config) => {
   // ===============================================
   passport.use(new FacebookStrategy(passportStrategyFacebookConfig, (accessToken, refreshToken, profile, cb) => { 
 	 	// called when OAuth provider sends back user information.  Normally, you would save the user to the database here in a callback that was customized for each provider.
-   	global.log("***passportCallback:: ", accessToken, refreshToken, profile, cb);
-    //DBUsers.findOrCreate({ facebookId: profile.id }, function (err, user) { return cb(err, user); });
-    profile.xxx = "xxx";
+   	//global.log("***passportCallback:: ", accessToken, refreshToken, profile, cb);
+    //todo: DBUsers.findOrCreate({ facebookId: profile.id }, function (err, user) { return cb(err, user); });
   	return cb(null, profile);
   }));
 
   passport.use(new GoogleStrategy(passportStrategyGoogleConfig, (accessToken, refreshToken, profile, cb) => { 
 	 	// called when OAuth provider sends back user information.  Normally, you would save the user to the database here in a callback that was customized for each provider.
-  	global.log("***passportCallback:: ", accessToken, refreshToken, profile, cb);
-    //DBUsers.findOrCreate({ facebookId: profile.id }, function (err, user) { return cb(err, user); });
-    profile.xxx = "xxx";
+  	//global.log("***passportCallback:: ", accessToken, refreshToken, profile, cb);
+    //todo: DBUsers.findOrCreate({ facebookId: profile.id }, function (err, user) { return cb(err, user); });
   	return cb(null, profile);
   }));
 
@@ -309,12 +309,14 @@ module.exports = async (config) => {
 
   	const {
   		socketid, // socketid from client-call
+  		fingerprinthash,
   	} = session || { };
   	
-	  global.log(`/${provider}.io/callback:: `, provider, id, socketid, session, session.passport, _raw, _json);
+	  //global.log(`/${provider}.io.callback:: `, provider, id, socketid, session, session.passport, _raw, _json);
 
-	  if (provider === "google" || provider === "facebook") {
-		  socketid && io.in(socketid).emit(provider, id);
+	  if (socketid && (provider === "google" || provider === "facebook")) {
+		  global.log(`/${provider}.io.callback:: EMIT:: `, socketid, provider, id, fingerprinthash);
+		  io.in(socketid).emit(provider, id);
 	  }
 	  res.end();
 	};
@@ -347,9 +349,9 @@ module.exports = async (config) => {
     //res.status(200).end();
   });
 
-  app.get('/test.io/callback', (req, res, next) => {
-    console.log('get route "/test.io/callback"', req.testing);
-    res.status(200).json({ route: "/test.io/callback", });
+  app.get('/test.io.callback', (req, res, next) => {
+    console.log('get route "/test.io.callback"', req.testing);
+    res.status(200).json({ route: "/test.io.callback", });
   });
 
 
@@ -363,8 +365,8 @@ module.exports = async (config) => {
   // ===============================================
   // route: passport callback:: triggerd by callbacks from oauth-provider
   // ===============================================	
-	app.get('/facebook.io/callback', passportFacebookAuth, passportAuthCallback); // callback from provider
-	app.get('/google.io/callback'	 , passportGoogleAuth  , passportAuthCallback); // callback from provider
+	app.get('/facebook.io.callback', passportFacebookAuth, passportAuthCallback); // callback from provider
+	app.get('/google.io.callback'	 , passportGoogleAuth  , passportAuthCallback); // callback from provider
 
 
   // ===============================================
