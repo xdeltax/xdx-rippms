@@ -4,18 +4,53 @@ import './index.css';
 import * as serviceWorker from './serviceWorker';
 
 import AppLoadingScreen from './AppLoadingScreen';
+import store from 'store'; // mobx-store
+
+import fp2 from "fingerprintjs2";
+import promiseToFingerprint from "tools/fingerprint";
+
 const AppLandingPage = React.lazy(() => import('./AppLandingPage')); //import AppRouter from "ui/AppRouter"; // react-router
 
-const startApp = () => {
+require("./AppConfiguration"); // import globals
+
+////////////////////////////////////////////////////////////////////////////////
+// global.app-config
+//
+global.serverURL = process.env.REACT_APP_SERVERURL || "";
+
+////////////////////////////////////////////////////////////////////////////////
+
+const startApp = async () => {
   //<React.StrictMode><AppLandingPage /></React.StrictMode>
 
   //screen.orientation.lock('portrait')
   //var rotate = 0 - window.orientation;
   //setAttribute("transform:rotate("+rotate+"deg);-ms-transform:rotate("+rotate+"deg);-webkit-transform:rotate("+rotate+"deg)", "style");
 
+  // init mobx-store
+  await store.init();
+  global.log("index:: startApp:: init store:: ", store);
+
+	global.fingerprint = await promiseToFingerprint({ });	// this is async! about 100 ms...
+	global.log("index:: fingerprint:: ", global.fingerprint, );
+
+
+	// connect socket at app-start
+  if (!global.DEBUG_DISABLE_SOCKETCONNECT) {
+		global.log("index:: startApp:: connect socket. ", global);
+
+		const socketProtokoll = process.env.REACT_APP_SOCKETIO_HANDSHAKEVERSION || 10000;
+
+		store.socketio.connect(global.serverURL, socketProtokoll);
+	} else {
+		global.log("index:: startApp:: DEBUG DEBUG DEBUG:: connect to socket is DISABLED!!! ", global);		
+	}
+
+
+
   ReactDOM.render((
     <React.Suspense fallback={<AppLoadingScreen />}>
-      <AppLandingPage />
+      <AppLandingPage store={store} />
     </React.Suspense>
   ), document.getElementById('root'));
   //ReactDOM.createRoot(document.getElementById('root')).render(<AppProvider />); // concurrent React react16.7

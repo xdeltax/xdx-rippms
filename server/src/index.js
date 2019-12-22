@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 "use strict";
-require('dotenv').config();   // autoincludes .env
+
+const dotenv = require('dotenv');
+dotenv.config();   // autoincludes .env
+//const envConfig = dotenv.parse(fs.readFileSync('.env.development.local')); for (const k in envConfig) { process.env[k] = envConfig[k]; } // override env
 
 // fallback if .env is missing :-)
 if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
+
 // server-port
-if (!process.env.PORT) process.env.PORT = 8080;
+if (!process.env.PORT) 	process.env.PORT = 8080;
 if (!process.env.HTTPS) process.env.HTTPS = false;
 
 // folder of pictures uploaded from socket.io-connection with client
@@ -17,41 +21,49 @@ if (!process.env.DATABASE_NEDB) process.env.DATABASE_NEDB = "database/nedb/"; //
 // server-secret for tokens
 if (!process.env.JWT_SECRET_PASSWORD) process.env.JWT_SECRET_PASSWORD = "veryVerySecretMessageToEncodeT3eJWTs!";
 
+// socket-io
+if (!process.env.SOCKETIO_HANDSHAKEVERSION) process.env.SOCKETIO_HANDSHAKEVERSION = 10000;
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // global.app-config
-//
-global.APPCONFIG_HANDSHAKEPROTOCOLVERSION = 10000; // v1.00.00
+//                                                                            
+global.APPCONFIG_HANDSHAKEPROTOCOLVERSION = process.env.SOCKETIO_HANDSHAKEVERSION; // v1.00.00
 //
 ////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // global debug-vars
+//                                                                            
 global.DEBUG_DISABLE_REQUIREFACEBOOKTOLOGIN = false;
 global.DEBUG_DISABLE_REQUIRESERVERTOKEN = false; // used in routes/socketio
 global.DEBUGMODE_MOCK_A_USER = false;
-//                                                                            //
+//                                                                            
 ////////////////////////////////////////////////////////////////////////////////
 
 
-const appENV = process.env;
-const numCPU = appENV.NUMBER_OF_PROCESSORS;
-
+////////////////////////////////////////////////////////////////////////////////
 // global-helpers
+//                                                                            
 global.base_dir = __dirname;
 global.abs_path = (p) => { return require('path').join(global.base_dir, p) } // abs_path('lib/Utils.js');
 global.requireX = (f) => { return require(abs_path('/' + f)) } // instead of: require('../../../lib/Utils.js'); -> requireX('lib/Utils.js');
 
 global.getRandomInt = (max) => { return Math.floor(Math.random() * Math.floor(max)); }
-global.absRandom = (max) => Math.floor(max*Math.random());
-global.randomHash = () => "hash"+Math.floor(100000000*Math.random());
+global.absRandom 		= (max) => Math.floor(max*Math.random());
+global.randomHash 	= () => "hash"+Math.floor(100000000*Math.random());
 
 global.now = () => new Date().toLocaleTimeString();
 
-global.ddd = requireX('tools/debug/ddd');
-global.iii = requireX('tools/debug/iii'); // usage:: iii(object, depth)
-global.log = ( ...restArgs ) => { ddd(global.now(), restArgs); };
-global.debug = ( ...restArgs ) => { ddd(global.now(), restArgs); };
+global.ddd 	= requireX('tools/debug/ddd');
+global.iii 	= requireX('tools/debug/iii'); // usage:: iii(object, depth)
+global.log 	= ( ...restArgs ) => { ddd(global.now(), restArgs); };
+global.debug= ( ...restArgs ) => { ddd(global.now(), restArgs); };
+//                                                                            
+////////////////////////////////////////////////////////////////////////////////
+
+
+const numCPU = process.env.NUMBER_OF_PROCESSORS;
 
 
 process.on('unhandledRejection', (reason, p) => {
@@ -69,5 +81,4 @@ process.on('uncaughtException', (error) => {
     process.exit(1);
 });
 
-const app = require('./app');
-app();
+require('./app')(); // const app = require('./app'); app();

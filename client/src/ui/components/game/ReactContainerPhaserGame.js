@@ -18,20 +18,21 @@ import Gui from 'game/phaser/scenes/Gui';
 
 import store from 'store';
 
-const GameContainer = observer( class GameContainer extends React.Component { //export default observer(class PhaserGameContainer extends React.Component {
+const GameContainer = withRouter( observer( class GameContainer extends React.Component { //export default observer(class PhaserGameContainer extends React.Component {
   _game = null;
   _scenes = {};
 
-  componentWillUnmount() {
+  componentWillUnmount = () => {
     if (this._game) {
       this._game.destroy(); // game.destroy(removeCanvas, noReturn);
       this._game = null;
-      global.log("ReactContainerPhaserGame:: componentDidUnmount:: ", this._game)
+      global.log("ReactContainerPhaserGame:: componentDidUnmount:: ", this._game);
     }
-  }
+  };
 
-  componentDidMount() {
+  componentDidMount = () => {
     const { size } = this.props;
+
     if (!this._game) {
       this.store = store; // mobx-store -> reachable in game -> this.game.react.store...
       this._game = new PhaserGame(this, size);
@@ -42,7 +43,8 @@ const GameContainer = observer( class GameContainer extends React.Component { //
     } else { // should not happend
       //global.log("+++", store.phaser.game)
     }
-  }
+  };
+
 
   initGameScenes = (game) => {
     global.log('ReactContainerPhaserGame:: initGameScenes:: ', game);
@@ -61,13 +63,21 @@ const GameContainer = observer( class GameContainer extends React.Component { //
     //game.scene.start("StressTest", /*data*/);
 
     //game.scene.bringToTop("Tilemap");
-  }
+  };
 
   initGameEvents = (game) => {
     global.log('ReactContainerPhaserGame:: initGameEvents', );
 
+	  window.addEventListener('resize', event => {
+	    this.onResize(event);
+	  })
+
     game.events.on('pause', () => { // Pause (window is invisible)
       global.log('ReactContainerPhaserGame:: Event:: pause ', );
+    });
+
+    game.events.on('resize', () => { // Resume (window is visible)
+      global.log('ReactContainerPhaserGame:: Event:: resize ', );
     });
 
     game.events.on('resume', () => { // Resume (window is visible)
@@ -85,49 +95,82 @@ const GameContainer = observer( class GameContainer extends React.Component { //
     game.events.on('visible', () => {
       global.log('ReactContainerPhaserGame:: Event:: visible ', );
     });
-  }
+  };
 
+
+  onResize = (event) => {
+  	const w = window.innerWidth
+    const h = window.innerHeight
+    global.log('ReactContainerPhaserGame:: Event:: resize ', event, w, h);
+  };
 
 
   click_clearAll = (e) => {
     store.phaser.clear();
-    global.log("ReactContainerPhaserGame:: store.phaser.clear:: ", store.phaser)
-  }
+    global.log("ReactContainerPhaserGame:: store.phaser.clear:: ", store.phaser);
+  };
 
   click_addLife = (e) => {
     //this.game && this.game.scene.keys.SceneMap.events.emit('addLife'); // eventhandler in scene "mainScene"
     store.phaser.lives++;
-    global.log("ReactContainerPhaserGame:: store.phaser.lives:: ", store.phaser.lives, store.phaser)
-  }
+    global.log("ReactContainerPhaserGame:: store.phaser.lives:: ", store.phaser.lives, store.phaser);
+  };
 
-  click_addLife2(e) {
+  click_addLife2 = (e) => {
     //this.game && this.game.scene.keys.SceneMap.events.emit('addLife'); // eventhandler in scene "mainScene"
     store.set("phaser.lives", store.phaser.lives + 1);
-  }
+  };
 
   render() {
     const {
       size,  // injected from sizeMe
       style, // destructured to dismiss
       gameVisible, // component is active
+
+      classes,  // withStyles(styles)
+      history,  // history: {length: 50, action: "POP", location: {…}, createHref: ƒ, push: ƒ, …} -> router-history::  history.push('/dashboard/users/1');
+      //location, // location: {pathname: "/login", search: "", hash: "", state: undefined, key: "whjdry"}
+      //match,    // match: {path: "/login", url: "/login", isExact: true, params: {…}}
       ...restProps // other props from RoutePhaserGame.js
     } = this.props;
     global.log("ReactContainerPhaserGame:: render:: size:: ", this, size.width, size.height, )
 
     const livesMobx = tryFallback(()=>store.phaser.lives, -1);
 
-
     return (
-      <div style={style} {...restProps}>
+      <React.Fragment>
+        <HeaderNavigationToolbar label="Phaser 3" hide={!store.system.app.header.visible}
+          onBackButtonClick={ () => { if (history.length > 1) history.goBack(); else history.push("/"); }}
+          //noRespawnButton={!store.system.app.game.visible}
+        />
+        
         <div id="phaserGameInjectID" style={{ height: "100%", }} />
-      </div>
+
+        <div id="reactOverlayScreen" style={{ position: "absolute", top: 0, left: 0, }}>
+        	Hallo
+        </div>
+      </React.Fragment>
     )
-  }
-});
+  };
+}));
+
 
 
 // messure dimensions and send to main-component
-const GameContainerWithSize = observer ( class /*GameContainerWithSize*/ extends React.Component {
+export default (props) => (
+	<SizeMe monitorHeight>
+    { ({ size }) => {
+      // 1. step: ignore the first one or two render-rounds (with size = 0)
+      // 2. step: render GameContainer (and create Phaser.Game) with final container-size
+      return (!size || !size.height || size.height <= 0)
+      ? (<div style={{ height: "100%", }} />)
+      : (<GameContainer size={size} {...props} />)
+    }}
+  </SizeMe>
+);	
+
+/*
+const GameContainerWithSize = observer ( class extends React.Component {
   render() {
     return (
       <SizeMe monitorHeight>
@@ -135,21 +178,22 @@ const GameContainerWithSize = observer ( class /*GameContainerWithSize*/ extends
           // 1. step: ignore the first one or two render-rounds (with size = 0)
           // 2. step: render GameContainer (and create Phaser.Game) with final container-size
           return (!size || !size.height || size.height <= 0)
-          ? (<div style={{height: "100%"}} />)
-          : (<GameContainer style={{height: "100%"}} size={size} {...this.props} />)
+          ? (<div style={{ height: "100%", }} />)
+          : (<GameContainer size={size} {...this.props} />)
         }}
       </SizeMe>
     );
   }
 });
+*/
 
-
+/*
 const styles = theme => ({
   root: {
   },
 });
 
-export default withRouter( withStyles(styles)( observer( class /*ReactContainerPhaserGame*/ extends React.Component {
+export default withRouter( withStyles(styles)( observer( class extends React.Component {
   state = {
   }
   render() {
@@ -172,11 +216,6 @@ export default withRouter( withStyles(styles)( observer( class /*ReactContainerP
         color: store.system.colors.auth.text,
         background: store.system.colors.auth.background,
       }}>
-        <HeaderNavigationToolbar label="Phaser 3" hide={!store.system.app.header.visible}
-          onBackButtonClick={ () => { if (history.length > 1) history.goBack(); else history.push("/"); }}
-          //noRespawnButton={!store.system.app.game.visible}
-        />
-        
         <GameContainerWithSize gameVisible={gameVisible} />
 
         <div id="reactOverlayScreen" style={{ position: "absolute", top: 0, left: 0, }}>
@@ -186,3 +225,4 @@ export default withRouter( withStyles(styles)( observer( class /*ReactContainerP
     );
   }
 })));
+*/

@@ -43,8 +43,10 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
     // set defaults
     this.timers = [];
     this.timerTicker = 0;
-    this.children = []; //  new List(); // This List contains all of the Bob objects created by the Blitter.
+
+    this.children = []; // new Phaser.Structs.List(); 
     this.cullList = [];
+
     this.animList = [];
     this.animSyncToFrames = 0;
     this.animLastTime = 0;
@@ -74,16 +76,16 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
     this.initDone = true;
   }
 
-  preDestroy = () => {
+  preDestroy = () => { // override blitter.predestroy because this.children.destory() is a fkn joke in terms of speed. every single item is removed one by one. lol for 1 mio or more items (tiles).
     this.removeTimer();
-    this.anims.destroy();
     this.anims = undefined;
 
-    this.children = [];
     this.animList = [];
     this.cullList = [];
+    
+    //super.preDestroy(); // 
+	  this.children = [];
     this.renderList = [];
-    super.preDestroy();
   }
 
   ///////////////////////////////////////////////////////////

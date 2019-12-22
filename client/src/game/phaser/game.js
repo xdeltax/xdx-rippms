@@ -42,8 +42,8 @@ let phaserConfig = {
   scale: {
     mode: Phaser.Scale.RESIZE, //Phaser.Scale.FIT, // ENVELOP, // FIT, //HEIGHT_CONTROLS_WIDTH ,// https://photonstorm.github.io/phaser3-docs/Phaser.Scale.ScaleModes.html
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    //width: "100%",
-    //height: "100%",
+    width: 50,
+    height: 50,
   },
   /*
   physics: {

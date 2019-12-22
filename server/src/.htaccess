@@ -6,12 +6,6 @@ RewriteCond %{ENV:HTTPS} !=on
 RewriteRule .* https://%{SERVER_NAME}%{REQUEST_URI} [R=301,L]
 
 
-# rewrite to domain name and add www
-#RewriteEngine On
-#RewriteCond %{HTTP_HOST} !=www.xdeltax.com
-#RewriteRule (.*) http://www.xdeltax.com/$1 [R=301,L]
-
-
 # rewrite url routes
 # RewriteEngine On
 # rewrite in subdirectories

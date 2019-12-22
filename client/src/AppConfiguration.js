@@ -8,6 +8,7 @@ import { configure, /*toJS*/ } from 'mobx';
 ////////////////////////////////////////////////////////////////////////////////
 // global helpers
 // set new globals -> accessible in whole project without require
+global.launchTime   = new Date();
 global.now          = () => new Date(); // Thu Oct 31 2019 10:45:09 GMT+0100
 global.nowTimePretty= () => global.now().toLocaleTimeString(); // 10:47:05
 global.nowDatePretty= () => global.now().toLocaleDateString(); // 31.10.2019
@@ -20,22 +21,14 @@ global.consoleLog   = require('tools/debug/consoleLog');
 global.consoleWarn  = require('tools/debug/consoleWarn');
 global.consoleInfo  = require('tools/debug/consoleInfo');
 global.consoleError = require('tools/debug/consoleError');
-global.log   = ( ...restArgs ) => { global.consoleLog  (global.nowTimePretty(), restArgs); };
-global.debug = ( ...restArgs ) => { global.consoleLog  (global.nowTimePretty(), restArgs); };
-global.warn  = ( ...restArgs ) => { global.consoleWarn (global.nowTimePretty(), restArgs); };
-global.info  = ( ...restArgs ) => { global.consoleInfo (global.nowTimePretty(), restArgs); };
-global.error = ( ...restArgs ) => { global.consoleError(global.nowTimePretty(), restArgs); };
 
-////////////////////////////////////////////////////////////////////////////////
-// global.app-config
-//
-global.APPCONFIG_HANDSHAKEPROTOCOLVERSION = 10000; // v1.00.00
+global.debugTime = () => `${global.nowTimePretty()} (${global.now()-global.launchTime} ms)`;
+global.log   = ( ...restArgs ) => { global.consoleLog  (global.debugTime(), restArgs); };
+global.debug = ( ...restArgs ) => { global.consoleLog  (global.debugTime(), restArgs); };
+global.warn  = ( ...restArgs ) => { global.consoleWarn (global.debugTime(), restArgs); };
+global.info  = ( ...restArgs ) => { global.consoleInfo (global.debugTime(), restArgs); };
+global.error = ( ...restArgs ) => { global.consoleError(global.debugTime(), restArgs); };
 
-global.APPCONFIG_FACEBOOK_API_VERSION = "v3.1";
-global.APPCONFIG_FACEBOOK_APPID = process.env.REACT_APP_FB_APPID;
-
-////////////////////////////////////////////////////////////////////////////////
-// global debug-vars
 
 //if (process.env.NODE_ENV === "development") 
 {
@@ -48,7 +41,7 @@ global.APPCONFIG_FACEBOOK_APPID = process.env.REACT_APP_FB_APPID;
   global.DEBUG_DISABLE_PERSISTENSAVEONCLOSEAPP = false; // persistent:: saveToPersistentDatabase()
   global.DEBUG_DISABLE_PERSISTENLOADONOPENAPP = false; // persistent:: loadFromPersistentDatabase()
 
-  global.DEBUG_DISABLE_SOCKETCONNECT = true; // store.init() -> this.socketio.connect()
+  global.DEBUG_DISABLE_SOCKETCONNECT = false; // store.init() -> this.socketio.connect()
   //global.DEBUG_AUTH_FAKE_SERVERRESPONSE = false; // store.user.loginWithFacebook(fakeUser, fakeProfile)
   //DEBUG_DISABLE_REQUIREFACEBOOKTOLOGIN = false;
   //DEBUG_DISABLE_REQUIRESERVERTOKEN = false; // used in routes/socketio

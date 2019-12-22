@@ -126,11 +126,18 @@ pixi.js
 fonts
   npm i -s typeface-roboto typeface-indie-flower typeface-rock-salt
 
+fingerprint
+	npm i -s fingerprintjs2
+
 socket.io
   npm i -s socket.io-client
 
 database
   npm i -s nedb
+
+portals
+	npm i -s react-new-window
+	//npm i -s react-portal
 
 motion
   npm i -s react-swipeable-views
@@ -168,8 +175,16 @@ node.js
 express.js
   npm i -s express body-parser cors helmet morgan
 
+session
+	npm i -s express-session
+
 socket.io
   npm i -s socket.io
+
+auth
+	npm i -s passport
+	npm i -s passport-facebook
+	npm i -s passport-google-oauth20
 
 facebook
   npm i -s fbgraph

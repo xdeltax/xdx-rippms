@@ -1,2 +1,1 @@
-set NODE_PATH=
-npm run build
+set NODE_PATH=&&set HTTPS=false&&npm run build

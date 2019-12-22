@@ -8,21 +8,20 @@ import PixiStore from 'store/pixi';
 
 import SystemStore from 'store/system';
 import SocketIOStore from 'store/socketio';
-import FacebookStore from 'store/facebook';
 
 import sleep from "tools/debug/sleeper";
 
 class Store extends ProtoStore {
 	#__privateObervablesInit;
-  	#__privateHelpersInit;
+  #__privateHelpersInit;
 	#__initDone = false;
 
 	// this.init(); -> store.init() needs to be called in constructor of App.js
 	constructor() { super(); this.#__initDone = false; /*store init-state of all vars*/ this.#__privateObervablesInit = deepCopy(this._obervables); this.#__privateHelpersInit = deepCopy(this._helpers); };
 	reset     = action(() 	=> { /*recover init-state*/ this.obervables = deepCopy(this.#__privateObervablesInit); this.helpers = deepCopy(this.#__privateHelpersInit); this.constants = deepCopy(this.#__privateHelpersInit); });
-	clear 	= action(() 	=> this.clear_all() );
+	clear 		= action(() 	=> this.clear_all() );
 	clear_all = action(() 	=> Object.keys(this.obervables).forEach( (prop) => this.obervables[prop] = deepCopy(this.#__privateObervablesInit[prop]) ) );
-	clear_obj = action((obj) 	=> this[obj] = deepCopy(this.#__privateObervablesInit[obj]) );
+	clear_obj = action((obj)=> this[obj] = deepCopy(this.#__privateObervablesInit[obj]) );
 
 	// init of all observables
 	_obervables = {
@@ -33,7 +32,6 @@ class Store extends ProtoStore {
 		pixi: null,
 
 		socketio: null,
-		facebook: null,
 	};
 
 	_helpers = {
@@ -47,7 +45,7 @@ class Store extends ProtoStore {
 	_constants = {
 	}
 
-	init = action(() => {
+	init = action(() => new Promise(resolve => {
 		if (this.#__initDone) return;
 		this.reset();
 
@@ -57,18 +55,12 @@ class Store extends ProtoStore {
 		this._obervables.user = new UserStore();
 		this._obervables.phaser = new PhaserStore();
 		this._obervables.pixi = new PixiStore();
-
-		this._obervables.socketio = new SocketIOStore();
-		this._obervables.facebook = new FacebookStore();
-
-		// connect socket at app-start
-	    if (!global.DEBUG_DISABLE_SOCKETCONNECT) {
-			global.log("store:: init:: connect socket. ", global);
-			this.socketio.connect();
-		}
+		
+		this.socketio = new SocketIOStore();
 
 		this.#__initDone = true;
-	})
+		resolve();
+	}));
 
 	// helpers
 	sleep = async (v) => await sleep(v || 1000);
@@ -137,13 +129,11 @@ class Store extends ProtoStore {
 	get socketio() { return this._obervables.socketio }
 	set socketio(o) { runInAction(() => { this._obervables.socketio = o; }) }
 
-	get facebook() { return this._obervables.facebook }
-	set facebook(o) { runInAction(() => { this._obervables.facebook = o; }) }
 };
 
 decorate(Store, {
 	_obervables: observable,
-  	_helpers: observable,
+  _helpers: observable,
 });
 
 export default new Store();

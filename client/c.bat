@@ -1,2 +1,1 @@
-set NODE_PATH=
-set HTTPS=false&&npm run start
+set NODE_PATH=&&set HTTPS=false&&npm run start

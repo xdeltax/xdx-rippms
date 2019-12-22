@@ -6,6 +6,7 @@ import { withStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
 
+import OAuth from './OAuth'
 //import tryFallback from "tools/tryFallback";
 
 import store from 'store';
@@ -14,7 +15,8 @@ import AllInclusiveICON from '@material-ui/icons/AllInclusive';
 
 // assets
 import AppLogo from 'assets/applogo.svg';
-import FacebookLogo from 'assets/facebook2.png';
+import FacebookLogo from 'assets/Facebook_Logo_(2019)_144x144.png';
+import GoogleLogo from 'assets/Google_Logo_512x512.svg';
 
 const styles = theme => ({
   root: {
@@ -39,16 +41,6 @@ const styles = theme => ({
 
 export default ( withStyles(styles)( observer( class extends React.Component {
   state = {  }
-  constructor(props) {
-    super(props);
-    // init facebook before first use of API. it is not allowed to init it async -> do it in constructor and not on button-click
-    // attn.: if you forgot to setup REACT_APP_FB_APPID in .env the facebookAPI will fail silent but you get messages like: "FB.login() called before FB.init()""
-    const initFBAPI = async () => {
-      const result = await store.facebook.initFBAPI();
-      global.log("RouteLogin:: constructor:: initFBAPI:: result:: ", result);
-    }
-    try { if (!store.facebook.isReady) initFBAPI().catch( (error) => {}) } catch (error) { }
-  }
 
   render() {
     global.log("RouteLogin:: render:: ", this.props);
@@ -58,6 +50,11 @@ export default ( withStyles(styles)( observer( class extends React.Component {
       //location, // location: {pathname: "/login", search: "", hash: "", state: undefined, key: "whjdry"}
       //match,    // match: {path: "/login", url: "/login", isExact: true, params: {…}}
     } = this.props;
+
+    const onAuthSuccess = (socketid, provider, userdata) => {
+    	global.log("OAuth:: Callback:: ", socketid, provider, userdata);
+    	//store.user.loginWithProvider
+    }
 
     return (
       <div className={classes.root} style={{
@@ -75,31 +72,19 @@ export default ( withStyles(styles)( observer( class extends React.Component {
 
         <div>
           <Button className={classes.button} variant="outlined" color="primary" onClick={ async (event) => {
-            this.login();
-          }}>
-            <img width="25px" height="25px" src={FacebookLogo} alt="" style={{marginRight: 15,}} />LOGIN WITH FACEBOOK
-          </Button>
-        </div>
-
-        <div>
-          <Button className={classes.button} variant="outlined" color="primary" onClick={ async (event) => {
-            this.login({userid:"01fake"}, {});
-          }} >
-            FAKE-LOGIN 1
-          </Button>
-
-          <Button className={classes.button} variant="outlined" color="primary" onClick={ async (event) => {
-            this.login({userid:"01fake", servertoken:"01fake"}, {});
-          }}>
-            FAKE-LOGIN 2
-          </Button>
-
-          <Button className={classes.button} variant="outlined" color="primary" onClick={ async (event) => {
             this.login({userid:"01fake", servertoken:"01fake"}, {email:"fake@fake.com", phonenumber:"00417998765"});
           }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
             FAKE-LOGIN (no FB / no Server)
           </Button>
         </div>
+
+
+        <div>
+					<OAuth onAuthSuccess={this.onAuthSuccess} buttonText="bind with" provider="facebook" providerLogo={FacebookLogo} server={global.serverURL} socket={store.socketio.socket} />
+					<OAuth onAuthSuccess={this.onAuthSuccess} buttonText="bind with" provider="google" providerLogo={GoogleLogo} server={global.serverURL} socket={store.socketio.socket} />
+					<OAuth onAuthSuccess={this.onAuthSuccess} buttonText="" provider="test" server={global.serverURL} socket={store.socketio.socket} />
+				</div>
+
 
         <div>
           <Button className={classes.button} style={{width:150,height:150}} variant="contained" color="primary" onClick={ async (event) => {
@@ -110,7 +95,7 @@ export default ( withStyles(styles)( observer( class extends React.Component {
             <Typography className={classes.fontIndieItalic} align="center" noWrap style={{fontSize: 32, }}>PIXI v5</Typography>
           </Button>
 
-          <Button className={classes.button} style={{width:150,height:150}} variant="contained" color="primary" onClick={ async (event) => {
+          <Button className={classes.button} style={{width:150, height:150}} variant="contained" color="primary" onClick={ async (event) => {
             // phase explampe will render phaser-container hidden at app start and pause the game until this "route" is called
             // no rendering of a container(-route) here because container is already rendered in AppRouter on app-start
             // but hidden to keep the game-assets and running or paused in background. otherwise it would be destroyed and re-init on gui-change
@@ -125,21 +110,21 @@ export default ( withStyles(styles)( observer( class extends React.Component {
   } // of render
 
 
-  login = async (fakeUser, fakeProfile) => {
+  loginWithProvider = async (provider) => {
     const { history, } = this.props;
     try {
       // attn.: if you forgot to setup REACT_APP_FB_APPID in .env the facebookAPI will fail silent but you get messages like: "FB.login() called before FB.init()""
-      const res = await store.user.loginWithFacebook(fakeUser, fakeProfile);
-      global.log("RouteLogin:: login:: result:: ", res)
+      const res = await store.user.apiCALL_loginWithProvider(provider);
+      global.log("RouteLogin:: loginWithProvider:: result:: ", res)
     } catch (error) {
-      global.log("RouteLogin:: login:: ERROR:: ", error.message);
+      global.log("RouteLogin:: loginWithProvider:: ERROR:: ", error);
 
       //todo: show error-modal
-
     } finally {
       // redirect router to "/" -> from there router will check if valid user and forward to login-route (again) or home-route
       history && history.push('/');
     }
   }
 
+ 
 }))); // of class

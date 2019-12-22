@@ -26,7 +26,6 @@ import RouteLogin from "ui/routes/login/RouteLogin";
 import RouteRegister from "ui/routes/login/RouteRegister";
 
 import RoutePixiGame from "ui/routes/game/RoutePixiGame";
-import RoutePhaserGame from "ui/routes/game/RoutePhaserGame";
 
 // protected routes -> access needs authentication
 import AuthRouteLogout from "ui/routes/auth/RouteLogout";
@@ -66,6 +65,7 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
   constructor(props) {
     super(props);
 
+    // REDIRECT TO startRoute (if present)
     props.startRoute && props.history && (props.history.location.pathname !== props.startRoute) && props.history.push(props.startRoute);
   }
 
@@ -103,7 +103,7 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
     //const pixiGameVisible = Boolean(location.pathname === "/game/pixi") /*store.system.app.game.visible*/
 
     return (
-      <>
+      <React.Fragment>
         <div id="routecontainer" className={classes.root} style={{
           position: "relative",
           height: "100%",
@@ -113,16 +113,15 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
           background: store.system.colors.app.background,
         }}>
           <ScrollToTop />
+
           <Switch>
-            <Route exact path="/"             render={ (routeProps) =>
-              store.user.isAuthenticated ? <Redirect to="/auth/home" /> : <Redirect to="/login" />
-            } />
+            <Route exact path="/"             render={ (routeProps) => store.user.isAuthenticated ? <Redirect to="/auth/home" /> : <Redirect to="/login" /> } />
 
             <Route exact path="/login"        render={ (routeProps) => !store.user.isValidUser ? (<RouteLogin {...routeProps } />) : !store.user.isValidUserProfile ? <Redirect to="/register" /> : <Redirect to="/auth/home" /> } />
             <Route exact path="/register"     render={ (routeProps) => !store.user.isValidUser ? (<Redirect to="/login" />) : store.user.isValidUserProfile ? (<Redirect to="/" />) : (<RouteRegister {...routeProps } />) } />
             <Route exact path="/logout"       render={ (routeProps) => (<AuthRouteLogout {...routeProps } />) } />
             <Route exact path="/game/pixi"    render={ (routeProps) => (<RoutePixiGame {...routeProps } />) } />
-            <Route exact path="/game/phaser"  render={ (routeProps) => (<RoutePhaserGame {...routeProps } />)} />
+            <Route exact path="/game/phaser"  render={ (routeProps) => (null/*<RoutePhaserGame {...routeProps } />*/)} />
 
             <Route exact path="/auth/home"    render={ (routeProps) => store.user.isAuthenticated ? <AuthRouteHome {...routeProps } /> : <Redirect to="/login" /> } />
             <Route exact path="/auth/account" render={ (routeProps) => store.user.isAuthenticated ? <AuthRouteAccount {...routeProps } /> : <Redirect to="/login" /> } />
@@ -138,22 +137,15 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
           open={phaserGameVisible} disableEscapeKeyDown={true} disablePortal={true} disableScrollLock={true} hideBackdrop={true}
           style={{ outline: 0, border: 0, backgroundColor: "transparent", }}
         >
-          <Fade timeout={2500} mountOnEnter exit={true} in={phaserGameVisible} direction={phaserGameVisible ? "up" : "right"} >
-            <div style={{ height:"100%", width: "100%", }} >
-              <ReactContainerPhaserGame gameVisible={phaserGameVisible} style={{ backgroundColor: "transparent", padding:0, margin:0, }} />
-              {/* PHASER-GAME::
-                  we need to create / render the game container here (at "root"-level of the app).
-                  -> init the game here -> otherwise component will restart (and reload all assets) on every UI-change
-                  -> "mountOnEnter={true}" -> phaser init-sequence start at first show of component (not at app-start)
-                  -> "mountOnEnter={false}" -> phaser init-sequence start at app-start
-               */
-              }
+          <Fade timeout={0} mountOnEnter exit={true} in={phaserGameVisible} direction={phaserGameVisible ? "up" : "right"} >
+					 <React.Fragment>
+              <ReactContainerPhaserGame gameVisible={phaserGameVisible} style={{ backgroundColor: "transparent", padding:0, margin:0, height:"100%", }} />
               {!store.system.app.header.visible && <RenderAGetMyHiddenToolbarBackArrowDownIconButton />}
               {store.user.isAuthenticated && <BottomNavigation hide={!store.system.app.bottomNavigation.visible} /> }
-            </div>
+ 						</React.Fragment>
           </Fade>
         </Modal>
-      </>
+      </React.Fragment>
     ); // of return
   }; // of render
 }))); // of class
@@ -162,4 +154,6 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
 <Route path="/:tab(sessions)" component={RouteLogin} exact={true} />
 <Route path="/:tab(sessions)/:id" component={RouteLogin} />
 <Route path="/:tab(speakers)" component={RouteRegister} exact={true} />
+<Route path='/facebook' component={() => { window.location.href = `${global.serverURL}/facebook.io?socketid=${store.socketio.socket.id}`; return null; }}/>
+
 */

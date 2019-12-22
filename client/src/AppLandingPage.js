@@ -22,8 +22,6 @@ import AppLoadingScreen from "./AppLoadingScreen";
 
 import store from 'store'; // mobx-store
 
-require("./AppConfiguration");
-
 const AppRouter = React.lazy(() => import('ui/AppRouter'));
 
 export default ( observer( class extends React.Component {
@@ -38,10 +36,6 @@ export default ( observer( class extends React.Component {
 
     global.log("AppLandingPage:: constructor:: ", global.nowDatePretty(), global.nowTimePretty(), )
 
-    // init mobx-store
-    store.init();
-    global.log("AppLandingPage:: constructor:: init store.", store);
-
     store.showSpinner("loading");
 
     // some noob checks
@@ -49,8 +43,6 @@ export default ( observer( class extends React.Component {
     global.info(`INFO:: process.env.REACT_APP_SERVERURL is set to "${process.env.REACT_APP_SERVERURL}".`,); // for socket.io
     // attn: socket.io:: .env-file needs url to nodejs-server for socket-connection
     if (!process.env.REACT_APP_SERVERURL ) global.warn(`ATTN:: process.env.REACT_APP_SERVERURL no found! set it in .env`);
-    // attn.: facebookAPI:: if you forgot to setup REACT_APP_FB_APPID in .env the facebookAPI will fail silent but you get messages like: "FB.login() called before FB.init()""
-    if (!process.env.REACT_APP_FB_APPID  ) global.warn(`ATTN:: process.env.REACT_APP_FB_APPID no found! set it in .env`);
 
     if (!process.env.REACT_APP_APPVERSION) global.warn(`ATTN:: process.env.REACT_APP_APPVERSION no found! set it in .env`);
   }
@@ -184,7 +176,7 @@ export default ( observer( class extends React.Component {
             title={[
               "DEBUG", ` v01 ${process.env.REACT_APP_APPVERSION} ${Math.floor(99*Math.random())}`,
               " s:", `${store.socketio.isConnected?1:0}`,
-              " c:", `${store.loadingNowStatus?1:0}`,
+              " l:", `${store.loadingNowStatus?1:0}`,
 
               " c:", `${store.system.app.watchers.connection.isOnline?1:0}`,
 
@@ -200,8 +192,10 @@ export default ( observer( class extends React.Component {
             ]}
             titleColors={["white", "cyan", "yellow", "cyan", ]}
             data={{
+            	debugTime: global.debugTime(),
             	appVersion: process.env.REACT_APP_APPVERSION,
-              l: store.loadingNowStatus,
+            	fingerprint: global.fingerprint.hash,
+              loadingNowStatus: store.loadingNowStatus,
               isConnected: Boolean(store.socketio.isConnected),
               isAuthenticated: this.isAuthenticated,
               isValidUser: this.isValidUser,
@@ -211,7 +205,6 @@ export default ( observer( class extends React.Component {
               storeUser: store.user.get_all(),
               storePhaser: store.phaser.get_all(),
               storePixi: store.pixi.get_all(),
-              storeFacebook: store.facebook.get_all(),
               //storeSocketIO: store.socketio.get_all(),
               storeSystem: store.system.get_all(),
             }}

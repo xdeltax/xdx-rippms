@@ -1,6 +1,6 @@
 set NODE_PATH=
 cd ..
 cd client
-build.bat
+buildhttps.bat
 cd ..
 cd server

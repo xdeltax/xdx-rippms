@@ -30,11 +30,6 @@ class Store extends ProtoStore {
       accountstatus: [],
       memberstatus: [],
     },
-    facebook: {
-      fbuserid: null,
-      fbemail: null,
-      fbME: null,
-    },
     userCard: {
       gender: null,
       email: null,
@@ -93,28 +88,9 @@ class Store extends ProtoStore {
       set phonenumber(v) { runInAction(() => { this.userCard.phonenumber = v; }) }
 
 
-  // facebook
-  get facebook() { return this.obervables.facebook; }
-  set facebook(o) { runInAction(() => { this.obervables.facebook = o; }) }
-
-      get fbuserid() { return this.facebook.fbuserid; }
-      set fbuserid(v) { runInAction(() => { this.facebook.fbuserid = v; }) }
-
-      get fbemail() { return this.facebook.fbemail; }
-      set fbemail(v) { runInAction(() => { this.facebook.fbemail = v; }) }
-
-      get fbME() { return this.facebook.fbME; }
-      set fbME(v) { runInAction(() => { this.facebook.fbME = v; }) }
-
-
-
-
-
   // public
-  logout = async (forceFB) => {
+  logout = async (forceProviderLogout) => {
     try {
-      if (forceFB) store.facebook.askFacebook2Logout();
-
       // send logout signal to server
       if (this.userid && this.servertoken)
       try {
@@ -134,7 +110,7 @@ class Store extends ProtoStore {
   }
 
 
-  loginWithFacebook = async (fakeUser, fakeUserProfile) => { // "user click" must not be "async" otherwise login-popup from facebook will be blocked in browser
+  __loginWithProvider = async (fakeUser, fakeUserProfile) => { // "user click" must not be "async" otherwise login-popup from facebook will be blocked in browser
     try {
       //store.globalSpinner.show();
       if (global.DEBUG_AUTH_ALLOW_FAKE_IDS) {
@@ -301,7 +277,7 @@ class Store extends ProtoStore {
   }
 
 
-  apiCALL_DBUsers_loginWithFacebook = async (fbUserID, fbAccessToken,) => {
+  __apiCALL_DBUsers_loginWithFacebook = async (fbUserID, fbAccessToken,) => {
     const socketCall = `/api2/token/get`;
     try {
       if (!fbUserID || !fbAccessToken)
@@ -335,6 +311,34 @@ class Store extends ProtoStore {
 
   apiCALL_DBUsers_saveUserToServerDatabase = async (targetuserid, userid, servertoken,) => {
 
+  }
+
+
+
+
+  apiCALL_loginWithProvider = async (provider,) => {
+    const socketCall = `/api3/login/provider/${provider}`;
+    try {
+      if (!provider)
+      throw new Error("invalid provider");
+
+      const headers = { //Accept: "application/json", 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*',
+        // NEED to be all LOWERCASE
+        'logintype': `${provider}`,
+        'authorization': '',
+      };
+      const params = {
+      };
+      const body = {
+      };
+      const userObject = await store.socketio.emitWithTimeoutAndConvertStatusToError(socketCall, { headers: headers || {}, body: body || {}, params: params || {}, }, 5000);
+
+      global.log(`store:: user:: apiCALL_loginWithProvider:: ${socketCall}:: userObject:: `, userObject);
+      return userObject;
+    } catch(error) {
+      global.log(`store:: user:: apiCALL_loginWithProvider:: ${socketCall}:: ERROR:: `, error);
+      throw error;
+    }
   }
 
 

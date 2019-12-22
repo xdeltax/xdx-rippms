@@ -8,8 +8,8 @@ class SocketIO {
   _socket = null;
   _isConnected = false;
 
-  constructor(fbToken) {
-    global.log("store:: socket:: constructor:: ", );
+  constructor() {
+    //global.log("store:: socket:: constructor:: ", );
     this.clear();
   }
 
@@ -26,26 +26,40 @@ class SocketIO {
     this.socket = null;
   });
 
-  connect = action(() => {
-    global.log("store:: socket:: connect:: creating connection.", );
 
-    // url for connection to server
-    const server_url = process.env.REACT_APP_SERVERURL;
+  connect = action((server_url, handshake_version) => {
+
+    if (!server_url) { 
+	    global.log("store:: socket:: connect:: abort:: server_url missing:: ", server_url);
+    	return;  // url for connection to server
+  	}	
+    if (!handshake_version) handshake_version = 10000; // internal version of socket-api of app (if client has older than required by server -> reject)
+
     // send "version" to check on serverside app-version for connection
-    const manager_options = { query: { version: process.env.REACT_APP_HANDSHAKEVERSION || 10000, } }
+    const manager_options = { query: { version: handshake_version, } }
+
+    global.log("store:: socket:: connect:: creating connection:: ", server_url);
     // connect
     this.socket = io(server_url, manager_options);
+
     // events
     this.initEvents();
   });
+
 
   disconnect = () => {
     if (this.socket) this.socket.disconnect();
   }
 
+
   clearSendBuffer = () => { // clear emit-buffer (after a offline-phase)
     if (this.socket) this.socket.sendBuffer = [];
   }
+
+  		onSocketConnect
+  		onSocketDisconnect
+      onSocketError
+      onSocketPong
 
   // events
   initEvents = action(() => {
@@ -55,6 +69,8 @@ class SocketIO {
       global.log("store:: socket:: event:: connect:: ", this.socket.id, this.socket.connected, );
       this.isConnected = this.socket.connected;
 
+      this.onSocketConnect && this.onSocketConnect(this.socket, this.isConnected);
+
       this.clearSendBuffer(); // clear previously buffered data when reconnecting
     });
 
@@ -62,9 +78,9 @@ class SocketIO {
       global.log("store:: socket:: event:: disconnect:: ", this.socket.id, this.socket.connected, );
       this.isConnected = this.socket.connected;
 
+      this.onSocketDisconnect && this.onSocketDisconnect(this.socket, this.isConnected);
       //this.socket.connect(); // force manually reconnect
     });
-
 
     this.socket.on('reconnect_attempt', () => {
       global.log("store:: socket:: event:: reconnect_attempt:: ", this.socket.id, this.socket.connected, );
@@ -108,6 +124,7 @@ class SocketIO {
     this.socket.on("error", (error) => { // triggered from next(new Error(xxx)) in socket.use-middleware of node
       global.log("store:: socket:: event:: error:: ERROR:: ", error, this.socket.id, this.socket.connected, );
 
+      this.onSocketError && this.onSocketError(this.socket, error);
     });
 
     /*
@@ -119,6 +136,7 @@ class SocketIO {
     this.socket.on("pong", (ms) => { // responsetime
       global.log("store:: socket:: event:: pong:: ", ms, this.socket.id, this.socket.connected, );
 
+      this.onSocketPong && this.onSocketPong(this.socket, ms);
     });
   });
 
@@ -150,7 +168,9 @@ class SocketIO {
     }); // of promise
   }
 
+
 } // of class
+
 
 decorate(SocketIO, {
   _socket: observable,
