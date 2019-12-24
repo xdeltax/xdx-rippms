@@ -99,16 +99,19 @@ class Store extends ProtoStore {
 
   doAuthLogin = async (userdataFromServer) => {
   	const {userid, servertoken, accountstatus, memberstatus, createdAt, updatedAt} = userdataFromServer || {};
+		global.log("USER:: doAuthLogin:: START:: ", userid,)
   	
   	if (userid !== this.userid) {
+  		global.log("USER:: doAuthLogin:: logout:: ", userid, this.userid)
 	  	await this.doAuthLogout();
   	};
 
   	if (userid && servertoken) {
+			global.log("USER:: doAuthLogin:: SET:: ", userid,)
 	  	this.userid 			= userid;
 	  	this.servertoken  = servertoken;
-	  	this.memberstatus = [...memberstatus];
-	  	this.accountstatus= [...accountstatus];
+	  	this.memberstatus = Array.from(memberstatus); // [...memberstatus]; // shallow copy only
+	  	this.accountstatus= Array.from(accountstatus); // [...accountstatus]; // shallow copy only
 	  	this.createdAt  	= createdAt;
 	  	this.updatedAt  	= updatedAt;
   	}

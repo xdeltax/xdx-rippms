@@ -2,6 +2,9 @@ import {decorate, action, runInAction, observable, toJS, } from 'mobx';
 import deepCopy from 'tools/deepCopyObject';
 import deepMerge from 'tools/deepMergeObject';
 
+const deepCopyArrayOrObject = (a) => JSON.parse(JSON.stringify(a));
+const shallowCopyArray = (a) => Array.from(a);
+
 class Store {
 	_obervables = { }
 	_helpers = { }

@@ -66,6 +66,7 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
     super(props);
 
     // REDIRECT TO startRoute (if present)
+    props.startRoute && global.log("AppRouter:: constructor:: STARTROUTE:: ", props.startRoute, );
     props.startRoute && props.history && (props.history.location.pathname !== props.startRoute) && props.history.push(props.startRoute);
   }
 
@@ -79,7 +80,6 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
   }
 
   render() {
-    global.log("AppRouter:: render:: ", this.props, store.user.isAuthenticated, store.user.isValidUser, store.user.isValidUserProfile, )
     const {
       classes,  // withStyles(styles)
       //history, // withRouter()
@@ -101,6 +101,9 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
 
     const phaserGameVisible = Boolean(location.pathname === "/game/phaser") /*store.system.app.game.visible*/
     //const pixiGameVisible = Boolean(location.pathname === "/game/pixi") /*store.system.app.game.visible*/
+
+    //global.log("AppRouter:: render:: ", this.props, store.user.isAuthenticated, store.user.isValidUser, store.user.isValidUserProfile, )
+    global.log("AppRouter:: render:: location.pathname:: ", location.pathname, );
 
     return (
       <React.Fragment>

@@ -54,7 +54,7 @@ module.exports = class DBUsers {
   ///////////////////////////////////////////////////////////////////////////////////////////////////////
   static async load() { // static method (not affected by instance) -> called with classname: DBGeoData.load
     try {
-			fse.ensureDir(this.databasePath(), { });
+			fse.ensureDir(this.databasePath(), { mode: 0o0700, });
       this.db = Datastore.create(this.databasePath() + this.collectionName() + ".db");
 
       await this.db.ensureIndex({ fieldName: 'userid', }); // index for quick searching the userid

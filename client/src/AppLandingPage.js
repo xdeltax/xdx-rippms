@@ -77,22 +77,32 @@ export default ( observer( class extends React.Component {
   } // of componentDidMount
 
   onAppLoadEvent = async () => {
-    global.log("AppLandingPage:: onAppLoadEvent:: load app-state from persistent", );
-
+	  // ===============================================
+	  // load store-data from client-storage
+	  // ===============================================
     this.setState({ statusText: "load persistent app-states" })
+    global.log("AppLandingPage:: onAppLoadEvent:: load app-state from persistent", );
     await loadFromPersistentDatabase(); // save is on onUnloadEvent
 
-    global.log("AppLandingPage:: onAppLoadEvent:: load user-data from server", );
-
+	  // ===============================================
+	  // load store-data from server-database
+	  // ===============================================
     this.setState({ statusText: "load persistent app-states" })
+    global.log("AppLandingPage:: onAppLoadEvent:: load user-data from server", );
     await store.user.apiCALL_DBUsers_loadUserFromServerDatabase(store.user.userid, store.user.userid, store.user.servertoken);
   }
 
 
   onAppUnloadEvent = async (event) => {
+	  // ===============================================
+	  // save store-data to client-storage
+	  // ===============================================
     global.log("AppLandingPage:: onAppUnloadEvent:: saveToPersistentDatabase", )
     saveToPersistentDatabase();
 
+	  // ===============================================
+	  // save store-data to server-database
+	  // ===============================================
     global.log("AppLandingPage:: onAppUnloadEvent:: saveUserToServerDatabase", store.user.userid)
     await store.user.apiCALL_DBUsers_saveUserToServerDatabase(store.user.userid, store.user.userid, store.user.servertoken);
 

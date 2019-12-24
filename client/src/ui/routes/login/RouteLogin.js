@@ -47,10 +47,6 @@ export default ( withStyles(styles)( observer( class extends React.Component {
   	global.log("OAuth:: Success:: Callback:: ", socketid, provider, userdataFromServer);
 
   	await store.user.doAuthLogin(userdataFromServer);
-
-    // redirect router to "/" -> from there router will check if valid user and forward to login-route (again) or home-route
-    //const { history, } = this.props;
-    //history && history.push('/');
   }
 
   onAuthFailed = (socketid, provider, error) => {
@@ -105,6 +101,16 @@ export default ( withStyles(styles)( observer( class extends React.Component {
             <Typography className={classes.fontIndieItalic} align="center" noWrap style={{fontSize: 32, }}>phaser</Typography>
           </Button>
         </div>
+
+
+        <div>
+          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
+          	store.user.userid = "TEST";
+          	store.user.servertoken = "TEST"
+          }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
+          	TESTUSER
+          </Button>
+	      </div>
 
       </div>
     ) // of return
