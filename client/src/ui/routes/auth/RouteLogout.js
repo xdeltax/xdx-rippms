@@ -23,7 +23,7 @@ export default ( observer( class extends React.Component {
   logout = async () => {
     const { history, } = this.props;
     try {
-      const res = await store.user.logout();
+      const res = await store.user.doAuthLogout();
       global.log("RouteLogout:: logout:: result:: ", res)
     } catch (error) {
       global.log("RouteLogout:: logout:: ERROR:: ", error)

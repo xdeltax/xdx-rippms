@@ -1,10 +1,10 @@
 "use strict";
 var jwt = require('jsonwebtoken');
 
-module.exports.sign = (userid, fbid, hash) => {
+module.exports.sign = (userid, provider, providerid, hash) => {
   const jwtPayload = {
     usid: userid,
-    fbid: fbid,
+    pid: providerid,
     hash: hash,
   }; // exp: Math.floor(Date.now() / 1000) + jwtExpiration,
   const jwtSecret = process.env.JWT_SECRET_PASSWORD;
@@ -14,7 +14,7 @@ module.exports.sign = (userid, fbid, hash) => {
     expiresIn: jwtExpiration, // -> exp: 155148373      60*60, "1h", "7d",
     issuer: 'xdx',            // -> iss: "xdx"
     audience: 'member',       // -> aud: "testuser"
-    subject: 'nothing',       // -> sub: "hello"
+    subject: 'x',       // -> sub: "hello"
   }
   return jwt.sign( jwtPayload, jwtSecret, jwtOptions );
 }

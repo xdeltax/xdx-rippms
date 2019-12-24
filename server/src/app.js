@@ -19,13 +19,14 @@ const path = require('path');
 const requestIp = require('request-ip');
 
 const passport = require('passport');
-const FacebookStrategy = require('passport-facebook').Strategy; //const { Strategy: FacebookStrategy } = require('passport-facebook');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const PassportFacebookStrategy = require('passport-facebook').Strategy; //const { Strategy: FacebookStrategy } = require('passport-facebook');
+const PassportGoogleStrategy = require('passport-google-oauth20').Strategy;
+//const PassportLocalStrategy = require('passport-local').Strategy;
 
 
 const jwt = requireX('tools/auth/jwt');
 
-const socketioRoutes = require('./routes/socketio');
+const socketioRoutes = requireX('routes/socketio');
 
 
 function logErrors(err, req, res, next) {
@@ -68,7 +69,7 @@ module.exports = async (config) => {
   // DATABASE: load
   // ===============================================
   try {
-    global.log("app:: nedb:: await loading DBUsers ...");
+    global.log("app:: nedb:: await loading DBUsers:: ", DBUsers.databasePath());
     await DBUsers.load();
     global.log("app:: nedb:: DBUsers count:", await DBUsers.count());
   } catch (error) { throw new Error("app:: error:: loading DBUsers::" + error.message); }
@@ -216,7 +217,6 @@ module.exports = async (config) => {
 	// Initialize Passport and restore authentication state, if any, from the
 	// session.
 	app.use(passport.initialize());
-	app.use(passport.session());
 	//require("./passport/strategies")(); // configure passport-strategies
   
 	// *** Configure Passport authenticated session persistence
@@ -227,28 +227,17 @@ module.exports = async (config) => {
 	// from the database when deserializing.  However, due to the fact that this
 	// example does not have a database, the complete Facebook profile is serialized
 	// and deserialized.
-  passport.serializeUser((user, cb) => { 
-  	return cb(null, user)
-  });
-
-  passport.deserializeUser((obj, cb) => { 
-  	cb(null, obj)
-  });
-
-	// custom middleware allows us to attach the socket id to the session. with the socket id attached we can send back the right user info to the right socket
-	const passportInjectSocket = (req, res, next) => {
-  	const socketid = (req && req.query) ? req.query.socketid : null; // from client http://serverurl:serverport/facebook.io?socketid={socket.id}
-  	const fingerprinthash = (req && req.query) ? req.query.fp : null; // from client http://serverurl:serverport/facebook.io?socketid={socket.id}&fp={fphash}
-  	req.session.socketid = socketid;
-  	req.session.fingerprinthash = fingerprinthash;
-		//global.log("****passportInjectSocket:: ", req.query, socketid, req.session)
-  	next();
-	};
-
+	/*
+	app.use(passport.session());
+  passport.serializeUser((user, cb) => { return cb(null, user) });
+	passport.deserializeUser((obj, cb) => { cb(null, obj) });
+	*/
 
 	// setting up the passport middleware for each of the OAuth providers
 	const passportFacebookAuth = passport.authenticate('facebook', { session: false, }); // disable req.session.passport
 	const passportGoogleAuth   = passport.authenticate('google'  , { scope: ['profile'], session: false, }); // disable req.session.passport
+	//const passportLocalAuth    = passport.authenticate('local'   , { session: false, successRedirect: '/local.io.callback', failureRedirect: '/', }); // disable req.session.passport
+
  	
 
 	// *** Configure the Facebook strategy for use by Passport.
@@ -272,53 +261,92 @@ module.exports = async (config) => {
 	  enableProof		: true, // enable app secret proof
 	};
 
+	/*
+	const passportStrategyLocalConfig = {
+		usernameField: "username",
+		passwordField: "password",
+	};
+	*/
 
   // ===============================================
   // passport:: auth against server database
   // ===============================================
-  passport.use(new FacebookStrategy(passportStrategyFacebookConfig, (accessToken, refreshToken, profile, cb) => { 
-	 	// called when OAuth provider sends back user information.  Normally, you would save the user to the database here in a callback that was customized for each provider.
-   	//global.log("***passportCallback:: ", accessToken, refreshToken, profile, cb);
-    //todo: DBUsers.findOrCreate({ facebookId: profile.id }, function (err, user) { return cb(err, user); });
-  	return cb(null, profile);
+  passport.use(new PassportFacebookStrategy(passportStrategyFacebookConfig, (accessToken, refreshToken, profile, cb) => { 
+  	profile.accessToken = accessToken;
+  	profile.refreshToken = refreshToken;
+  	cb(null, profile);
   }));
 
-  passport.use(new GoogleStrategy(passportStrategyGoogleConfig, (accessToken, refreshToken, profile, cb) => { 
-	 	// called when OAuth provider sends back user information.  Normally, you would save the user to the database here in a callback that was customized for each provider.
-  	//global.log("***passportCallback:: ", accessToken, refreshToken, profile, cb);
-    //todo: DBUsers.findOrCreate({ facebookId: profile.id }, function (err, user) { return cb(err, user); });
-  	return cb(null, profile);
+  passport.use(new PassportGoogleStrategy  (passportStrategyGoogleConfig,   (accessToken, refreshToken, profile, cb) => {
+  	profile.accessToken = accessToken;
+  	profile.refreshToken = refreshToken;
+  	cb(null, profile);
   }));
+
+
+  // ===============================================
+  // passport:: middleware to parse query to session
+  // ===============================================
+	// custom middleware allows us to attach the socket id to the session. with the socket id attached we can send back the right user info to the right socket
+	const passportInjectSession = (req, res, next) => {
+		// parse req.query and store in session for use in passportAuthCallback
+ 		// from client http://serverurl:serverport/facebook.io?sid={socket.id}&fp={fphash}&un={username}
+  	const socketid = (req && req.query) ? req.query.sid : null;
+  	const fingerprinthash = (req && req.query) ? req.query.fp : null;
+  	const uid = (req && req.query) ? req.query.uid : null;
+  	req.session.socketid = socketid;
+  	req.session.fingerprinthash = fingerprinthash;
+  	req.session.uid = uid;
+		//global.log("***(1) passportInjectSession:: ", socketid, req.query, req.session,)
+  	next();
+	};
 
 
   // ===============================================
   // passport:: send auth-success to client
   // ===============================================
-  const passportAuthCallback = (req, res) => {
+  const passportAuthCallback = async (req, res) => {
+  	// req.user from passport.use() -> cb(null, user)
+  	// req.session from passportInjectSession()
+  	// req.testing from app.use()
   	const { 
-  		user, 		// injected from passportGoogleAuth
-  		session, 	// injected from passport
+  		user, 		// injected from passport.authenticate()
+  		session, 	// injected from passport / passportInjectSession
   	} = req;
 
   	const {
-  		provider, // "facebook", "google"
-  		id, 			// fb-id or google-id
-  		_raw,
-  		_json,
-  	} = user || { };
+  		socketid, // socketid from client-call
+  		fingerprinthash, // from client
+  		uid, // from client
+  	} = session || { };
 
   	const {
-  		socketid, // socketid from client-call
-  		fingerprinthash,
-  	} = session || { };
+  		provider, // "facebook", "google", "local"
+  		accessToken,
+			refreshToken,
+  		id,
+  		name,
+  		photos,
+  		emails,
+  		username,
+  	} = user || { };
   	
-	  //global.log(`/${provider}.io.callback:: `, provider, id, socketid, session, session.passport, _raw, _json);
+	  if (socketid && provider) { // valid: (provider === "google" || provider === "facebook" || provider === "local")) {
+			const _providerid = id ? id : null;
+	  	const _providertoken =	refreshToken ? refreshToken : accessToken ? accessToken : null;
+	  	const	_uid = uid ? uid : null; // client-data
+	  	const _fingerprinthash = fingerprinthash ? fingerprinthash : null; // client-data
 
-	  if (socketid && (provider === "google" || provider === "facebook")) {
-		  global.log(`/${provider}.io.callback:: EMIT:: `, socketid, provider, id, fingerprinthash);
-		  io.in(socketid).emit(provider, id);
+			// query db -> update or create db
+	  	const {err, res} = await DBUsers.loginWithProvider(provider, _providerid, _providertoken, _uid, _fingerprinthash);
+
+		  //global.log(`***(3) passportAuthCallback:: /${provider}.io.callback:: `,  err, res );
+
+		  // send error or (full) user-object to client -> OAuth.js -> RouteLogin.js
+		  const ioRoute = `client.oauth.${provider}.io`;
+		  io.in(socketid).emit(ioRoute, err, res); // emit to client:: userobject OR null
 	  }
-	  res.end();
+	  res.status(200).end();
 	};
 
 
@@ -340,9 +368,10 @@ module.exports = async (config) => {
   // ===============================================
   // route: test something
   // ===============================================
-  app.get('/test.io', (req, res, next) => {
-    console.log('get route "/test"', req.testing);
-    res.status(200).json({ route: "/test", });
+  app.get('/test.io', passportInjectSession, (req, res, next) => {
+    console.log('get route "/test"', req.testing, req.session);
+		res.redirect("/test.io.callback");
+    //res.status(200).json({ route: "/test", });
     //res.send()
     //res.end();
     //res.status(404).end();
@@ -358,8 +387,9 @@ module.exports = async (config) => {
   // ===============================================
   // route: passport:: auth-strategies triggerd by client-call
   // ===============================================
-	app.get('/facebook.io', passportInjectSocket, passportFacebookAuth); // call from client: http://localhost/facebook.io?socketid=
-	app.get('/google.io'	, passportInjectSocket, passportGoogleAuth); // call from client: http://localhost/google.io?socketid=
+	app.get('/facebook.io', passportInjectSession, passportFacebookAuth); // call from client: http://localhost/facebook.io?socketid=
+	app.get('/google.io'	, passportInjectSession, passportGoogleAuth); // call from client: http://localhost/google.io?socketid=
+	//app.get('/local.io'		, passportInjectSession, passportLocalAuth, (req, res) => { res.redirect("/local.io.callback") }); // call from client: http://localhost/fingerprint.io?socketid=xxx&fp=xxx
 
 
   // ===============================================
@@ -367,6 +397,7 @@ module.exports = async (config) => {
   // ===============================================	
 	app.get('/facebook.io.callback', passportFacebookAuth, passportAuthCallback); // callback from provider
 	app.get('/google.io.callback'	 , passportGoogleAuth  , passportAuthCallback); // callback from provider
+	//app.get('/local.io.callback'	 , passportLocalAuth   , passportAuthCallback); // callback from provider
 
 
   // ===============================================

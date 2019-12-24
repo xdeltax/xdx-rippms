@@ -1,37 +1,41 @@
 "use strict";
 
+const fse = require('fs-extra');
+
 const Datastore = require('nedb-promises');
 
 const validator = require('validator');
 const Joi = require('@hapi/joi');
 const JoiValidateThrow = requireX('tools/joivalidatethrow');
+const JoiValidateFallback = requireX('tools/joivalidatefallback');
 
-const fbGraphAPI = require('fbgraph');
+//const fbGraphAPI = require('fbgraph');
 
 const crypto = require('crypto');
 const jwt = requireX('tools/auth/jwt');
+const createErrorHash = requireX('tools/errorHash');
 
 const accountstatusREADONLY = ["default", "owner", "admin", "moderator", "reviewer", "hidden", "locked", "blocked", "banned", "removed", "disbanded" ];
 const memberstatusREADONLY  = ["default", "vip", "vip+", "idle", ];
 
 const schemaUser = Joi.object().keys({
   //_id
-  userid : Joi.string().alphanum().min(30).max(50).normalize().required(),
-  logintype : Joi.string().trim().min(1).max(99).required(),
-  fbuserid : Joi.string().trim().min(1).max(99).required(),
-  fbtoken : Joi.string().trim().min(1).max(299).required(),
+  userid: 			Joi.string().alphanum().min(30).max(50).normalize().required(),
+  uid: 					Joi.string().allow('').min(0).max(99).alphanum().normalize().optional(),
+ 	fphash: 			Joi.string().min(10).max(40).alphanum().normalize().optional(),
+  servertoken: 	Joi.string().trim().min(1).max(399).required(),
+  email: 				Joi.string().max(256).email().allow("").allow(null).normalize().optional().default(""),
+  phonenumber: 	Joi.string().max(64).allow("").allow(null).normalize().optional().default(""),
+  facebookid:   Joi.string().trim().min(1).max(50).alphanum().normalize().optional(),
+  googleid:    	Joi.string().trim().min(1).max(50).alphanum().normalize().optional(),
+	provider:    	Joi.string().trim().min(1).max(50).alphanum().normalize().required(),
+	providertoken:Joi.string().min(30).max(499).alphanum().normalize().required(),
+  forcenew: 		Joi.string().trim().min(1).max(99).optional(),
+  createdAt: 		Joi.date().optional(),
+  updatedAt: 		Joi.date().optional(),
 
   memberstatus : Joi.array().items( Joi.number().integer().min(0).max(99).optional() ).optional(),
-  accountstatus : Joi.array().items( Joi.number().integer().min(0).max(99).optional() ).optional(),
-
-  fbemail: Joi.string().max(256).email().allow("").allow(null).normalize().optional().default(""),
-  email: Joi.string().max(256).email().allow("").allow(null).normalize().optional().default(""),
-  phonenumber: Joi.string().max(64).allow("").allow(null).normalize().optional().default(""),
-
-  servertoken : Joi.string().trim().min(1).max(399).required(),
-  forcenew : Joi.string().trim().min(1).max(99).optional(),
-  createdAt : Joi.date().optional(),
-  updatedAt : Joi.date().optional(),
+  accountstatus: Joi.array().items( Joi.number().integer().min(0).max(99).optional() ).optional(),
 });
 
 
@@ -44,15 +48,16 @@ module.exports = class DBUsers {
 
   }
 
+
   //////////
   // init / load database at startup of nodejs
   ///////////////////////////////////////////////////////////////////////////////////////////////////////
   static async load() { // static method (not affected by instance) -> called with classname: DBGeoData.load
     try {
+			fse.ensureDir(this.databasePath(), { });
       this.db = Datastore.create(this.databasePath() + this.collectionName() + ".db");
 
       await this.db.ensureIndex({ fieldName: 'userid', }); // index for quick searching the userid
-      await this.db.ensureIndex({ fieldName: 'fbuserid', }); // index for quick searching the userid
 
       return this.db;
     } catch (error) { throw new Error(this.collectionName() + error); }
@@ -60,148 +65,132 @@ module.exports = class DBUsers {
   }; // of load
 
 
-  // SERVER-LOGIN -> get facebook-id and facebook-token -> create userid and servertoken
-  static async loginWithFacebook(req, res) { // call from /client/DBServer -> apiCALL_getServerTokenFromFacebookToken
-    //global.log("DBUsers:: loginWithFacebook:: req:: ", req)
-    try {
-      const now = new Date() / 1000;
 
-      const clientip = validator.escape(req.clientip || ""); // requestIp.getClientIp(mainreq);
+	static async loginWithProvider(provider, providerid, providertoken, uid, fingerprinthash) { // create or update database
+    const now = new Date() / 1000;
+		try {
+		  // ===============================================
+		  // normalize input
+		  // ===============================================
+	    const valid_provider = JoiValidateFallback(provider, null, Joi.string().min(1).max(30).alphanum().normalize().required(), ); 
+			if (!valid_provider || (valid_provider !== "facebook" && valid_provider !== "google")) throw "invalid provider";
 
-      // unverified input from client
-      const { // header-content
-        logintype : req_logintype,          // === "facebook"
-        fbuserid : req_fbuserid,            // userid from facebook (numbers only) or userid from fb + ".FAKE" + number (to force server to create a new user in debugging)
-        fbaccesstoken : req_fbaccesstoken,
-        authorization : req_authorization,  // === ""
-      } = req.headers;
+			// user-id
+			// facebook: '573929389742863', (15)
+			// google: '115290779649011912108', (21)
+	    const valid_providerid = JoiValidateFallback(providerid, null, Joi.string().trim().min(1).max(50).alphanum().normalize().required(), ); 
+			if (!valid_providerid) throw "invalid provider-id";
 
-      const {
-        //fbmail: req_fbmail,
-        //fbname: req_fbname,
-      } = req.body;
+			// accesstoken
+			// facebook: 'EAAFSPeVOQKkBAJ6M6eGAJViYu1UwuKF9eumKV1cr2hMrEEehOayxGSgQhQmUBLZBsz3rc8ZAy4aurHOKUHZBqYt6XZCCZAedzXA6Mo9aJGCGZBAyApXLoReCDtzXOHWAAlUyflQ5ZCcwhW4lHN7z5M88QrICD7UeZBKup3a94gj8dAZDZD',
+			// google: 'ya29.ImC2B0PDxykRp-dr-k9SjTCBHSfwcxNEamphbOgVx0Z4POrqEo7IfnT7YCF6hTGwzZJnWKNAzEwjV29QmPwfIqtjUlkdgqnnfLBxDa8A-xrvKlC5Z9NXXk0LVq2GpjCL1lk',
+	    const valid_providertoken = JoiValidateFallback(providertoken, null, Joi.string().min(30).max(499).alphanum().normalize().required(), ); 
+			if (!valid_providertoken) throw "invalid provider-token";
 
-      const {
-        //useridtarget: req_useridtarget,
-      } = req.params;
+	  	// fingerprint of client-device:: '47a9591391229e99a2417d27fbc32147' (32, alphanum:: a-z, A-Z, and 0-9)
+	    const valid_fingerprinthash = JoiValidateFallback(fingerprinthash, "", Joi.string().min(10).max(40).alphanum().normalize().optional(), ); 
 
-      // *****************************************************************************************************************
+			// fake-username(-extension) for debugging:: 'fakeusername1',
+	    const valid_uid = JoiValidateFallback(uid, "", Joi.string().allow('').min(0).max(99).alphanum().normalize().optional(), ); 
 
-      // verify and normalise (and strip unknown elements) for further use; throw on error
-      if (req_logintype !== "facebook") throw new Error("db(1): invalid client request header");
-      if (req_authorization !== "") throw new Error("db(2): invalid client request header");
-      const valid_fbuserid      = JoiValidateThrow(req_fbuserid      , Joi.string().trim().min(1).max(50).alphanum().normalize().required(), "db(3): invalid client request header: " ); // return valid object or throw
-      const valid_fbaccesstoken = JoiValidateThrow(req_fbaccesstoken , Joi.string().min(30).max(499).alphanum().normalize().required(), "db(4): invalid client request header: " ); // return valid object or throw
-      //const valid_fbmail        = JoiValidateThrow(req_fbmail        , Joi.string().max(256).email().allow("").allow(null).normalize().optional().default(""), "db(5): invalid client request header: " ); // return valid object or throw
-      //const valid_fbname        = JoiValidateThrow(req_fbname        , Joi.string().max(256).allow("").normalize().optional(), "db(6): invalid client request header: " ); // return valid object or throw
+		  // ===============================================
+		  // create userid from provider-id and uid 
+		  // ===============================================
+	    // create a unique userid from the hashed facebook id (same fb-id generates always the same userid)
+	    const creationBase = valid_uid + valid_providerid;
+	    const userid_created = crypto.createHash('sha1').update(JSON.stringify(creationBase)).digest('hex');
 
-      // *****************************************************************************************************************
+		  // ===============================================
+		  // search db
+		  // ===============================================
+	    // check if user already exists (and get user data for login-count then)
+	    let thisUser = await this.findOne( { "userid": userid_created, }, ); // not found -> null
 
-      // check for DEBUG_FAKE (userid + ".FAKE")
-      const fakePos = valid_fbuserid.indexOf("FAKE", 1); // -1 if no FAKE
-      const valid_fbuserid_withoutFAKE = (fakePos < 0) ? valid_fbuserid : valid_fbuserid.slice(0, fakePos); // remove ".FAKE"
+	    const isNewUser = Boolean(!thisUser);
 
-      // validate facebook token
-      //const fbGraphAPI = requireX('tools/auth/fbGraphAPI');
-      fbGraphAPI.setAccessToken(valid_fbaccesstoken);
-      fbGraphAPI.setOptions({ timeout: 3000, pool: { maxSockets:  Infinity }, headers: { /*connection:  "keep-alive"*/ } });
-      const fbGraphAPI_getAsync = async (command) => { return new Promise( (resolve, reject) => { fbGraphAPI.get(command, (err, res) => { if (err) reject(err); resolve(res); }); }); }
-      const fbResponse_me = await fbGraphAPI_getAsync("me?fields=id,email,name,picture"); // returns: id, name, email, picture, ...
+		  // ===============================================
+		  // create user-object (if user not in db)
+		  // ===============================================
+	    // create new user-account in server-database if user not found
+	    if (isNewUser) {
+	      thisUser = {
+	        //_id: (unique hash) generated by database
+	        userid: userid_created, // hash of facebook-id
+	        uid: valid_uid,
+	        //servertoken: "", // will be generated later
 
-      // *****************************************************************************************************************
+	        fphash: valid_fingerprinthash,
 
-      // validate facebook id (and accestoken) by requesting "me" with fb-accesstoken
-      let { id: req_me_id, /*name: req_me_name,*/ email: req_me_email, } = fbResponse_me;
+	        //facebookid
+	        //googleid
 
-      const valid_me_fbuserid   = JoiValidateThrow(req_me_id      , Joi.string().trim().min(1).max(50).alphanum().normalize().required(), "(3)invalid client request header: " ); // return valid object or throw
-      const valid_me_fbemail    = JoiValidateThrow(req_me_email   , Joi.string().max(256).email().allow("").allow(null).normalize().optional().default(""), "(5)invalid client request header: " ); // return valid object or throw
+	    		provider: valid_provider,
+	    		providertoken: valid_providertoken,
 
-      if (!valid_me_fbuserid
-        || valid_me_fbuserid !== valid_fbuserid_withoutFAKE
-      ) throw new Error("invalid facebook profile response");
+	        forcenew: "0", // set this to anything else to force the servertoken of this user to be invalid -> new login with fb
 
-      // *****************************************************************************************************************
+	        memberstatus: [0],
+	        accountstatus: [0],
 
-      // create a unique userid from the hashed facebook id (same fb-id generates always the same userid)
-      const userid_created = crypto.createHash('sha1').update(JSON.stringify(valid_fbuserid)).digest('hex');
-
-      // check if user already exists (and get user data for login-count then)
-      let thisUser = await this.findOne( { "userid": userid_created, }, ); // not found -> null
-
-      let isnewuser = (!thisUser) ? true : false;
-
-      // create new user-account in server-database if user not found
-      if (isnewuser) {
-        //////////////////////////////
-        // CREATE NEW USER: user not found -> create user, set token and login-count = 1
-        //////////////////////////////
-        thisUser = {
-          //_id: (unique hash) generated by database
-          userid: userid_created, // hash of facebook-id
-
-          accountstatus: [0],
-          memberstatus: [0],
-
-          logintype: "facebook", // login-method used
-          fbuserid: valid_fbuserid,
-          fbemail: valid_me_fbemail,
-
-          email: valid_me_fbemail,
-          phonenumber: "",
-
-          forcenew: "0", // set this to anything else to force the servertoken of this user to be invalid -> new login with fb
-          //servertoken: "", // will be generated later
-          createdAt: now,
-          //updatedAt: Date.now() / 1000,
-        };
-      }
-
-      //global.log("DBUsers:: loginWithFacebook:: thisUser::", thisUser, isnewuser,)
-      if (thisUser.userid !== userid_created) throw new Error("invalid user-id");
-      if (thisUser.fbuserid !== valid_fbuserid) throw new Error("invalid facebook user-id");
+	        createdAt: now,
+	        //updatedAt: Date.now() / 1000,
+	      };
+	    }
 
 
-      ////////////////////////////////////////////////////////////////////////////////
-      // SERVERTOKEN -> create servertoken
-      ////////////////////////////////////////////////////////////////////////////////
-      const hash = crypto.createHash('sha1').update(JSON.stringify(thisUser.forcenew + valid_fbaccesstoken)).digest('hex');
-      const jwtservertoken = jwt.sign(thisUser.userid, thisUser.fbuserid, hash);
-
-      //////////////////////////////
-      // UPDATE USER: with new servertoken and (new) fb-accesstoken
-      //////////////////////////////
-      // update (old) db-entry with new faceboot-token
-      thisUser.servertoken = jwtservertoken;
-      thisUser.fbtoken = valid_fbaccesstoken;
-      thisUser.updatedAt = now; // Date.now() / 1000;
-
-      // *****************************************************************************************************************
-
-      const valid_user = JoiValidateThrow(thisUser, schemaUser, "db(x): invalid client request header: ", {abortEarly: true, convert: true, allowUnknown: false, stripUnknown: true, } );
-
-      // *****************************************************************************************************************
-
-      const numReplace = await this.updateFull( {userid: valid_user.userid}, valid_user);
-      if (numReplace !== 1)
-      throw new Error("failed to add user to database");
-
-      // *****************************************************************************************************************
-
-      // return to client in "result"
-      const returnObject = {
-        isnewuser: isnewuser,           // if newUser -> client redirect to Login_Register else to Profile_Account
-        user: valid_user,
-      }
-
-      global.log("DBUsers:: loginWithFacebook:: returnObject:: ", returnObject.user.userid)
-      return ( { status: "ok", result: returnObject, } );
-    } catch(error) {
-      global.log("DBUsers:: loginWithFacebook:: ERROR:: ", error)
-      return ( { status: "DBUsers:: loginWithFacebook:: error-message:: " + error.message, result: null, } );
-    }
-  }; // of loginWithFacebook
+		  // ===============================================
+		  // add / update userid of used login provider
+		  // ===============================================
+	    switch (provider) {
+	    	case "facebook": 	
+	    		thisUser.facebookid = valid_providerid; 
+	    		break;
+	    	case "google": 		
+	    		thisUser.googleid = valid_providerid; 
+	    		break;
+	    	default: 
+	    		break;
+			}
 
 
+		  // ===============================================
+		  // create new servertoken
+		  // ===============================================
+	    const hash = crypto.createHash('sha1').update(JSON.stringify(thisUser.forcenew + thisUser.providertoken)).digest('hex');
+	    const jwtservertoken = jwt.sign(thisUser.userid, thisUser.provider, thisUser.fbuserid, hash); // (payload)
+
+
+		  // ===============================================
+	    // update userdata with new servertoken
+		  // ===============================================
+	    thisUser.servertoken = jwtservertoken;
+	    thisUser.updatedAt = now; 
+
+
+		  // ===============================================
+	    // check userdata
+		  // ===============================================
+	    const valid_user = JoiValidateFallback(thisUser, null, schemaUser, {abortEarly: true, convert: true, allowUnknown: false, stripUnknown: true, } );
+	    if (!valid_user) throw "invalid user-object";
+
+
+		  // ===============================================
+	    // update user in database
+		  // ===============================================
+	    const numReplace = await this.updateFull( {userid: valid_user.userid}, valid_user);
+	    if (numReplace !== 1) throw "invalid update count";
+
+			//global.log("XXX2:", querydata, provider, isNewUser, thisUser)
+	    return ( { err: null, res: valid_user, } );
+	  } catch (error) {
+	  	const hashcode = createErrorHash(error);
+	  	global.log("loginWithProvider:: ERROR:: ", hashcode, error);
+	    return ( { err: `login failed (${hashcode})`, res: null, } );	  	
+	  }
+	}
+
+
+	/*
   // SERVER LOGOUT
   static async logout(req, res) {
     //global.log("DBUsers:: logout:: req:: ", req)
@@ -442,6 +431,15 @@ module.exports = class DBUsers {
       return ( { status: "DBUsers:: getUser:: error-message:: " + error.message, result: null, } );
     }
   }; // of getUser
+*/
+
+
+
+
+
+
+
+
 
 
 

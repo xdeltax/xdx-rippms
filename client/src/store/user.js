@@ -29,6 +29,9 @@ class Store extends ProtoStore {
 
       accountstatus: [],
       memberstatus: [],
+
+      createdAt: 0,
+      updatedAt: 0,
     },
     userCard: {
       gender: null,
@@ -39,6 +42,7 @@ class Store extends ProtoStore {
 
   _helpers = {
   };
+
 
   // setters and getters
   get const() { return this.constants; }
@@ -70,6 +74,11 @@ class Store extends ProtoStore {
       get memberstatus() { return this.auth.memberstatus; }
       set memberstatus(v) { runInAction(() => { this.auth.memberstatus = v; }) }
 
+      get createdAt() { return this.auth.createdAt; }
+      set createdAt(v) { runInAction(() => { this.auth.createdAt = v; }) }
+
+      get updatedAt() { return this.auth.updatedAt; }
+      set updatedAt(v) { runInAction(() => { this.auth.updatedAt = v; }) }
 
   // usercard
   get userCard() { return this.obervables.userCard }
@@ -78,7 +87,7 @@ class Store extends ProtoStore {
       // user-validation
       get isValidUserProfile() {
         if (global.DEBUG_AUTH_FAKE_ISVALIDPROFILE) return true;
-        return Boolean(!!this.userCard.email && !!this.userCard.phonenumber)
+        return true; //Boolean(!!this.userCard.email && !!this.userCard.phonenumber)
       }
 
       get email() { return this.userCard.email; }
@@ -88,28 +97,37 @@ class Store extends ProtoStore {
       set phonenumber(v) { runInAction(() => { this.userCard.phonenumber = v; }) }
 
 
-  // public
-  logout = async (forceProviderLogout) => {
-    try {
-      // send logout signal to server
-      if (this.userid && this.servertoken)
-      try {
-        await this.apiCALL_DBUsers_logout(this.userid, this.servertoken);
-      } catch (error) {
-        // fail silent
-      }
+  doAuthLogin = async (userdataFromServer) => {
+  	const {userid, servertoken, accountstatus, memberstatus, createdAt, updatedAt} = userdataFromServer || {};
+  	
+  	if (userid !== this.userid) {
+	  	await this.doAuthLogout();
+  	};
 
-      // clear local persistent store
-      await deletePersistentDatabase();
-
-      return true;
-    } finally {
-      // clear store
-      this.clear();
-    }
-  }
+  	if (userid && servertoken) {
+	  	this.userid 			= userid;
+	  	this.servertoken  = servertoken;
+	  	this.memberstatus = [...memberstatus];
+	  	this.accountstatus= [...accountstatus];
+	  	this.createdAt  	= createdAt;
+	  	this.updatedAt  	= updatedAt;
+  	}
+  };
 
 
+  doAuthLogout = async () => {
+    // send logout signal to server
+    //await this.apiCALL_DBUsers_logout(this.userid, this.servertoken);
+
+    // clear local persistent store
+    await deletePersistentDatabase();
+
+    // clear store
+	  this.clear_all();
+  };
+
+
+/*
   __loginWithProvider = async (fakeUser, fakeUserProfile) => { // "user click" must not be "async" otherwise login-popup from facebook will be blocked in browser
     try {
       //store.globalSpinner.show();
@@ -173,7 +191,7 @@ class Store extends ProtoStore {
         if (!userObject || !userObject.hasOwnProperty("isnewuser") || !userObject.hasOwnProperty("user"))
         throw new Error("invalid server response (userObject)");
 
-        let { isnewuser: s_isNewUser, user: s_user, /*fbname: s_fbname,*/ /*newuser*/ } = userObject;
+        let { isnewuser: s_isNewUser, user: s_user, } = userObject;
         if (!s_user || !s_user.userid || !s_user.servertoken)
         throw new Error("invalid server response (userid / servertoken)");
 
@@ -217,7 +235,7 @@ class Store extends ProtoStore {
               // http://graph.facebook.com/373932389756869/picture?type=square&height=500&width=500& -> jpeg
               const fbProfileImageURL = `http://graph.facebook.com/${this.fbuserid}/picture?type=square&height=1000&width=1000&`;
               const img = await Jimp.read(fbProfileImageURL);
-              /*const imgbase64 = */await img.getBase64Async(Jimp.MIME_JPEG);
+              await img.getBase64Async(Jimp.MIME_JPEG);
 
               // server-call -> store image in database
               //await this.userCard.userGallery.apiCALL_DBUserGallery_addImageOwnANDupdateStore(this.userid, this.servertoken, "url", imgbase64)
@@ -239,7 +257,7 @@ class Store extends ProtoStore {
     }
   }
 
-
+	
   // api-calls
   apiCALL_DBUsers_logout = async (userid, servertoken) => {
     const socketCall = `/api2/auth/logout`;
@@ -275,34 +293,8 @@ class Store extends ProtoStore {
       throw error; // return { status: error, result: null, }
     }
   }
+	*/
 
-
-  __apiCALL_DBUsers_loginWithFacebook = async (fbUserID, fbAccessToken,) => {
-    const socketCall = `/api2/token/get`;
-    try {
-      if (!fbUserID || !fbAccessToken)
-      throw new Error("invalid fb-userid / fb-accesstoken");
-
-      const headers = { //Accept: "application/json", 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*',
-        // NEED to be all LOWERCASE
-        'logintype': 'facebook',
-        'fbuserid': fbUserID, // userid or userid + "FAKE" + number
-        'fbaccesstoken': fbAccessToken,
-        'authorization': '',
-      };
-      const params = {
-      };
-      const body = {
-      };
-      const userObject = await store.socketio.emitWithTimeoutAndConvertStatusToError(socketCall, { headers: headers || {}, body: body || {}, params: params || {}, }, 5000);
-
-      global.log(`store:: user:: apiCALL_DBUsers_loginWithFacebook:: ${socketCall}:: userObject:: `, userObject);
-      return userObject;
-    } catch(error) {
-      global.log(`store:: user:: apiCALL_DBUsers_loginWithFacebook:: ${socketCall}:: ERROR:: `, error);
-      throw error;
-    }
-  }
 
   apiCALL_DBUsers_loadUserFromServerDatabase = async (targetuserid, userid, servertoken,) => {
 
@@ -312,36 +304,6 @@ class Store extends ProtoStore {
   apiCALL_DBUsers_saveUserToServerDatabase = async (targetuserid, userid, servertoken,) => {
 
   }
-
-
-
-
-  apiCALL_loginWithProvider = async (provider,) => {
-    const socketCall = `/api3/login/provider/${provider}`;
-    try {
-      if (!provider)
-      throw new Error("invalid provider");
-
-      const headers = { //Accept: "application/json", 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*',
-        // NEED to be all LOWERCASE
-        'logintype': `${provider}`,
-        'authorization': '',
-      };
-      const params = {
-      };
-      const body = {
-      };
-      const userObject = await store.socketio.emitWithTimeoutAndConvertStatusToError(socketCall, { headers: headers || {}, body: body || {}, params: params || {}, }, 5000);
-
-      global.log(`store:: user:: apiCALL_loginWithProvider:: ${socketCall}:: userObject:: `, userObject);
-      return userObject;
-    } catch(error) {
-      global.log(`store:: user:: apiCALL_loginWithProvider:: ${socketCall}:: ERROR:: `, error);
-      throw error;
-    }
-  }
-
-
 };
 
 decorate(Store, {

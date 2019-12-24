@@ -16,6 +16,7 @@ import AllInclusiveICON from '@material-ui/icons/AllInclusive';
 // assets
 import AppLogo from 'assets/applogo.svg';
 import FacebookLogo from 'assets/Facebook_Logo_(2019)_144x144.png';
+import InstagramLogo from 'assets/Instagram_Logo_2016.svg';
 import GoogleLogo from 'assets/Google_Logo_512x512.svg';
 
 const styles = theme => ({
@@ -42,9 +43,18 @@ const styles = theme => ({
 export default ( withStyles(styles)( observer( class extends React.Component {
   state = {  }
 
-  onAuthSuccess = (socketid, provider, userdata) => {
-  	global.log("OAuth:: Callback:: ", socketid, provider, userdata);
-  	//store.user.loginWithProvider
+  onAuthSuccess = async (socketid, provider, userdataFromServer) => {
+  	global.log("OAuth:: Success:: Callback:: ", socketid, provider, userdataFromServer);
+
+  	await store.user.doAuthLogin(userdataFromServer);
+
+    // redirect router to "/" -> from there router will check if valid user and forward to login-route (again) or home-route
+    //const { history, } = this.props;
+    //history && history.push('/');
+  }
+
+  onAuthFailed = (socketid, provider, error) => {
+  	global.log("OAuth:: Failed:: Callback:: ", socketid, provider, error);
   }
 
   render() {
@@ -71,18 +81,9 @@ export default ( withStyles(styles)( observer( class extends React.Component {
         </div>
 
         <div>
-          <Button className={classes.button} variant="outlined" color="primary" onClick={ async (event) => {
-            this.login({userid:"01fake", servertoken:"01fake"}, {email:"fake@fake.com", phonenumber:"00417998765"});
-          }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
-            FAKE-LOGIN (no FB / no Server)
-          </Button>
-        </div>
-
-
-        <div>
-					<OAuth onAuthSuccess={this.onAuthSuccess} buttonText="bind with" provider="facebook" providerLogo={FacebookLogo} server={global.serverURL} socket={store.socketio.socket} fingerprint={global.fingerprint} />
-					<OAuth onAuthSuccess={this.onAuthSuccess} buttonText="bind with" provider="google" providerLogo={GoogleLogo} server={global.serverURL} socket={store.socketio.socket} fingerprint={global.fingerprint} />
-					<OAuth onAuthSuccess={this.onAuthSuccess} buttonText="" provider="test" server={global.serverURL} socket={store.socketio.socket} fingerprint={global.fingerprint} />
+					<OAuth buttonText="bind with facebook" uid="" provider="facebook" providerLogo={FacebookLogo} server={global.serverURL} socket={store.socketio.socket} fingerprint={global.fingerprint} onAuthSuccess={this.onAuthSuccess} onAuthFailed={this.onAuthFailed} />
+					<OAuth buttonText="bind with google" uid="" provider="google" providerLogo={GoogleLogo} server={global.serverURL} socket={store.socketio.socket} fingerprint={global.fingerprint} onAuthSuccess={this.onAuthSuccess} onAuthFailed={this.onAuthFailed} />
+					<OAuth buttonText="fake1 with fb" uid="fake1" provider="facebook" providerLogo={FacebookLogo} server={global.serverURL} socket={store.socketio.socket} fingerprint={global.fingerprint} onAuthSuccess={this.onAuthSuccess} onAuthFailed={this.onAuthFailed} />
 				</div>
 
 
@@ -109,22 +110,15 @@ export default ( withStyles(styles)( observer( class extends React.Component {
     ) // of return
   } // of render
 
+  /*
+    <div>
+      <Button className={classes.button} variant="outlined" color="primary" onClick={ async (event) => {
+        this.login({userid:"01fake", servertoken:"01fake"}, {email:"fake@fake.com", phonenumber:"00417998765"});
+      }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
+        FAKE-LOGIN (no FB / no Server)
+      </Button>
+    </div>
 
-  loginWithProvider = async (provider) => {
-    const { history, } = this.props;
-    try {
-      // attn.: if you forgot to setup REACT_APP_FB_APPID in .env the facebookAPI will fail silent but you get messages like: "FB.login() called before FB.init()""
-      const res = await store.user.apiCALL_loginWithProvider(provider);
-      global.log("RouteLogin:: loginWithProvider:: result:: ", res)
-    } catch (error) {
-      global.log("RouteLogin:: loginWithProvider:: ERROR:: ", error);
-
-      //todo: show error-modal
-    } finally {
-      // redirect router to "/" -> from there router will check if valid user and forward to login-route (again) or home-route
-      history && history.push('/');
-    }
-  }
-
- 
+		<OAuth uid="" onAuthSuccess={this.onAuthSuccess} onAuthFailed={this.onAuthFailed} buttonText="login as guest" provider="local" server={global.serverURL} socket={store.socketio.socket} fingerprint={global.fingerprint}/>
+	*/ 
 }))); // of class

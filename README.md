@@ -185,6 +185,8 @@ auth
 	npm i -s passport
 	npm i -s passport-facebook
 	npm i -s passport-google-oauth20
+	npm i -s passport-instagram
+	npm i -s passport-local
 
 facebook
   npm i -s fbgraph

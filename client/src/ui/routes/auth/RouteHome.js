@@ -95,6 +95,8 @@ export default ( withStyles(styles)( observer( class extends React.Component {
         <Button variant="outlined" onClick={()=> saveToPersistentDatabase(true) }>saveToPersistentDatabase</Button>
         <Button variant="outlined" onClick={()=> { store.showSpinner("test the spinner", 5000) }}>show Spinner</Button>
 
+        <Button variant="outlined" onClick={()=> { history.push("/logout") }}>logout</Button>
+
         {store.system.app.bottomNavigation.visible && (<Toolbar disableGutters style={{ marginBottom: 25, }} />) /* extra padding for content below HeaderNavigationToolbar */ }
       </div>
     );
