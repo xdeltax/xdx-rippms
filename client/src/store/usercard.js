@@ -17,19 +17,15 @@ class Store extends ProtoStore {
   clear_obj = action((obj) => this[obj] = deepCopy(this.#__privateObervablesInit[obj]) );
 
   _constants = {
+    genderREADONLY: ["unknown", "male", "female", ],
   }
 
   // init of all observables
   _obervables = {
-    user: {
-      userid: null,
-      servertoken: null,
-
-      accountstatus: [],
-      memberstatus: [],
-
-      createdAt: 0,
-      updatedAt: 0,
+    usercard: {
+    	gender: null,
+      email: null,
+      phonenumber: null,
     },
   };
 
@@ -41,73 +37,25 @@ class Store extends ProtoStore {
   get const() { return this.constants; }
   set const(v) { runInAction(() => { this.constants = v; }) }
 
-
-  // user / user-credentials
-  get user() { return this._obervables.user; }
-  set user(v) { runInAction(() => { this._obervables.user = v; }) }
+  // usercard
+  get usercard() { return this.obervables.usercard }
+  set usercard(o) { runInAction(() => { this.obervables.usercard = o }) }
 
       // user-validation
       get isValid() {
-        if (global.DEBUG_AUTH_FAKE_ISVALIDUSER) return true;
-        return Boolean(!!this.user.servertoken && !!this.user.userid)
+        if (global.DEBUG_AUTH_FAKE_ISVALIDPROFILE) return true;
+        return true; //Boolean(!!this.usercard.email && !!this.usercard.phonenumber)
       }
 
-      get userid() { return this.user.userid; }
-      set userid(v) { runInAction(() => { this.user.userid = v; }) }
+      get gender() { return this.usercard.gender; }
+      set gender(v) { runInAction(() => { this.usercard.gender = v; }) }
 
-      get servertoken() { return this.user.servertoken; }
-      set servertoken(v) { runInAction(() => { this.user.servertoken = v; }) }
+      get email() { return this.usercard.email; }
+      set email(v) { runInAction(() => { this.usercard.email = v; }) }
 
-      get accountstatus() { return this.user.accountstatus; }
-      set accountstatus(v) { runInAction(() => { this.user.accountstatus = v; }) }
+      get phonenumber() { return this.usercard.phonenumber; }
+      set phonenumber(v) { runInAction(() => { this.usercard.phonenumber = v; }) }
 
-      get memberstatus() { return this.user.memberstatus; }
-      set memberstatus(v) { runInAction(() => { this.user.memberstatus = v; }) }
-
-      get createdAt() { return this.user.createdAt; }
-      set createdAt(v) { runInAction(() => { this.user.createdAt = v; }) }
-
-      get updatedAt() { return this.user.updatedAt; }
-      set updatedAt(v) { runInAction(() => { this.user.updatedAt = v; }) }
-
-
-
-  doAuthLogout = async () => {
-		global.log("USER:: doAuthLogout:: ", this.userid,)
-    // send logout signal to server
-    //await this.apiCALL_DBUsers_logout(this.userid, this.servertoken);
-
-    // clear local persistent store
-    await deletePersistentDatabase();
-
-    // clear store
-	  this.clear_all();
-  };
-
-
-  doAuthLogin = async (userdataFromServer) => {
-  	const {userid, servertoken, accountstatus, memberstatus, createdAt, updatedAt,} = userdataFromServer || {};
-
-		global.log("store.user:: doAuthLogin:: ", this.userid, userid,);
-  	
-  	if (userid !== this.userid) {
-	  	await this.doAuthLogout();
-  	};
-
-  	if (userid && servertoken) {
-	  	this.userid 			= userid;
-	  	this.servertoken  = servertoken;
-	  	this.memberstatus = Array.from(memberstatus); // [...memberstatus]; // shallow copy only
-	  	this.accountstatus= Array.from(accountstatus); // [...accountstatus]; // shallow copy only
-	  	this.createdAt  	= createdAt;
-	  	this.updatedAt  	= updatedAt;
-
-	  	//const {err, res} = await this._getUsercard(this.userid, this.userid, this.servertoken);
-	  	//if (!err) this.usercard = Object.assign(this.usercard || {}, res);
-
-	    await saveToPersistentDatabase();
-  	};
-  };
 
 
   getOwnFromServer = async () => {
@@ -125,11 +73,11 @@ class Store extends ProtoStore {
   };
 
 
-  _getUser = async (targetuserid, userid, servertoken) => {
+  _getUsercard = async (targetuserid, userid, servertoken) => {
 		let res = null;
 		let err = null;
 		try {
-			const ioRoute = "auth/store/user/get";
+			const ioRoute = "auth/store/usercard/get";
 			const req = {
 				targetuserid,
 				userid,
@@ -140,7 +88,7 @@ class Store extends ProtoStore {
 			err = error;
 		}
 
-		global.log("store.user:: getUser:: ", targetuserid, userid, err, res)
+		global.log("store.usercard:: getUsercard:: ", targetuserid, userid, err, res)
   	return { err, res };
   };
 
@@ -163,7 +111,7 @@ class Store extends ProtoStore {
 		let err = null;
 		const targetuserid = userid;
 		try {
-			const ioRoute = "auth/store/user/update";
+			const ioRoute = "auth/store/usercard/update";
 			const req = {
 				targetuserid,
 				userid,

@@ -102,7 +102,6 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
     const phaserGameVisible = Boolean(location.pathname === "/game/phaser") /*store.system.app.game.visible*/
     //const pixiGameVisible = Boolean(location.pathname === "/game/pixi") /*store.system.app.game.visible*/
 
-    //global.log("AppRouter:: render:: ", this.props, store.user.isAuthenticated, store.user.isValidUser, store.user.isValidUserProfile, )
     global.log("AppRouter:: render:: location.pathname:: ", location.pathname, );
 
     return (
@@ -118,23 +117,23 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
           <ScrollToTop />
 
           <Switch>
-            <Route exact path="/"             render={ (routeProps) => store.user.isAuthenticated ? <Redirect to="/auth/home" /> : <Redirect to="/login" /> } />
+            <Route exact path="/"             render={ (routeProps) => store.isAuthenticated ? <Redirect to="/auth/home" /> : <Redirect to="/login" /> } />
 
-            <Route exact path="/login"        render={ (routeProps) => !store.user.isValidUser ? (<RouteLogin {...routeProps } />) : !store.user.isValidUserProfile ? <Redirect to="/register" /> : <Redirect to="/auth/home" /> } />
-            <Route exact path="/register"     render={ (routeProps) => !store.user.isValidUser ? (<Redirect to="/login" />) : store.user.isValidUserProfile ? (<Redirect to="/" />) : (<RouteRegister {...routeProps } />) } />
+            <Route exact path="/login"        render={ (routeProps) => !store.user.isValid ? (<RouteLogin {...routeProps } />) : !store.usercard.isValid ? <Redirect to="/register" /> : <Redirect to="/auth/home" /> } />
+            <Route exact path="/register"     render={ (routeProps) => !store.user.isValid ? (<Redirect to="/login" />) : store.usercard.isValid ? (<Redirect to="/" />) : (<RouteRegister {...routeProps } />) } />
             <Route exact path="/logout"       render={ (routeProps) => (<AuthRouteLogout {...routeProps } />) } />
             <Route exact path="/game/pixi"    render={ (routeProps) => (<RoutePixiGame {...routeProps } />) } />
             <Route exact path="/game/phaser"  render={ (routeProps) => (null/*<RoutePhaserGame {...routeProps } />*/)} />
 
-            <Route exact path="/auth/home"    render={ (routeProps) => store.user.isAuthenticated ? <AuthRouteHome {...routeProps } /> : <Redirect to="/login" /> } />
-            <Route exact path="/auth/account" render={ (routeProps) => store.user.isAuthenticated ? <AuthRouteAccount {...routeProps } /> : <Redirect to="/login" /> } />
+            <Route exact path="/auth/home"    render={ (routeProps) => store.isAuthenticated ? <AuthRouteHome {...routeProps } /> : <Redirect to="/login" /> } />
+            <Route exact path="/auth/account" render={ (routeProps) => store.isAuthenticated ? <AuthRouteAccount {...routeProps } /> : <Redirect to="/login" /> } />
 
             <Route component={RouteNoMatch} />
           </Switch>
         </div>
 
         {!store.system.app.header.visible && <RenderAGetMyHiddenToolbarBackArrowDownIconButton />}
-        {store.user.isAuthenticated && <BottomNavigation hide={!store.system.app.bottomNavigation.visible} /> }
+        {store.isAuthenticated && <BottomNavigation hide={!store.system.app.bottomNavigation.visible} /> }
 
         <Modal id="phasergame" keepMounted // modal container for the game (stays mounted all the time)
           open={phaserGameVisible} disableEscapeKeyDown={true} disablePortal={true} disableScrollLock={true} hideBackdrop={true}
@@ -144,7 +143,7 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
 					 <React.Fragment>
               <ReactContainerPhaserGame gameVisible={phaserGameVisible} style={{ backgroundColor: "transparent", padding:0, margin:0, height:"100%", }} />
               {!store.system.app.header.visible && <RenderAGetMyHiddenToolbarBackArrowDownIconButton />}
-              {store.user.isAuthenticated && <BottomNavigation hide={!store.system.app.bottomNavigation.visible} /> }
+              {store.isAuthenticated && <BottomNavigation hide={!store.system.app.bottomNavigation.visible} /> }
  						</React.Fragment>
           </Fade>
         </Modal>

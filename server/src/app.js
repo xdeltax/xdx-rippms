@@ -486,14 +486,14 @@ module.exports = async (config) => {
 	  // ===============================================
 	  // all routes witgh "free/" and "auth/" are valid
 	  // ===============================================
-    socket.on('auth/userstore/user/get', async (req, clientEmitCallback) => {
+    socket.on('auth/store/user/get', async (req, clientEmitCallback) => {
     	const {
     		targetuserid,
     		userid,
     		servertoken,
     	} = req || {};
 
-    	global.log("socket.on(auth/getusercard):: ", req, socket.xdx.userid);
+    	global.log("socket.on(auth/getuser):: ", req, socket.xdx.userid);
 
 	  	const {err, res} = await DBUsers.getUser(targetuserid, userid, servertoken);
 
@@ -502,7 +502,7 @@ module.exports = async (config) => {
     });
 
     /*
-    socket.on('auth/userstore/user/update', async (req, clientEmitCallback) => {
+    socket.on('auth/store/user/update', async (req, clientEmitCallback) => {
     	const {
     		targetuserid,
     		userid,

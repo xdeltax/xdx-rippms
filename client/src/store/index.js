@@ -3,6 +3,8 @@ import ProtoStore from "./protoStore";
 import deepCopy from 'tools/deepCopyObject';
 
 import UserStore from 'store/user';
+import UsercardStore from 'store/usercard';
+
 import PhaserStore from 'store/phaser';
 import PixiStore from 'store/pixi';
 
@@ -28,6 +30,8 @@ class Store extends ProtoStore {
 		system: null,
 
 		user: null,
+		usercard: null,
+
 		phaser: null,
 		pixi: null,
 
@@ -53,6 +57,8 @@ class Store extends ProtoStore {
 		this._obervables.system = new SystemStore();
 
 		this._obervables.user = new UserStore();
+		this._obervables.usercard = new UsercardStore();
+
 		this._obervables.phaser = new PhaserStore();
 		this._obervables.pixi = new PixiStore();
 		
@@ -120,6 +126,9 @@ class Store extends ProtoStore {
 	get user() { return this._obervables.user }
 	set user(o) { runInAction(() => { this._obervables.user = o; }) }
 
+	get usercard() { return this._obervables.usercard }
+	set usercard(o) { runInAction(() => { this._obervables.usercard = o; }) }
+
 	get phaser() { return this._obervables.phaser }
 	set phaser(o) { runInAction(() => { this._obervables.phaser = o; }) }
 
@@ -128,6 +137,11 @@ class Store extends ProtoStore {
 
 	get socketio() { return this._obervables.socketio }
 	set socketio(o) { runInAction(() => { this._obervables.socketio = o; }) }
+
+
+  get isAuthenticated() {
+    return Boolean(this.user.isValid && this.usercard.isValid);
+  }
 
 };
 

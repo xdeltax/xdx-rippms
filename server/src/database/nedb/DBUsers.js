@@ -39,8 +39,8 @@ const schemaUser = Joi.object().keys({
 	providertoken:Joi.string().min(30).max(499).normalize().required(),
   forcenew: 		Joi.string().trim().min(1).max(99).optional(),
 
-  //email: 				Joi.string().max(256).email().allow("").allow(null).normalize().optional().default(""),
-  //phonenumber: 	Joi.string().max(64).allow("").allow(null).normalize().optional().default(""),
+  email: 				Joi.string().max(256).email().allow("").allow(null).normalize().optional().default(""),
+  phonenumber: 	Joi.string().max(64).allow("").allow(null).normalize().optional().default(""),
 });
 
 

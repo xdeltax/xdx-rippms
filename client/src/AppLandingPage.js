@@ -190,9 +190,9 @@ export default ( observer( class extends React.Component {
 
               " c:", `${store.system.app.watchers.connection.isOnline?1:0}`,
 
-              " a", `${store.user.isAuthenticated?1:0}`,
-              "/", `${store.user.isValidUser?1:0}`,
-              "/", `${store.user.isValidUserProfile?1:0}`,
+              " a", `${store.isAuthenticated?1:0}`,
+              "/", `${store.user.isValid?1:0}`,
+              "/", `${store.usercard.isValid?1:0}`,
 
               " id:",`${store.user.userid}`,
               " [o:", `${store.system.app.watchers.orientation.angle}`,
@@ -207,12 +207,16 @@ export default ( observer( class extends React.Component {
             	fingerprint: global.fingerprint.hash,
               loadingNowStatus: store.loadingNowStatus,
               isConnected: Boolean(store.socketio.isConnected),
-              isAuthenticated: this.isAuthenticated,
-              isValidUser: this.isValidUser,
-              isValidUserProfile: this.isValidUserProfile,
+
+              isAuthenticated: store.isAuthenticated,
+              isValidUser: store.user.isValid,
+              isValidUsercard: store.usercard.isValid,
+
               userid: store.user.userid,
               servertoken: store.user.servertoken,
+
               storeUser: store.user.get_all(),
+              storeUsercard: store.usercard.get_all(),
               storePhaser: store.phaser.get_all(),
               storePixi: store.pixi.get_all(),
               //storeSocketIO: store.socketio.get_all(),
