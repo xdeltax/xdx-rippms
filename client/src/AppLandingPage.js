@@ -89,7 +89,7 @@ export default ( observer( class extends React.Component {
 	  // ===============================================
     this.setState({ statusText: "load persistent app-states" })
     global.log("AppLandingPage:: onAppLoadEvent:: load user-data from server", );
-    await store.user.apiCALL_DBUsers_loadUserFromServerDatabase(store.user.userid, store.user.userid, store.user.servertoken);
+    await store.user.getOwnFromServer(store.user.userid, store.user.servertoken); //await store.user.apiCALL_DBUsers_loadUserFromServerDatabase(store.user.userid, store.user.userid, store.user.servertoken);
   }
 
 
@@ -104,7 +104,7 @@ export default ( observer( class extends React.Component {
 	  // save store-data to server-database
 	  // ===============================================
     global.log("AppLandingPage:: onAppUnloadEvent:: saveUserToServerDatabase", store.user.userid)
-    await store.user.apiCALL_DBUsers_saveUserToServerDatabase(store.user.userid, store.user.userid, store.user.servertoken);
+    await store.user.saveOwnToServer();
 
     global.log("AppLandingPage:: componentWillUnmount:: removeEventListeners", )
     unwatchConnectionStatus();

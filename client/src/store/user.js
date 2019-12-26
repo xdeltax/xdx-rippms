@@ -23,7 +23,7 @@ class Store extends ProtoStore {
 
   // init of all observables
   _obervables = {
-    auth: {
+    user: {
       userid: null,
       servertoken: null,
 
@@ -33,8 +33,7 @@ class Store extends ProtoStore {
       createdAt: 0,
       updatedAt: 0,
     },
-    userCard: {
-      gender: null,
+    usercard: {
       email: null,
       phonenumber: null,
     },
@@ -48,77 +47,59 @@ class Store extends ProtoStore {
   get const() { return this.constants; }
   set const(v) { runInAction(() => { this.constants = v; }) }
 
-  // user / user-credentials
-  get auth() { return this._obervables.auth; }
-  set auth(v) { runInAction(() => { this._obervables.auth = v; }) }
 
   get isAuthenticated() {
     return Boolean(this.isValidUser && this.isValidUserProfile);
   }
 
+  // user / user-credentials
+  get user() { return this._obervables.user; }
+  set user(v) { runInAction(() => { this._obervables.user = v; }) }
+
       // user-validation
       get isValidUser() {
         if (global.DEBUG_AUTH_FAKE_ISVALIDUSER) return true;
-        return Boolean(!!this.auth.servertoken && !!this.auth.userid)
+        return Boolean(!!this.user.servertoken && !!this.user.userid)
       }
 
-      get userid() { return this.auth.userid; }
-      set userid(v) { runInAction(() => { this.auth.userid = v; }) }
+      get userid() { return this.user.userid; }
+      set userid(v) { runInAction(() => { this.user.userid = v; }) }
 
-      get servertoken() { return this.auth.servertoken; }
-      set servertoken(v) { runInAction(() => { this.auth.servertoken = v; }) }
+      get servertoken() { return this.user.servertoken; }
+      set servertoken(v) { runInAction(() => { this.user.servertoken = v; }) }
 
-      get accountstatus() { return this.auth.accountstatus; }
-      set accountstatus(v) { runInAction(() => { this.auth.accountstatus = v; }) }
+      get accountstatus() { return this.user.accountstatus; }
+      set accountstatus(v) { runInAction(() => { this.user.accountstatus = v; }) }
 
-      get memberstatus() { return this.auth.memberstatus; }
-      set memberstatus(v) { runInAction(() => { this.auth.memberstatus = v; }) }
+      get memberstatus() { return this.user.memberstatus; }
+      set memberstatus(v) { runInAction(() => { this.user.memberstatus = v; }) }
 
-      get createdAt() { return this.auth.createdAt; }
-      set createdAt(v) { runInAction(() => { this.auth.createdAt = v; }) }
+      get createdAt() { return this.user.createdAt; }
+      set createdAt(v) { runInAction(() => { this.user.createdAt = v; }) }
 
-      get updatedAt() { return this.auth.updatedAt; }
-      set updatedAt(v) { runInAction(() => { this.auth.updatedAt = v; }) }
+      get updatedAt() { return this.user.updatedAt; }
+      set updatedAt(v) { runInAction(() => { this.user.updatedAt = v; }) }
 
   // usercard
-  get userCard() { return this.obervables.userCard }
-  set userCard(o) { runInAction(() => { this.obervables.userCard = o }) }
+  get usercard() { return this.obervables.usercard }
+  set usercard(o) { runInAction(() => { this.obervables.usercard = o }) }
 
       // user-validation
       get isValidUserProfile() {
         if (global.DEBUG_AUTH_FAKE_ISVALIDPROFILE) return true;
-        return true; //Boolean(!!this.userCard.email && !!this.userCard.phonenumber)
+        return true; //Boolean(!!this.usercard.email && !!this.usercard.phonenumber)
       }
 
-      get email() { return this.userCard.email; }
-      set email(v) { runInAction(() => { this.userCard.email = v; }) }
+      get email() { return this.usercard.email; }
+      set email(v) { runInAction(() => { this.usercard.email = v; }) }
 
-      get phonenumber() { return this.userCard.phonenumber; }
-      set phonenumber(v) { runInAction(() => { this.userCard.phonenumber = v; }) }
+      get phonenumber() { return this.usercard.phonenumber; }
+      set phonenumber(v) { runInAction(() => { this.usercard.phonenumber = v; }) }
 
-
-  doAuthLogin = async (userdataFromServer) => {
-  	const {userid, servertoken, accountstatus, memberstatus, createdAt, updatedAt} = userdataFromServer || {};
-		global.log("USER:: doAuthLogin:: START:: ", userid,)
-  	
-  	if (userid !== this.userid) {
-  		global.log("USER:: doAuthLogin:: logout:: ", userid, this.userid)
-	  	await this.doAuthLogout();
-  	};
-
-  	if (userid && servertoken) {
-			global.log("USER:: doAuthLogin:: SET:: ", userid,)
-	  	this.userid 			= userid;
-	  	this.servertoken  = servertoken;
-	  	this.memberstatus = Array.from(memberstatus); // [...memberstatus]; // shallow copy only
-	  	this.accountstatus= Array.from(accountstatus); // [...accountstatus]; // shallow copy only
-	  	this.createdAt  	= createdAt;
-	  	this.updatedAt  	= updatedAt;
-  	}
-  };
 
 
   doAuthLogout = async () => {
+		global.log("USER:: doAuthLogout:: ", this.userid,)
     // send logout signal to server
     //await this.apiCALL_DBUsers_logout(this.userid, this.servertoken);
 
@@ -130,183 +111,100 @@ class Store extends ProtoStore {
   };
 
 
-/*
-  __loginWithProvider = async (fakeUser, fakeUserProfile) => { // "user click" must not be "async" otherwise login-popup from facebook will be blocked in browser
-    try {
-      //store.globalSpinner.show();
-      if (global.DEBUG_AUTH_ALLOW_FAKE_IDS) {
-        if (fakeUser) this.merge("auth", fakeUser);
-        if (fakeUserProfile) this.merge("userCard", fakeUserProfile);
-      }
-      //global.log("$$$$$$$$$---->", this.isValidUser, Boolean(!!this.auth.servertoken && !!this.auth.userid), this.servertoken, this.userid, this.isValidUserProfile, fakeUser, fakeUserProfile, toJS(this.auth), toJS(this.userCard));
+  doAuthLogin = async (userdataFromServer) => {
+  	const {userid, servertoken, accountstatus, memberstatus, createdAt, updatedAt,} = userdataFromServer || {};
 
-      // open faceboook login dialog
-      if (!this.isValidUser) { // no valid userid or servertoken -> logout (clear all) -> login-popup facebook to get fbid and fbtoken
-        this.logout();
-        /////
-        // facebook
-        ///////////////
-        // OPEN LOGIN-SCREEN FACEBOOK -> ask for fb-userid and fb-accesstoken
-        let fb, fbME;
+		global.log("store.user:: doAuthLogin:: ", this.userid, userid,);
+  	
+  	if (userid !== this.userid) {
+	  	await this.doAuthLogout();
+  	};
 
-        fb = await store.facebook.askFacebook4Accesstoken(); // fb.init() MUST NOT be "async", thats why init is done in constuctor of RouteLogin
-        // fb::
-        //  accessToken: authResponse.accessToken,
-        //  userID: authResponse.userID,
-        //  error: null,
-        if (!fb || fb.error || !fb.accessToken || !fb.userID )
-        throw new Error("failed to access facebook");
+  	if (userid && servertoken) {
+	  	this.userid 			= userid;
+	  	this.servertoken  = servertoken;
+	  	this.memberstatus = Array.from(memberstatus); // [...memberstatus]; // shallow copy only
+	  	this.accountstatus= Array.from(accountstatus); // [...accountstatus]; // shallow copy only
+	  	this.createdAt  	= createdAt;
+	  	this.updatedAt  	= updatedAt;
 
-        fbME = await store.facebook.askFacebook4Me("id,email,name,picture");
-        global.log("store:: user:: loginWithFacebook:: askFacebook4Accesstoken:: fb, fbME:: ", fb, fbME)
+	  	//const {err, res} = await this._getUsercard(this.userid, this.userid, this.servertoken);
+	  	//if (!err) this.usercard = Object.assign(this.usercard || {}, res);
 
-        // DEBUG:: after successfull login to official facebook account -> add some fake to facebook-id to force server to create a new user.
-        if (global.DEBUG_AUTH_ALLOW_FAKE_IDS && fakeUser && fakeUser.hasOwnProperty("userid")) {
-          fb.userID = fb.userID + "FAKE" + fakeUser.userid;
-        }
-
-        const { userID: fbUserID, accessToken: fbAccessToken, } = fb;
-
-        /////
-        //  server-call: get or create user and update tokens
-        ///////////////
-        // search server-database "DBUsers" for fb-userid and create new user and / or return userid and servertoken
-        let userObject;
-        userObject = await this.apiCALL_DBUsers_loginWithFacebook(fbUserID, fbAccessToken);
-        global.log("store:: user:: loginWithFacebook:: askFacebook4Accesstoken:: apiCALL_DBUsers_loginWithFacebook:: ", userObject)
-        //userObject
-        //  isnewuser: true OR false
-        //  user:
-        //    accountstatus: [0]
-        //    createdAt: "1970-01-19T03:30:08.368Z"
-        //    email:
-        //    fbemail:
-        //    fbtoken:
-        //    fbuserid:
-        //    forcenew: "0"
-        //    logintype: "facebook"
-        //    memberstatus: [0]
-        //    phonenumber: ""
-        //    servertoken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2lkIjoiNjZmNTczNzNlNzY2MTIzMzljYWY3MmVlMTAzYzRhNTJkYjI1NjQ4MSIsImZiaWQiOiI1NzM5MjkzODk3NDI4NjMiLCJoYXNoIjoiYzVlMDA0NTE4NGY5ZjIxOTkzNmNkMzJlMmE2M2IxYWJlMTE5NGU3MiIsImlhdCI6MTU2ODg3NTk2MSwiZXhwIjoxNTY5NDgwNzYxLCJhdWQiOiJtZW1iZXIiLCJpc3MiOiJ4ZHgiLCJzdWIiOiJub3RoaW5nIiwianRpIjoiaWQxIn0.T-zKobehjuSjeWXpekcm-NXMjJbCsvSORKA6pmN9ATw"
-        //    updatedAt: "1970-01-19T03:47:55.961Z"
-        //    userid: "66f57373e76612339caf72ee103c4a52db256481"
-
-        if (!userObject || !userObject.hasOwnProperty("isnewuser") || !userObject.hasOwnProperty("user"))
-        throw new Error("invalid server response (userObject)");
-
-        let { isnewuser: s_isNewUser, user: s_user, } = userObject;
-        if (!s_user || !s_user.userid || !s_user.servertoken)
-        throw new Error("invalid server response (userid / servertoken)");
-
-        /////
-        //  mobx: set user and token
-        ///////////////
-        // check for DEBUG_FAKE
-        const fakePos = fbUserID.indexOf("FAKE", 1); // -1 if no FAKE
-        const fbuserid_withoutFAKE = (fakePos < 0) ? fbUserID : fbUserID.slice(0, fakePos);
-
-        if (s_isNewUser) ;
-
-        this.userid = s_user.userid;
-        this.servertoken = s_user.servertoken;
-
-        this.accountstatus = s_user.hasOwnProperty("accountstatus") ? s_user.accountstatus : [];
-        this.memberstatus = s_user.hasOwnProperty("memberstatus") ? s_user.memberstatus : [];
-
-        this.fbemail = s_user.hasOwnProperty("fbemail") ? s_user.fbemail : "";
-        this.fbuserid = fbuserid_withoutFAKE;
-        this.fbME = fbME;
-
-        this.email = s_user.hasOwnProperty("email") ? s_user.email : s_user.hasOwnProperty("fbemail") ? s_user.fbemail : "";
-        this.phonenumber = s_user.hasOwnProperty("phonenumber") ? s_user.phonenumber : "";
-      } // !isValidUser
-
-      if (!this.isValidUserProfile) { // no valid userid or servertoken -> logout (clear all) -> login-popup facebook to get fbid and fbtoken
-        // call-server for usercard
-        await this.apiCALL_DBUsers_loadUserFromServerDatabase(this.userid, this.userid, this.servertoken);
-
-        if (!this.isValidUserProfile) { // no valid userid or servertoken -> logout (clear all) -> login-popup facebook to get fbid and fbtoken
-          this.clear_obj("userCard");
-
-          const { picture: fbPicture, } = this.fbME;
-
-          // update Gallery:: get profile-image from facebook and upload to server and return url from server and add to gallery
-          const isSilhouette = (fbPicture && fbPicture.hasOwnProperty("data") && fbPicture.data.hasOwnProperty("is_silhouette") && fbPicture.is_silhouette === true)
-
-          if (!isSilhouette) {
-            try {
-              // http://graph.facebook.com/373932389756869/picture?type=square&height=500&width=500& -> jpeg
-              const fbProfileImageURL = `http://graph.facebook.com/${this.fbuserid}/picture?type=square&height=1000&width=1000&`;
-              const img = await Jimp.read(fbProfileImageURL);
-              await img.getBase64Async(Jimp.MIME_JPEG);
-
-              // server-call -> store image in database
-              //await this.userCard.userGallery.apiCALL_DBUserGallery_addImageOwnANDupdateStore(this.userid, this.servertoken, "url", imgbase64)
-
-            } catch (error) {
-              global.log("store:: user:: loginWithFacebook:: ERROR:: ", error);
-            }
-          }
-        }
-      }
-
-      global.log("store:: user:: loginWithFacebook:: isValid:: ", this.isValidUser, this.isValidUserProfile);
-      return this.isValidUserProfile;
-    } catch (error) {
-      global.log("store:: user:: loginWithFacebook:: ERROR:: ", error);
-      throw error;
-    } finally {
-      //store.globalSpinner.hide();
-    }
-  }
-
-	
-  // api-calls
-  apiCALL_DBUsers_logout = async (userid, servertoken) => {
-    const socketCall = `/api2/auth/logout`;
-    //REST-call:: const url_param = `${process.env.REACT_APP_SERVERURL}/api2/auth/logout`;
-    try {
-      if (!userid || !servertoken)
-      throw new Error("invalid userid / servertoken");
-
-      const headers = {
-        //REST-call:: Accept: "application/json", 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*',
-        'userid': userid,
-        'authorization': servertoken,
-      };
-      const params = {
-      };
-      const body = { // REST-call:: NEED to be all LOWERCASE
-        // userid: userid,
-      };
-      // socket-call::
-      const userLoggedOut = await store.socketio.emitWithTimeoutAndConvertStatusToError(socketCall, { headers: headers || {}, body: body || {}, params: params || {}, }, 5000);
-      // REST-call:: const options = { method: 'POST', headers: headers, body: JSON.stringify(body), timeout: 5000}; // throw on timeout
-      // REST-call:: const result = await fetchWithTimeout(url_param, options, });
-      // REST-call:: if (!serverResponse || serverResponse.status !== 200 || serverResponse.ok !== true || serverResponse.statusText !== 'OK') throw new Error("could not connect to server.");
-      // REST-call:: const returnObject = await serverResponse.json();
-      // REST-call:: if (returnObject.status !== "ok") throw new Error(returnObject.status);
-      // REST-call:: returnObject.result = dbProfile,
-      // REST-call:: const userLoggedOut = returnObject.result; // from server/DBUserProfile -> getUserProfile
-
-      global.log(`store:: user:: apiCALL_DBUsers_logout:: ${socketCall}:: userLoggedOut:: `, userLoggedOut);
-      return userLoggedOut;
-    } catch(error) {
-      global.log(`store:: user:: apiCALL_DBUsers_logout:: ${socketCall}:: ERROR:: `, error)
-      throw error; // return { status: error, result: null, }
-    }
-  }
-	*/
+	    await saveToPersistentDatabase();
+  	};
+  };
 
 
-  apiCALL_DBUsers_loadUserFromServerDatabase = async (targetuserid, userid, servertoken,) => {
+  getOwnFromServer = async () => {
+  	if (!this.userid || !this.servertoken) return;
 
-    await saveToPersistentDatabase();
-  }
+	  const {err, res} = await this._getUser(this.userid, this.userid, this.servertoken);
+	  if (!err) { 
+	  	this.user = Object.assign(this.user || {}, res);
+	  	
+	  	//const {err, res} = await this._getUsercard(this.userid, this.userid, this.servertoken);
+	  	//if (!err) this.usercard = Object.assign(this.usercard || {}, res);
 
-  apiCALL_DBUsers_saveUserToServerDatabase = async (targetuserid, userid, servertoken,) => {
+	    await saveToPersistentDatabase();
+	  };
+  };
 
-  }
+
+  _getUser = async (targetuserid, userid, servertoken) => {
+		let res = null;
+		let err = null;
+		try {
+			const ioRoute = "auth/userstore/get/user";
+			const req = {
+				targetuserid,
+				userid,
+				servertoken,
+			}
+    	res = await store.socketio.emitWithTimeout(ioRoute, req,);
+		} catch (error) {
+			err = error;
+		}
+
+		global.log("store.user:: getUser:: ", targetuserid, userid, err, res)
+  	return { err, res };
+  };
+
+
+  saveOwnToServer = async () => {
+  	if (!this.userid || !this.servertoken) return;
+	  //await this._saveOwnUserToServer(this.userid, this.servertoken, this.user);
+  };
+
+
+  /*
+  _saveOwnUserToServer = async (userid, servertoken, obj) => {
+  	if (!userid || !servertoken) return;
+	  return await this._saveOwnUser(userid, servertoken, obj);
+  };
+
+
+  _saveUserOwn = async (userid, servertoken, obj) => {
+		let res = null;
+		let err = null;
+		const targetuserid = userid;
+		try {
+			const ioRoute = "auth/userstore/user/update";
+			const req = {
+				targetuserid,
+				userid,
+				servertoken,
+				obj,
+			}
+    	res = await store.socketio.emitWithTimeout(ioRoute, req,);
+		} catch (error) {
+			err = error;
+		}
+
+		global.log("store.user:: saveUserOwn:: ", targetuserid, userid, err, res)
+  	return { err, res };
+  };
+  */
 };
 
 decorate(Store, {

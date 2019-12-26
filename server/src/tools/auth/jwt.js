@@ -4,6 +4,7 @@ var jwt = require('jsonwebtoken');
 module.exports.sign = (userid, provider, providerid, hash) => {
   const jwtPayload = {
     usid: userid,
+    pvd: provider,
     pid: providerid,
     hash: hash,
   }; // exp: Math.floor(Date.now() / 1000) + jwtExpiration,
@@ -25,7 +26,7 @@ module.exports.verify = (jwtServertoken) => {
     jwtid: 'id1',
     issuer: 'xdx',
     audience: 'member',
-    subject: 'nothing',
+    subject: 'x',
     complete: true,
     clockTolerance: 120,
     maxAge: '30d',

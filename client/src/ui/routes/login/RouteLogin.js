@@ -43,10 +43,10 @@ const styles = theme => ({
 export default ( withStyles(styles)( observer( class extends React.Component {
   state = {  }
 
-  onAuthSuccess = async (socketid, provider, userdataFromServer) => {
-  	global.log("OAuth:: Success:: Callback:: ", socketid, provider, userdataFromServer);
+  onAuthSuccess = async (socketid, provider, user) => {
+  	global.log("OAuth:: Success:: Callback:: ", socketid, provider, user);
 
-  	await store.user.doAuthLogin(userdataFromServer);
+  	await store.user.doAuthLogin(user);
   }
 
   onAuthFailed = (socketid, provider, error) => {
@@ -109,6 +109,35 @@ export default ( withStyles(styles)( observer( class extends React.Component {
           	store.user.servertoken = "TEST"
           }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
           	TESTUSER
+          </Button>
+
+          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
+          	const userid = "66f57373e76612339caf72ee103c4a52db256481";
+          	const servertoken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2lkIjoiNjZmNTczNzNlNzY2MTIzMzljYWY3MmVlMTAzYzRhNTJkYjI1NjQ4MSIsInB2ZCI6ImZhY2Vib29rIiwicGlkIjoiNTczOTI5Mzg5NzQyODYzIiwiaGFzaCI6IjJkZjYzYmQ5NWMwMTM5ZWEyN2MyZTJkMzlkYjgwYzA1OWNmN2U2OTEiLCJpYXQiOjE1NzcyOTM5NzMsImV4cCI6MTU3Nzg5ODc3MywiYXVkIjoibWVtYmVyIiwiaXNzIjoieGR4Iiwic3ViIjoieCIsImp0aSI6ImlkMSJ9.0pef9JFR-25iC0fi87vDW_n-K9HkuvxoVy9UblSxScc";
+          	const {err, res} = store.user.getUser(userid, userid, servertoken);
+          	global.log("TEST GET USER:: ", err, res);
+          }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
+          	OWN USER
+          </Button>
+
+          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
+          	const targetuserid = "03d9a6fe7b0a19303d35b2257a46d77c3ccbd705";
+          	const userid = "66f57373e76612339caf72ee103c4a52db256481";
+          	const servertoken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2lkIjoiNjZmNTczNzNlNzY2MTIzMzljYWY3MmVlMTAzYzRhNTJkYjI1NjQ4MSIsInB2ZCI6ImZhY2Vib29rIiwicGlkIjoiNTczOTI5Mzg5NzQyODYzIiwiaGFzaCI6IjJkZjYzYmQ5NWMwMTM5ZWEyN2MyZTJkMzlkYjgwYzA1OWNmN2U2OTEiLCJpYXQiOjE1NzcyOTM5NzMsImV4cCI6MTU3Nzg5ODc3MywiYXVkIjoibWVtYmVyIiwiaXNzIjoieGR4Iiwic3ViIjoieCIsImp0aSI6ImlkMSJ9.0pef9JFR-25iC0fi87vDW_n-K9HkuvxoVy9UblSxScc";
+          	const {err, res} = store.user.getUser(targetuserid, userid, servertoken);
+          	global.log("TEST GET USER:: ", err, res);
+          }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
+          	OTHER USER
+          </Button>
+
+          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
+          	const targetuserid = "03d9a6fe7b0a19303d35b2257a46d77c3ccbd705";
+          	const userid = "66f57373e76612339caf72ee103c4a52db256481";
+          	const servertoken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2lkIjoiNjZmNTczNzNlNzY2MTIzMzljYWY3MmVlMTAzYzRhNTJkYjI1NjQ4MSIsInB2ZCI6ImZhY2Vib29rIiwicGlkIjoiNTczOTI5Mzg5NzQyODYzIiwiaGFzaCI6IjJkZjYzYmQ5NWMwMTM5ZWEyN2MyZTJkMzlkYjgwYzA1OWNmN2U2OTEiLCJpYXQiOjE1NzcyOTM5NzMsImV4cCI6MTU3Nzg5ODc3MywiYXVkIjoibWVtYmVyIiwiaXNzIjoieGR4Iiwic3ViIjoieCIsImp0aSI6ImlkMSJ9.0pef9JFR-25iC0fi87vDW_n-K9HkuvxoVy9UblSxScc";
+          	const {err, res} = store.user.getUsercard(userid, userid, servertoken);
+          	global.log("TEST GET USERCARD:: ", err, res);
+          }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
+          	USERCARD
           </Button>
 	      </div>
 

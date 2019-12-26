@@ -66,7 +66,8 @@ module.exports = (app, io) => {
 	  //
     // - attn.: is NOT called on first connection. it IS called on emit-events
 	  //
-    socket.use((packet, next) => {
+    socket.use((packet, next) => { 
+
       // packet contains all fiels from the client-side emit-function
       // packet:: all from socket.emit(a,b,c,d, () => {}); -> packet: [ a,b,c,d, callback-function ]
       // from client we send this: packet = [ url_param, res, callback-function ]
@@ -134,7 +135,7 @@ module.exports = (app, io) => {
           if (!validator.isJWT(valid_authorization))
           throw new Error('invalid token format');
 
-          if (!wt.verify(valid_authorization)) // check if the token was signed by this server and isnt expired
+          if (!jwt.verify(valid_authorization)) // check if the token was signed by this server and isnt expired
           throw new Error('verification failed');
 
           const decodedServertoken = jwt.decode(valid_authorization); // decoding token to extract userid

@@ -17,7 +17,7 @@ export default class OAuth extends React.Component {
 
     global.log("OAuth:: constructor:: provider:: ", provider, socket);
 
-    const ioRoute = `client.oauth.${provider}.io`;
+    const ioRoute = `clientapi.oauth.${provider}.io`;
     socket && socket.on(ioRoute, (err, res) => { // get reply with logindata from server (provider/callback) via socket
     	//global.log("oAuth:: incomming socket message:: ", socket.id, provider, err, res)
       if (this.state && this.state.windowOpen) {

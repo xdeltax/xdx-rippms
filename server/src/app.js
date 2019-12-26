@@ -23,10 +23,15 @@ const PassportFacebookStrategy = require('passport-facebook').Strategy; //const 
 const PassportGoogleStrategy = require('passport-google-oauth20').Strategy;
 //const PassportLocalStrategy = require('passport-local').Strategy;
 
+//const jwt = requireX('tools/auth/jwt');
+//const socketioRoutes = requireX('routes/socketio');
+//const socketValidateServertoken = requireX("socket/validateServertoken");
 
 const jwt = requireX('tools/auth/jwt');
+const Joi = require('@hapi/joi');
+const JoiValidateFallback = requireX('tools/joivalidatefallback');
 
-const socketioRoutes = requireX('routes/socketio');
+const arrayRemoveElementByValue = (arr, value) => { return arr.filter( function(element){ return element !== value; }) }
 
 
 function logErrors(err, req, res, next) {
@@ -135,7 +140,7 @@ module.exports = async (config) => {
   // socket.io: initialize the WebSocket server instance
   // ===============================================
   global.log("app:: configurating socketio")
-  const io = socketio.listen(server);	// connect sockets to the server
+  var io = socketio.listen(server);	// connect sockets to the server
 	//app.set('io', io); // add sockets to the request so that we can access them later in the controller -> const _io = req.app.get('io');
 
   // ===============================================
@@ -181,23 +186,6 @@ module.exports = async (config) => {
   // middleware: inject IP:: get IP of client and inject in res.clientip
   // ===============================================
   app.use(requestIp.mw({ attributeName : 'clientip' })) // inject ip to res.clientip
-
-
-  // ===============================================
-  // ROUTES: PROTECTED
-  //    protected routes that require authorization-header-entry containing a valid jwt-servertoken
-  //    https://localhost:8080/account
-  //    https://localhost:8080/auth/*
-  //    https://localhost:8080/api/protected/random-quote
-  // ===============================================
-  ////  app.use(routesProtected); // API-calls
-  // ===============================================
-  // ROUTES: UNPROTECED7
-  //    unprotected routes that do not need any auth for requesting data from server
-  //    https://localhost:8080/api/token/request
-  //    https://localhost:8080/open/hello
-  // ===============================================
-  ////  app.use(routesUnprotected); // API-calls
 
 
   // ===============================================
@@ -339,21 +327,201 @@ module.exports = async (config) => {
 
 			// query db -> update or create db
 	  	const {err, res} = await DBUsers.loginWithProvider(provider, _providerid, _providertoken, _uid, _fingerprinthash);
-
 		  //global.log(`***(3) passportAuthCallback:: /${provider}.io.callback:: `,  err, res );
 
 		  // send error or (full) user-object to client -> OAuth.js -> RouteLogin.js
-		  const ioRoute = `client.oauth.${provider}.io`;
+		  const ioRoute = `clientapi.oauth.${provider}.io`;
 		  io.in(socketid).emit(ioRoute, err, res); // emit to client:: userobject OR null
 	  }
 	  res.status(200).end();
 	};
 
 
+
+
   // ===============================================
   // route: socket.io-routing
   // ===============================================
-  socketioRoutes(app, io);
+  io.xdx = { // add object to io -> track number of connections
+    connectionCount: 0,
+    useridARRAY: [],
+  };
+	
+
+  // ===============================================
+  // route: middleware for every new socket-connect
+  // ===============================================
+  io.use( (socket, next) => {
+  	global.log("+++ io.use:: socket:: ", socket.id)
+  	next();
+  });
+
+
+  io.on('connection', (socket) => {
+    // new connection established
+    global.log('io.on:: client successfully connected:: ', socket.id);
+
+    io.xdx.connectionCount++;
+
+    socket.xdx = {
+    	routetype: null,
+      userid: null, // update after verification
+      servertoken: null,
+    };
+
+    //todo: -> db-call to update onlineStatus
+
+    // handle disconnect-event
+    socket.on('disconnect', (operation) => {
+      global.log('socket.on:: client disconnect:: ', socket.id, operation);
+
+      io.xdx.connectionCount--;
+      if (io.xdx.connectionCount < 0) io.xdx.connectionCount = 0;
+
+      // remove client from online-list
+      if ( socket.hasOwnProperty("xdx")
+        && socket.xdx.hasOwnProperty("userid")
+        && socket.xdx.userid
+        && io.xdx.useridARRAY.includes(socket.xdx.userid)
+      ) {
+        io.xdx.useridARRAY = arrayRemoveElementByValue(io.xdx.useridARRAY, socket.xdx.userid);
+      }
+
+      //todo: -> db-call to update onlineStatus
+    }); // of socket.on(disconnect)
+
+
+    // every api-call for this client (socket) is counted here.
+    if (!socket.apicalls) socket.apicalls = { count: 0, };
+    socket.apicalls.count++;
+    socket.apicalls.updatedAt = new Date() / 1000;
+    global.log("socketio:: socket.use:: apicalls:: count:: ", socket.apicalls.count, socket.apicalls.updatedAt);
+
+
+
+	  // ===============================================
+	  // middleware: check routes
+	  // ===============================================
+	  // routes with "auth/..." are valid if req contains "userid" and (a valid) "servertoken"
+	  // routes with "free/..." are always valid
+	  // all other routes are invalid
+	  // ===============================================
+    socket.use( (packet, next) => {    	
+    	try {
+    		const [route, req] = packet || {};
+
+			  // ===============================================
+			  // auth-routes: routes starting with "auth" needs a valid servertoken 
+			  // ===============================================
+    		if (route && route.indexOf("auth") === 0) {
+    			const {userid, servertoken} = req || {};
+    			if (!req || !userid || !servertoken) throw new Error("no token found");
+
+				  // ===============================================
+				  // check servertoken-format
+				  // ===============================================
+    			const valid_userid      = JoiValidateFallback(userid     , null, Joi.string().min(30).max(50).alphanum().normalize().required(),); 
+			    const valid_servertoken = JoiValidateFallback(servertoken, null, Joi.string().regex(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]*$/).min(30).max(499).normalize().required(), ); 
+    			if (!valid_userid || !valid_servertoken) throw new Error("invalid token format");
+
+				  // ===============================================
+				  // verify servertoken
+				  // ===============================================
+		      if (!jwt.verify(valid_servertoken)) throw new Error('token verification failed'); // check if the token was signed by this server and isnt expired		      
+
+				  // ===============================================
+				  // decode servertoken
+				  // ===============================================
+		      const decodedServertoken = jwt.decode(valid_servertoken); // decoding token to extract userid
+					//global.log("server.use:: decodedServertoken:: ", decodedServertoken)
+		      // usid: userid
+		      // pvd: provider
+		      // pid: providerid
+	    		// hash: crypto.createHash('sha1').update(JSON.stringify(thisUser.forcenew + thisUser.providertoken)).digest('hex');
+					const { usid, pvd, pid, hash } = decodedServertoken || {};
+					if (!usid || !pvd || !pid || !hash) throw new Error("invalid token structure");
+					if (usid !== valid_userid) throw new Error("token / user mismatch");
+
+					if (socket.xdx.userid && socket.xdx.userid !== valid_userid) throw new Error("connection misuse");
+					socket.xdx.routetype = "auth";
+			    socket.xdx.userid = valid_userid;
+			    socket.xdx.servertoken = valid_servertoken;
+
+				  // ===============================================
+				  // add user to list of valid users beeing online
+				  // ===============================================
+			    // add auth client to online-list
+			    if (!io.xdx.useridARRAY.includes(socket.xdx.userid)) {
+			      io.xdx.useridARRAY.push(socket.xdx.userid);
+			      //todo: -> db-call to update onlineStatus
+			    };
+
+    			return next();
+    		};
+
+			  // ===============================================
+			  // unauth-routes: routes starting with "free" needs no servertoken 
+			  // ===============================================
+    		if (route && route.indexOf("free") === 0) {
+    			const {userid, servertoken} = req || {};
+
+    			if (!req) throw new Error("no token found");
+
+					socket.xdx.routetype = "free";
+
+    			return next();
+    		};
+
+			  // ===============================================
+			  // invalid-routes: all other routes are invalid 
+			  // ===============================================
+	    	throw new Error("invalid route");
+		  } catch (error) {
+		  	global.log("socket.use:: ERROR:: ", error);
+		  	next(error); // stop here
+		  }
+    });
+
+
+	  // ===============================================
+	  // all routes witgh "free/" and "auth/" are valid
+	  // ===============================================
+    socket.on('auth/userstore/user/get', async (req, clientEmitCallback) => {
+    	const {
+    		targetuserid,
+    		userid,
+    		servertoken,
+    	} = req || {};
+
+    	global.log("socket.on(auth/getusercard):: ", req, socket.xdx.userid);
+
+	  	const {err, res} = await DBUsers.getUser(targetuserid, userid, servertoken);
+
+    	// callback to store.user.getUsercard
+    	clientEmitCallback && clientEmitCallback(err, res);
+    });
+
+    /*
+    socket.on('auth/userstore/user/update', async (req, clientEmitCallback) => {
+    	const {
+    		targetuserid,
+    		userid,
+    		servertoken,
+    		obj,
+    	} = req || {};
+
+    	global.log("socket.on(auth/updateusercard):: ", req, socket.xdx.userid);
+
+	  	const {err, res} = await DBUsers.updateUser(targetuserid, userid, servertoken, obj);
+
+    	// callback to store.user.getUsercard
+    	clientEmitCallback && clientEmitCallback(err, res);
+    });
+		*/
+
+	}); // of io.on(connection)
+
+  //socketioRoutes(app, io);
 
 
   // ===============================================
