@@ -22,6 +22,7 @@ class Store extends ProtoStore {
   // init of all observables
   _obervables = {
     user: {
+		  // public (store.user)
       userid: null,
       servertoken: null,
 
@@ -30,6 +31,21 @@ class Store extends ProtoStore {
 
       createdAt: 0,
       updatedAt: 0,
+
+			// private
+			uid: null,
+			fphash: null,
+			provider: null,
+			facebookid: null,
+			googleid: null,
+			providertoken: null,
+			forcenew: null, // modifiable
+
+			// modifiable
+			name: null,
+			email: null,
+			phonenumber: null,
+
     },
   };
 
@@ -37,20 +53,20 @@ class Store extends ProtoStore {
   };
 
 
-  // setters and getters
-  get const() { return this.constants; }
-  set const(v) { runInAction(() => { this.constants = v; }) }
+  // user-validation
+  get isValid() {
+    if (global.DEBUG_AUTH_FAKE_ISVALIDUSER) return true;
+    return Boolean(!!this.user.servertoken && !!this.user.userid)
+  }
 
+  get const() { return this._constants; }
+  set const(v) { runInAction(() => { this._constants = v; }) }
 
-  // user / user-credentials
+  get helpers() { return this._helpers; }
+  set helpers(v) { runInAction(() => { this._helpers = v; }) }
+
   get user() { return this._obervables.user; }
   set user(v) { runInAction(() => { this._obervables.user = v; }) }
-
-      // user-validation
-      get isValid() {
-        if (global.DEBUG_AUTH_FAKE_ISVALIDUSER) return true;
-        return Boolean(!!this.user.servertoken && !!this.user.userid)
-      }
 
       get userid() { return this.user.userid; }
       set userid(v) { runInAction(() => { this.user.userid = v; }) }
@@ -70,6 +86,14 @@ class Store extends ProtoStore {
       get updatedAt() { return this.user.updatedAt; }
       set updatedAt(v) { runInAction(() => { this.user.updatedAt = v; }) }
 
+      get name() { return this.user.name; }
+      set name(v) { runInAction(() => { this.user.name = v; }) }
+
+      get email() { return this.user.email; }
+      set email(v) { runInAction(() => { this.user.email = v; }) }
+
+      get phonenumber() { return this.user.phonenumber; }
+      set phonenumber(v) { runInAction(() => { this.user.phonenumber = v; }) }
 
 
   doAuthLogout = async () => {
@@ -78,15 +102,36 @@ class Store extends ProtoStore {
     //await this.apiCALL_DBUsers_logout(this.userid, this.servertoken);
 
     // clear local persistent store
-    await deletePersistentDatabase();
+		await deletePersistentDatabase();
 
     // clear store
 	  this.clear_all();
+	  store.usercard.clear_all();
   };
 
 
   doAuthLogin = async (userdataFromServer) => {
-  	const {userid, servertoken, accountstatus, memberstatus, createdAt, updatedAt,} = userdataFromServer || {};
+  	// userObject = {
+  	//	 user: { ... }
+  	//	 usercard: { ... }
+  	// }
+  	const {
+  		user, 
+  		usercard,
+  	} = userdataFromServer || {};
+
+  	const {
+  		userid, 
+  		servertoken, 
+  		accountstatus, 
+  		memberstatus, 
+  		createdAt, 
+  		updatedAt,
+  	} = user || {};
+
+  	const {
+  	} = usercard || {};
+
 
 		global.log("store.user:: doAuthLogin:: ", this.userid, userid,);
   	
@@ -102,62 +147,145 @@ class Store extends ProtoStore {
 	  	this.createdAt  	= createdAt;
 	  	this.updatedAt  	= updatedAt;
 
-	  	//const {err, res} = await this._getUsercard(this.userid, this.userid, this.servertoken);
-	  	//if (!err) this.usercard = Object.assign(this.usercard || {}, res);
+		  store.usercard.clear_all();
+	  	store.usercard.merge_all(usercard);
 
 	    await saveToPersistentDatabase();
   	};
   };
 
 
-  getOwnFromServer = async () => {
+  getUserStoreFromServer = async (targetuserid) => {
   	if (!this.userid || !this.servertoken) return;
 
-	  const {err, res} = await this._getUser(this.userid, this.userid, this.servertoken);
-	  if (!err) { 
-	  	this.user = Object.assign(this.user || {}, res);
-	  	
-	  	//const {err, res} = await this._getUsercard(this.userid, this.userid, this.servertoken);
-	  	//if (!err) this.usercard = Object.assign(this.usercard || {}, res);
-
-	    await saveToPersistentDatabase();
-	  };
+		let res = null;
+		let err = null;
+		try {
+			const ioRoute = "auth/store/userstore/get";
+			const req = {
+				targetuserid: targetuserid,
+				userid: this.userid,
+				servertoken: this.servertoken,
+			}
+	  	global.log("*** getUserStoreFromServer:: ", req, store.socketio.socketID)
+    	res = await store.socketio.emitWithTimeout(ioRoute, req,);
+		} catch (error) {
+    	err = error;
+		} finally {
+			global.log("store.user:: getUserStoreFromServer:: ", targetuserid, err, res)
+	  	return { err: err, res: res };
+		}
   };
 
 
-  _getUser = async (targetuserid, userid, servertoken) => {
+  getUserFromServer = async (targetuserid) => {
+  	if (!this.userid || !this.servertoken) return;
+
 		let res = null;
 		let err = null;
 		try {
 			const ioRoute = "auth/store/user/get";
 			const req = {
-				targetuserid,
-				userid,
-				servertoken,
+				targetuserid: targetuserid,
+				userid: this.userid,
+				servertoken: this.servertoken,
 			}
     	res = await store.socketio.emitWithTimeout(ioRoute, req,);
 		} catch (error) {
-			err = error;
+    	err = error;
+		} finally {
+			global.log("store.user:: getUserFromServer:: ", targetuserid, err, res)
+	  	return { err: err, res: res };
 		}
-
-		global.log("store.user:: getUser:: ", targetuserid, userid, err, res)
-  	return { err, res };
   };
 
 
-  saveOwnToServer = async () => {
+  updateOwnUserPropsToServer = async (newProps) => {
   	if (!this.userid || !this.servertoken) return;
-	  //await this._saveOwnUserToServer(this.userid, this.servertoken, this.user);
+
+		let res = null;
+		let err = null;
+		try {
+			const ioRoute = "auth/store/user/update";
+			const req = {
+				targetuserid: this.userid,
+				userid: this.userid,
+				servertoken: this.servertoken,
+				props: newProps,
+			};
+    	res = await store.socketio.emitWithTimeout(ioRoute, req,);
+		} catch (error) {
+    	err = error;
+		} finally {
+			global.log("store.user:: updateOwnUserPropsToServer:: ", this.userid, err, res)
+	  	return { err: err, res: res };
+		}
   };
 
+
+  updateOwnUsercardPropsToServer = async (newProps) => {
+  	if (!this.userid || !this.servertoken) return;
+
+		let res = null;
+		let err = null;
+		try {
+			const ioRoute = "auth/store/usercard/update";
+			const req = {
+				targetuserid: this.userid,
+				userid: this.userid,
+				servertoken: this.servertoken,
+				props: newProps,
+			};
+    	res = await store.socketio.emitWithTimeout(ioRoute, req,);
+		} catch (error) {
+    	err = error;
+		} finally {
+			global.log("store.user:: updateOwnUserPropsToServer:: ", this.userid, err, res)
+	  	return { err: err, res: res };
+		}
+  };
+
+
+  // used in AppLandingPage @ componentDidMount
+  getUserStoreFromServerANDMergeWithStore = async () => {
+  	if (!this.userid || !this.servertoken) return;
+
+  	//global.log("+++++++1 getUserStoreFromServerANDMergeWithStore:: ", this.userid)
+	  const {err, res} = await this.getUserStoreFromServer(this.userid);
+  	//global.log("+++++++2 getUserStoreFromServerANDMergeWithStore:: ", err, res)
+	  if (!err) { 
+	  	const { 
+	  		user, 
+	  		usercard,
+	  	} = res || {};
+
+	  	//this.user = runInAction(() => Object.assign(this.user || {}, user));
+      store.user.clear();
+      store.user.merge_all( {user: user} );
+
+      store.usercard.clear();
+      store.usercard.merge_all( {usercard: usercard} );
+
+	    await saveToPersistentDatabase();
+	  };
+  	//global.log("+++++++3 getUserStoreFromServerANDMergeWithStore:: ", err, res)
+  	return { err: err, res: res };
+  };
+
+	
+	// used in AppLandingPage @ componentWillUnmount
+  saveUserStoreToServer = async () => {
+  	if (!this.userid || !this.servertoken) return;
+
+    const newProps = {
+    	name: this.name,
+    	email: this.email,
+    	phonenumber: this.phonenumber,
+    };
+	  const {err, res} = await this.updateOwnUserPropsToServer(newProps);
+  };
 
   /*
-  _saveOwnUserToServer = async (userid, servertoken, obj) => {
-  	if (!userid || !servertoken) return;
-	  return await this._saveOwnUser(userid, servertoken, obj);
-  };
-
-
   _saveUserOwn = async (userid, servertoken, obj) => {
 		let res = null;
 		let err = null;

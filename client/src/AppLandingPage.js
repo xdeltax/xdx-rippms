@@ -7,13 +7,12 @@ import CssBaseline from '@material-ui/core/CssBaseline';
 
 import Typography from '@material-ui/core/Typography';
 
-import { loadFromPersistentDatabase, saveToPersistentDatabase, } from "db/persistent";
+import { loadFromPersistentDatabase, saveToPersistentDatabase, } from "persistentdb";
 
 import { watchOnlineOfflineStatus, unwatchOnlineOfflineStatus } from "watchers/onOnlineOfflineChange";
 import { watchConnectionStatus, unwatchConnectionStatus } from "watchers/onConnectionChange";
 import { watchOrientationStatus, unwatchOrientationStatus } from "watchers/onOrientationChange";
 import { watchVisibilityStatus, unwatchVisibilityStatus } from "watchers/onVisibilityChange";
-import { watchUnloadAppEventAndUpdate, } from "watchers/onAppLoadUnloadEvent";
 
 import DEBUGOBJECTPRETTY from 'ui/components/debug/DEBUGOBJECTPRETTY';
 import ErrorBoundary from "ui/components/errorhandler/ErrorBoundary";
@@ -42,30 +41,63 @@ export default ( observer( class extends React.Component {
     global.info(`INFO:: process.env.NODE_ENV is set to "${process.env.NODE_ENV}".`,);
     global.info(`INFO:: process.env.REACT_APP_SERVERURL is set to "${process.env.REACT_APP_SERVERURL}".`,); // for socket.io
     // attn: socket.io:: .env-file needs url to nodejs-server for socket-connection
-    if (!process.env.REACT_APP_SERVERURL ) global.warn(`ATTN:: process.env.REACT_APP_SERVERURL no found! set it in .env`);
-
+    if (!process.env.REACT_APP_SERVERURL ) global.warn(`ATTN:: process.env.REACT_APP_SERVERURL no found! set it in .env`)
     if (!process.env.REACT_APP_APPVERSION) global.warn(`ATTN:: process.env.REACT_APP_APPVERSION no found! set it in .env`);
   }
 
   /*
-    don.t do anything between constructor and componentDidMount.
-    componentWillUnmount is async since r.v16 and could finish inbetween.
+    don.t do anything app-related between constructor and componentDidMount because
+    componentWillUnmount is async since r.v16 and could finish inbetween constructor and ...didmount.
   */
 
   componentDidMount = async () => {
     try {
-      // 1st load app-state to store -> than register / update listeners in store.
-      await this.onAppLoadEvent(); // load app-state from persistent local-db and call server for updates
+		  // ===============================================
+		  // load store-data from client-storage
+		  // ===============================================
+	    this.setState({ statusText: "load persistent app-states" })
+	    global.log("AppLandingPage:: onAppLoadEvent:: load app-state from persistent", );
+	    await loadFromPersistentDatabase(); // save is on onUnloadEvent
 
+		  // ===============================================
+		  // add watchers
+		  // ===============================================
       // Event listeners are only safe to add *after* mount, so they won't leak if mount is interrupted or errors.
       global.log("AppLandingPage:: componentDidMount:: register event-listeners", );
-
       this.setState({ statusText: "register event-listeners" })
       watchConnectionStatus();
       watchOnlineOfflineStatus();
       watchOrientationStatus();
       watchVisibilityStatus();
-      watchUnloadAppEventAndUpdate(this.onAppUnloadEvent); // -> saveToPersistentDatabase()
+      
+      window.addEventListener('beforeunload', this.handleLeavePageMessage, {once: true});
+
+		  // ===============================================
+		  // watch socket for first connection to server
+		  // ===============================================
+			store.socketio.onSocketConnect = async (socket, isConnected) => {
+				global.log("AppLandingPage:: onSocketConnect:: ", socket.id)
+
+			  // ===============================================
+			  // update store-data (from persistent load) with fresh data from server-database (if there is a valid userid and a valid servertoken)
+			  // ===============================================
+		    //global.log("!!!!!!!!!!!!!!!!!1 AppLandingPage:: onAppLoadEvent:: load user-data from server", store.user.userid);
+		    if (store.user.isValid) {
+		    	const resObj = await store.user.getUserStoreFromServerANDMergeWithStore();
+		    	global.log("AppLandingPage:: onAppLoadEvent:: getUserStoreFromServerANDMergeWithStore", resObj);
+		    }
+			}
+
+		  // ===============================================
+			// connect socket to server
+		  // ===============================================
+		  if (!global.DEBUG_DISABLE_SOCKETCONNECT) {
+				const socketProtokoll = process.env.REACT_APP_SOCKETIO_HANDSHAKEVERSION || 10000;
+				global.log("index:: startApp:: connect socket. ", socketProtokoll)
+				store.socketio.connect(global.serverURL, socketProtokoll);
+			} else {
+				global.log("index:: startApp:: DEBUG DEBUG DEBUG:: connect to socket is DISABLED!!! ", global);		
+			}
 
       //this.setState({ statusText: "sleep 2" })
       //await store.sleep(5000);
@@ -76,24 +108,8 @@ export default ( observer( class extends React.Component {
     }
   } // of componentDidMount
 
-  onAppLoadEvent = async () => {
-	  // ===============================================
-	  // load store-data from client-storage
-	  // ===============================================
-    this.setState({ statusText: "load persistent app-states" })
-    global.log("AppLandingPage:: onAppLoadEvent:: load app-state from persistent", );
-    await loadFromPersistentDatabase(); // save is on onUnloadEvent
 
-	  // ===============================================
-	  // load store-data from server-database
-	  // ===============================================
-    this.setState({ statusText: "load persistent app-states" })
-    global.log("AppLandingPage:: onAppLoadEvent:: load user-data from server", );
-    await store.user.getOwnFromServer(store.user.userid, store.user.servertoken); //await store.user.apiCALL_DBUsers_loadUserFromServerDatabase(store.user.userid, store.user.userid, store.user.servertoken);
-  }
-
-
-  onAppUnloadEvent = async (event) => {
+  componentWillUnmount = async () => { // fired (or not) after "beforeunload"-event
 	  // ===============================================
 	  // save store-data to client-storage
 	  // ===============================================
@@ -104,34 +120,34 @@ export default ( observer( class extends React.Component {
 	  // save store-data to server-database
 	  // ===============================================
     global.log("AppLandingPage:: onAppUnloadEvent:: saveUserToServerDatabase", store.user.userid)
-    await store.user.saveOwnToServer();
+    await store.user.saveUserStoreToServer();
 
+	  // ===============================================
+	  // remove watchers
+	  // ===============================================
     global.log("AppLandingPage:: componentWillUnmount:: removeEventListeners", )
     unwatchConnectionStatus();
     unwatchOnlineOfflineStatus();
     unwatchOrientationStatus();
     unwatchVisibilityStatus();
-
-    /*
-    if (event) {
-      global.log("onUnloadEvent:: EXIT?-Message");
-      if (!global.DEBUG_DISABLE_CONFIRMATIONMESSAGEONCLOSE) {
-        global.log("onUnloadEvent:: confirmationMessage");
-        event.preventDefault();
-        const confirmationMessage = '';
-        event.returnValue = confirmationMessage;      // Gecko, Trident, Chrome 34+
-        return confirmationMessage;                   // Gecko, WebKit, Chrome <34
-      }
-    }
-    */
-  }
-
-  componentWillUnmount = async () => { // fired (or not) after "beforeunload"-event
-    // saveToPersistentDatabase is called before componentWillUnmount in onAppUnloadEvent!
-    await this.onAppUnloadEvent(); // backup
-
+    
     global.log("AppLandingPage:: componentWillUnmount:: EXIT!", )
+    window.removeEventListener('beforeunload', this.handleLeavePageMessage);
   } // of componentWillUnmount
+
+
+  handleLeavePageMessage(event) {
+  	if (true === false)
+    if (event) {
+      global.log("onUnloadEvent:: confirmationMessage");
+
+      event.preventDefault();
+
+      const confirmationMessage = 'exit page?';
+      event.returnValue = confirmationMessage;      // Gecko, Trident, Chrome 34+
+      return confirmationMessage;                   // Gecko, WebKit, Chrome <34
+    };
+  }
 
 
   render() {

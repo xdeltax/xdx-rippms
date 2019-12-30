@@ -34,9 +34,9 @@ export const loadFromPersistentDatabase = async (force) => {
       && user.hasOwnProperty("storedata")
       && user.hasOwnProperty("createdAt")
       && user.hasOwnProperty("updatedAt")
-      && user.storedata.hasOwnProperty("auth")
-      && user.storedata.auth.hasOwnProperty("userid")
-      && user.storedata.auth.hasOwnProperty("servertoken")
+      //&& user.storedata.hasOwnProperty("user")
+      //&& user.storedata.user.hasOwnProperty("userid")
+      //&& user.storedata.user.hasOwnProperty("servertoken")
     ) {
       global.log("persistent:: loadFromPersistentDatabase:: merge_all:: user.storedata:: ", user.storedata)
       store.user.clear();
@@ -62,8 +62,8 @@ export const saveToPersistentDatabase = (force) => {
 
     try {
       global.log("persistent:: saveToPersistentDatabase.", );
-      createDatastoreASYNC('xdx-appstate').then(localDBapp=>updatedbASYNC(localDBapp, 'state', state));
-      createDatastoreASYNC('xdx-user').then(localDBuser=>updatedbASYNC(localDBuser, 'user', user));
+      createDatastoreASYNC('xdx-appstate').then(localDBapp =>updatedbASYNC(localDBapp, 'state', state));
+      createDatastoreASYNC('xdx-user'    ).then(localDBuser=>updatedbASYNC(localDBuser, 'user', user));
     } catch (error) {
       global.log("persistent:: saveToPersistentDatabase:: ERROR:: ", error);
       // fail silent
@@ -82,14 +82,11 @@ export const saveToPersistentDatabase = (force) => {
 
 export const deletePersistentDatabase = async () => {
   try {
-    global.log("persistent:: deletePersistentDatabase:: create database ", );
+    global.log("persistent:: deletePersistentDatabases.");
     const localDBapp = await createDatastoreASYNC('xdx-appstate');
     const localDBuser = await createDatastoreASYNC('xdx-user');
 
-    global.log("persistent:: deletePersistentDatabase:: state ");
     await removedbASYNC(localDBapp, 'state');
-
-    global.log("persistent:: deletePersistentDatabase:: user ");
     await removedbASYNC(localDBuser, 'user');
   } catch (error) {
     global.log("persistent:: deletePersistentDatabase:: ERROR:: ", error);

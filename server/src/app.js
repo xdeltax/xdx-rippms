@@ -1,7 +1,5 @@
 "use strict";
-
 const isPROD = Boolean(process.env.NODE_ENV === "production");
-
 
 const fse = require('fs-extra');
 
@@ -31,6 +29,11 @@ const jwt = requireX('tools/auth/jwt');
 const Joi = require('@hapi/joi');
 const JoiValidateFallback = requireX('tools/joivalidatefallback');
 
+const { SUCCESS, ERROR } = requireX('tools/errorhandler');
+
+const joi_userid = 			Joi.string().alphanum().min(30).max(50).normalize();
+const joi_servertoken =	Joi.string().regex(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]*$/).min(30).max(499).normalize();
+
 const arrayRemoveElementByValue = (arr, value) => { return arr.filter( function(element){ return element !== value; }) }
 
 
@@ -59,26 +62,40 @@ module.exports = async (config) => {
   // dev-stuff
   // ===============================================
 	if (!isPROD) {
+		global.debug = true;
 		//global.log("app:: env:: ", process.env)
 		//global.log("app:: global:: ", global)
+	} else {
+		global.debug = false;
 	}
 
 
   // ===============================================
   // DATABASE: init
   // ===============================================
-  const DBUsers = requireX('database/nedb/DBUsers');
+  const DBUsers 		= requireX('database/nedb/DBUsers');
+  const DBUsercards = requireX('database/nedb/DBUsercards');
 
 
   // ===============================================
   // DATABASE: load
   // ===============================================
   try {
-    global.log("app:: nedb:: await loading DBUsers:: ", DBUsers.databasePath());
-    await DBUsers.load();
+    global.log("app:: nedb:: loading DBUsers:: ", DBUsers.databasePath());
+    await DBUsers.loadDatabase();
     global.log("app:: nedb:: DBUsers count:", await DBUsers.count());
-  } catch (error) { throw new Error("app:: error:: loading DBUsers::" + error.message); }
+  } catch (error) { 
+  	throw new Error("app:: error:: loading DBUsers::" + error.message); 
+  }
 
+  try {
+    global.log("app:: nedb:: loading DBUsercards:: ", DBUsercards.databasePath());
+    await DBUsercards.loadDatabase();
+    global.log("app:: nedb:: DBUsercards count:", await DBUsercards.count());
+  } catch (error) { 
+  	throw new Error("app:: error:: loading DBUsercards::" + error.message); 
+  }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
 
   // ===============================================
   // EXPRESS
@@ -325,13 +342,27 @@ module.exports = async (config) => {
 	  	const	_uid = uid ? uid : null; // client-data
 	  	const _fingerprinthash = fingerprinthash ? fingerprinthash : null; // client-data
 
+	  	let res = null;
 			// query db -> update or create db
-	  	const {err, res} = await DBUsers.loginWithProvider(provider, _providerid, _providertoken, _uid, _fingerprinthash);
-		  //global.log(`***(3) passportAuthCallback:: /${provider}.io.callback:: `,  err, res );
+	  	const {err, res: res_user} = await DBUsers.loginWithProvider(provider, _providerid, _providertoken, _uid, _fingerprinthash);
+	  	if (!err && res_user) {
+	  		res = { 
+	  			user: res_user,
+	  			usercard: null,
+	  		};
+				// query usercard 
+	  		const {err: err_usercard, res: res_usercard} = await DBUsercards.getUsercard(res_user.userid, res_user.userid, res_user.servertoken);
+		  	if (!err_usercard) {
+		  		res.usercard = res_usercard;
+		  	}
+			  global.log(`***(X) passportAuthCallback:: /${provider}.io.callback:: STEP2:: `, err_usercard, res_usercard);
+	  	}
 
-		  // send error or (full) user-object to client -> OAuth.js -> RouteLogin.js
-		  const ioRoute = `clientapi.oauth.${provider}.io`;
+		  // send error or (full) user-object to client -> OAuth.js -> RouteLogin.js -> onAuthSuccess / onAuthFailed -> store.user.doAuthLogin(user)
+		  const ioRoute = `client.oauth.${provider}.io`;
 		  io.in(socketid).emit(ioRoute, err, res); // emit to client:: userobject OR null
+
+		  global.log(`***(X) passportAuthCallback:: /${provider}.io.callback:: `, err, res );
 	  }
 	  res.status(200).end();
 	};
@@ -359,7 +390,7 @@ module.exports = async (config) => {
 
   io.on('connection', (socket) => {
     // new connection established
-    global.log('io.on:: client successfully connected:: ', socket.id);
+    global.log('************ io.on:: client successfully connected:: ', socket.id);
 
     io.xdx.connectionCount++;
 
@@ -407,27 +438,26 @@ module.exports = async (config) => {
 	  // all other routes are invalid
 	  // ===============================================
     socket.use( (packet, next) => {    	
+  		const [route, req, clientEmitCallback] = packet || {};
     	try {
-    		const [route, req] = packet || {};
-
 			  // ===============================================
 			  // auth-routes: routes starting with "auth" needs a valid servertoken 
 			  // ===============================================
     		if (route && route.indexOf("auth") === 0) {
     			const {userid, servertoken} = req || {};
-    			if (!req || !userid || !servertoken) throw new Error("no token found");
+    			if (!req || !userid || !servertoken) throw ERROR(1, "api validation", "no id or token provided"); // throw new Error("no token found");
 
 				  // ===============================================
 				  // check servertoken-format
 				  // ===============================================
-    			const valid_userid      = JoiValidateFallback(userid     , null, Joi.string().min(30).max(50).alphanum().normalize().required(),); 
-			    const valid_servertoken = JoiValidateFallback(servertoken, null, Joi.string().regex(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]*$/).min(30).max(499).normalize().required(), ); 
-    			if (!valid_userid || !valid_servertoken) throw new Error("invalid token format");
+    			const valid_userid      = JoiValidateFallback(userid     , null, joi_userid); 
+			    const valid_servertoken = JoiValidateFallback(servertoken, null, joi_servertoken); 
+    			if (!valid_userid || !valid_servertoken) throw ERROR(2, "api validation", "invalid id or token format");
 
 				  // ===============================================
 				  // verify servertoken
 				  // ===============================================
-		      if (!jwt.verify(valid_servertoken)) throw new Error('token verification failed'); // check if the token was signed by this server and isnt expired		      
+		      if (!jwt.verify(valid_servertoken)) throw ERROR(3, "api validation", 'token verification failed'); // check if the token was signed by this server and isnt expired		      
 
 				  // ===============================================
 				  // decode servertoken
@@ -439,10 +469,10 @@ module.exports = async (config) => {
 		      // pid: providerid
 	    		// hash: crypto.createHash('sha1').update(JSON.stringify(thisUser.forcenew + thisUser.providertoken)).digest('hex');
 					const { usid, pvd, pid, hash } = decodedServertoken || {};
-					if (!usid || !pvd || !pid || !hash) throw new Error("invalid token structure");
-					if (usid !== valid_userid) throw new Error("token / user mismatch");
+					if (!usid || !pvd || !pid || !hash) throw ERROR(4, "api validation", "invalid token structure");
+					if (usid !== valid_userid) throw ERROR(5, "api validation", "token / user mismatch");
 
-					if (socket.xdx.userid && socket.xdx.userid !== valid_userid) throw new Error("connection misuse");
+					if (socket.xdx.userid && socket.xdx.userid !== valid_userid) throw ERROR(5, "api validation", "connection misuse");
 					socket.xdx.routetype = "auth";
 			    socket.xdx.userid = valid_userid;
 			    socket.xdx.servertoken = valid_servertoken;
@@ -465,7 +495,7 @@ module.exports = async (config) => {
     		if (route && route.indexOf("free") === 0) {
     			const {userid, servertoken} = req || {};
 
-    			if (!req) throw new Error("no token found");
+    			if (!req) throw ERROR(6, "api validation", "no id or token found");
 
 					socket.xdx.routetype = "free";
 
@@ -477,47 +507,76 @@ module.exports = async (config) => {
 			  // ===============================================
 	    	throw new Error("invalid route");
 		  } catch (error) {
-		  	global.log("socket.use:: ERROR:: ", error);
-		  	next(error); // stop here
+		  	const {err, res} = ERROR(99, "api validation", error);
+		  	global.log("socket.use:: ERROR:: ", err);
+
+    		// callback:: send the error to client-emit-function
+	    	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
+
+		  	next(err); // stop here -> err-object will be send to client socket-event "onError"
 		  }
     });
 
 
+    const _getUserStore = async (targetuserid, userid, servertoken) => {
+	  	let res = null;
+	  	const {err, res: res_user} = await DBUsers.getUser(targetuserid, userid, servertoken);
+	  	if (!err && res_user) {
+	  		res = { 
+	  			user: res_user,
+	  			usercard: null,
+	  		};
+
+				// query usercard 
+	  		const {err: err_usercard, res: res_usercard} = await DBUsercards.getUsercard(res_user.userid, res_user.userid, res_user.servertoken);
+		  	if (!err_usercard) {
+		  		res.usercard = res_usercard;
+		  	}
+	  	}
+	  	return {err: err, res: res};
+    };
+
 	  // ===============================================
 	  // all routes witgh "free/" and "auth/" are valid
 	  // ===============================================
+    socket.on('auth/store/userstore/get', async (req, clientEmitCallback) => {
+    	const { targetuserid, userid, servertoken, } = req || {};
+    	global.log("*****socket.on(auth/userstore/get):: ", req,);
+    	const {err, res} = await _getUserStore(targetuserid, userid, servertoken,);   
+    	global.log("socket.on(auth/userstore/get):: ", socket.xdx.userid, err, res,);
+    	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
+    });
+
+
     socket.on('auth/store/user/get', async (req, clientEmitCallback) => {
-    	const {
-    		targetuserid,
-    		userid,
-    		servertoken,
-    	} = req || {};
-
-    	global.log("socket.on(auth/getuser):: ", req, socket.xdx.userid);
-
+    	const { targetuserid, userid, servertoken, } = req || {};
 	  	const {err, res} = await DBUsers.getUser(targetuserid, userid, servertoken);
-
-    	// callback to store.user.getUsercard
-    	clientEmitCallback && clientEmitCallback(err, res);
+    	global.log("socket.on(auth/user/get):: ", socket.xdx.userid, err, res,);
+    	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
     });
 
-    /*
     socket.on('auth/store/user/update', async (req, clientEmitCallback) => {
-    	const {
-    		targetuserid,
-    		userid,
-    		servertoken,
-    		obj,
-    	} = req || {};
-
-    	global.log("socket.on(auth/updateusercard):: ", req, socket.xdx.userid);
-
-	  	const {err, res} = await DBUsers.updateUser(targetuserid, userid, servertoken, obj);
-
-    	// callback to store.user.getUsercard
-    	clientEmitCallback && clientEmitCallback(err, res);
+    	const { targetuserid, userid, servertoken, props, } = req || {};
+	  	const {err, res} = await DBUsers.updateProps(targetuserid, userid, servertoken, props);
+    	global.log("socket.on(auth/user/update):: ", socket.xdx.userid, err, res);
+    	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
     });
-		*/
+		
+
+    socket.on('auth/store/usercard/get', async (req, clientEmitCallback) => {
+    	const { targetuserid, userid, servertoken, } = req || {};
+	  	const {err, res} = await DBUsercards.getUsercard(targetuserid, userid, servertoken);
+    	global.log("socket.on(auth/usercard/get):: ", socket.xdx.userid, err, res);
+    	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
+    });
+
+    socket.on('auth/store/usercard/update', async (req, clientEmitCallback) => {
+    	const { targetuserid, userid, servertoken, props, } = req || {};
+	  	const {err, res} = await DBUsercards.updateProps(targetuserid, userid, servertoken, props);
+    	global.log("socket.on(auth/user/update):: ", socket.xdx.userid, err, res);
+    	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
+    });
+    
 
 	}); // of io.on(connection)
 

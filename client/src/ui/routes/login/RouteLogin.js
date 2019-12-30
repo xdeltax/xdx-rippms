@@ -6,12 +6,10 @@ import { withStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
 
-import OAuth from './OAuth'
+import OAuth from 'ui/components/auth/OAuth'
 //import tryFallback from "tools/tryFallback";
 
 import store from 'store';
-
-import AllInclusiveICON from '@material-ui/icons/AllInclusive';
 
 // assets
 import AppLogo from 'assets/applogo.svg';
@@ -43,10 +41,14 @@ const styles = theme => ({
 export default ( withStyles(styles)( observer( class extends React.Component {
   state = {  }
 
-  onAuthSuccess = async (socketid, provider, user) => {
-  	global.log("OAuth:: Success:: Callback:: ", socketid, provider, user);
+  onAuthSuccess = async (socketid, provider, userObject) => {
+  	global.log("OAuth:: Success:: Callback:: ", socketid, provider, userObject);
 
-  	await store.user.doAuthLogin(user);
+  	// userObject = {
+  	//	 user: { ... }
+  	//	 usercard: { ... }
+  	// }
+  	await store.user.doAuthLogin(userObject);
   }
 
   onAuthFailed = (socketid, provider, error) => {
@@ -103,57 +105,20 @@ export default ( withStyles(styles)( observer( class extends React.Component {
         </div>
 
 
-        <div>
           <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
-          	store.user.userid = "TEST";
-          	store.user.servertoken = "TEST"
-          }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
-          	TESTUSER
+					  // ===============================================
+					  // load store-data from server-database
+					  // ===============================================
+					  store.user.userid = "66f57373e76612339caf72ee103c4a52db256481";
+					  store.user.servertoken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2lkIjoiNjZmNTczNzNlNzY2MTIzMzljYWY3MmVlMTAzYzRhNTJkYjI1NjQ4MSIsInB2ZCI6ImZhY2Vib29rIiwicGlkIjoiNTczOTI5Mzg5NzQyODYzIiwiaGFzaCI6IjJkZjYzYmQ5NWMwMTM5ZWEyN2MyZTJkMzlkYjgwYzA1OWNmN2U2OTEiLCJpYXQiOjE1Nzc2NzQyMjgsImV4cCI6MTU3ODI3OTAyOCwiYXVkIjoibWVtYmVyIiwiaXNzIjoieGR4Iiwic3ViIjoieCIsImp0aSI6ImlkMSJ9.tOja7fzkxSZzrDoqNplHUQ0wWGgR4EV5NXvRJ2_97s0";
+				    const resObj = await store.user.getUserStoreFromServerANDMergeWithStore();
+				    global.log("getUserStoreFromServerANDMergeWithStore:: resObj:: ", resObj);
+          }} >
+          	GETUSERSTORE
           </Button>
 
-          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
-          	const userid = "66f57373e76612339caf72ee103c4a52db256481";
-          	const servertoken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2lkIjoiNjZmNTczNzNlNzY2MTIzMzljYWY3MmVlMTAzYzRhNTJkYjI1NjQ4MSIsInB2ZCI6ImZhY2Vib29rIiwicGlkIjoiNTczOTI5Mzg5NzQyODYzIiwiaGFzaCI6IjJkZjYzYmQ5NWMwMTM5ZWEyN2MyZTJkMzlkYjgwYzA1OWNmN2U2OTEiLCJpYXQiOjE1NzcyOTM5NzMsImV4cCI6MTU3Nzg5ODc3MywiYXVkIjoibWVtYmVyIiwiaXNzIjoieGR4Iiwic3ViIjoieCIsImp0aSI6ImlkMSJ9.0pef9JFR-25iC0fi87vDW_n-K9HkuvxoVy9UblSxScc";
-          	const {err, res} = store.user._getUser(userid, userid, servertoken);
-          	global.log("TEST GET USER:: ", err, res);
-          }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
-          	OWN USER
-          </Button>
-
-          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
-          	const targetuserid = "03d9a6fe7b0a19303d35b2257a46d77c3ccbd705";
-          	const userid = "66f57373e76612339caf72ee103c4a52db256481";
-          	const servertoken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2lkIjoiNjZmNTczNzNlNzY2MTIzMzljYWY3MmVlMTAzYzRhNTJkYjI1NjQ4MSIsInB2ZCI6ImZhY2Vib29rIiwicGlkIjoiNTczOTI5Mzg5NzQyODYzIiwiaGFzaCI6IjJkZjYzYmQ5NWMwMTM5ZWEyN2MyZTJkMzlkYjgwYzA1OWNmN2U2OTEiLCJpYXQiOjE1NzcyOTM5NzMsImV4cCI6MTU3Nzg5ODc3MywiYXVkIjoibWVtYmVyIiwiaXNzIjoieGR4Iiwic3ViIjoieCIsImp0aSI6ImlkMSJ9.0pef9JFR-25iC0fi87vDW_n-K9HkuvxoVy9UblSxScc";
-          	const {err, res} = store.user._getUser(targetuserid, userid, servertoken);
-          	global.log("TEST GET USER:: ", err, res);
-          }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
-          	OTHER USER
-          </Button>
-
-          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
-          	const targetuserid = "03d9a6fe7b0a19303d35b2257a46d77c3ccbd705";
-          	const userid = "66f57373e76612339caf72ee103c4a52db256481";
-          	const servertoken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2lkIjoiNjZmNTczNzNlNzY2MTIzMzljYWY3MmVlMTAzYzRhNTJkYjI1NjQ4MSIsInB2ZCI6ImZhY2Vib29rIiwicGlkIjoiNTczOTI5Mzg5NzQyODYzIiwiaGFzaCI6IjJkZjYzYmQ5NWMwMTM5ZWEyN2MyZTJkMzlkYjgwYzA1OWNmN2U2OTEiLCJpYXQiOjE1NzcyOTM5NzMsImV4cCI6MTU3Nzg5ODc3MywiYXVkIjoibWVtYmVyIiwiaXNzIjoieGR4Iiwic3ViIjoieCIsImp0aSI6ImlkMSJ9.0pef9JFR-25iC0fi87vDW_n-K9HkuvxoVy9UblSxScc";
-          	const {err, res} = store.user._getUsercard(userid, userid, servertoken);
-          	global.log("TEST GET USERCARD:: ", err, res);
-          }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
-          	USERCARD
-          </Button>
-	      </div>
 
       </div>
     ) // of return
   } // of render
-
-  /*
-    <div>
-      <Button className={classes.button} variant="outlined" color="primary" onClick={ async (event) => {
-        this.login({userid:"01fake", servertoken:"01fake"}, {email:"fake@fake.com", phonenumber:"00417998765"});
-      }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
-        FAKE-LOGIN (no FB / no Server)
-      </Button>
-    </div>
-
-		<OAuth uid="" onAuthSuccess={this.onAuthSuccess} onAuthFailed={this.onAuthFailed} buttonText="login as guest" provider="local" server={global.serverURL} socket={store.socketio.socket} fingerprint={global.fingerprint}/>
-	*/ 
 }))); // of class

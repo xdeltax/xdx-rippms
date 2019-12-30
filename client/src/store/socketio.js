@@ -16,7 +16,7 @@ class SocketIO {
   get socket()    { return this._socket }
 	set socket(o)   { runInAction(() => { this._socket = o; }) }
 
-  get socketID()  { return this.socket.id }
+  get socketID()  { return (this.socket) ? this.socket.id : null }
 
   get isConnected()  { return this._isConnected }
   set isConnected(v) { runInAction(() => { this._isConnected = v }) }

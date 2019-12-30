@@ -9,6 +9,7 @@ import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
 
 import LogoutICON from '@material-ui/icons/ExitToApp';
+import AllInclusiveICON from '@material-ui/icons/AllInclusive';
 
 import HeaderNavigationToolbar from "ui/components/header/HeaderNavigationToolbar";
 
@@ -82,7 +83,7 @@ export default ( withStyles(styles)( observer( class extends React.Component {
           <Button color="primary" variant="contained"
             style={{ width: 150, height: 150, background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)', }}
             onClick={ async (event) => {
-              // implementation variant 2:
+            // implementation variant 2:
             // phaser-example will render phaser-container hidden at app start (in AppRouter) and pause the game until this "route" is called
             // no rendering of a container(-route) here because container is already rendered in AppRouter on app-start
             // but hidden to keep the game-assets and running or paused in background. otherwise it would be destroyed and re-init on gui-change
@@ -96,6 +97,74 @@ export default ( withStyles(styles)( observer( class extends React.Component {
         <Button variant="outlined" onClick={()=> { store.showSpinner("test the spinner", 5000) }}>show Spinner</Button>
 
         <Button variant="outlined" onClick={()=> { history.push("/logout") }}>logout</Button>
+
+        <div>
+          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
+          	store.user.userid = "TEST";
+          	store.user.servertoken = "TEST"
+          }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
+          	TESTUSER
+          </Button>
+
+          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
+          	//const userid = "66f57373e76612339caf72ee103c4a52db256481";
+          	//const servertoken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2lkIjoiNjZmNTczNzNlNzY2MTIzMzljYWY3MmVlMTAzYzRhNTJkYjI1NjQ4MSIsInB2ZCI6ImZhY2Vib29rIiwicGlkIjoiNTczOTI5Mzg5NzQyODYzIiwiaGFzaCI6IjJkZjYzYmQ5NWMwMTM5ZWEyN2MyZTJkMzlkYjgwYzA1OWNmN2U2OTEiLCJpYXQiOjE1NzcyOTM5NzMsImV4cCI6MTU3Nzg5ODc3MywiYXVkIjoibWVtYmVyIiwiaXNzIjoieGR4Iiwic3ViIjoieCIsImp0aSI6ImlkMSJ9.0pef9JFR-25iC0fi87vDW_n-K9HkuvxoVy9UblSxScc";
+          	const x = await store.user.getUserFromServer(store.user.userid);
+          	global.log("TEST GET OWN USER:: ", x);
+          }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
+          	GET OWN USER
+          </Button>
+
+          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
+          	const userid = "66f57373e76612339caf72ee103c4a52db256481";
+          	const servertoken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2lkIjoiNjZmNTczNzNlNzY2MTIzMzljYWY3MmVlMTAzYzRhNTJkYjI1NjQ4MSIsInB2ZCI6ImZhY2Vib29rIiwicGlkIjoiNTczOTI5Mzg5NzQyODYzIiwiaGFzaCI6IjJkZjYzYmQ5NWMwMTM5ZWEyN2MyZTJkMzlkYjgwYzA1OWNmN2U2OTEiLCJpYXQiOjE1NzcyOTM5NzMsImV4cCI6MTU3Nzg5ODc3MywiYXVkIjoibWVtYmVyIiwiaXNzIjoieGR4Iiwic3ViIjoieCIsImp0aSI6ImlkMSJ9.0pef9JFR-25iC0fi87vDW_n-K9HkuvxoVy9UblSxScc";
+          	const newProps = {
+          		name: "testuser",
+          		//phonenumber: "123456",
+          		//email: "test@mail.com",
+          		//forcenew: new Data()/1000,
+          	}
+          	const x = await store.user.updateOwnUserPropsToServer(newProps);
+          	global.log("TEST UPDATE OWN USER:: ", x);
+          }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
+          	UPDATE OWN USER
+          </Button>
+
+          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
+          	const userid = "66f57373e76612339caf72ee103c4a52db256481";
+          	const servertoken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2lkIjoiNjZmNTczNzNlNzY2MTIzMzljYWY3MmVlMTAzYzRhNTJkYjI1NjQ4MSIsInB2ZCI6ImZhY2Vib29rIiwicGlkIjoiNTczOTI5Mzg5NzQyODYzIiwiaGFzaCI6IjJkZjYzYmQ5NWMwMTM5ZWEyN2MyZTJkMzlkYjgwYzA1OWNmN2U2OTEiLCJpYXQiOjE1NzcyOTM5NzMsImV4cCI6MTU3Nzg5ODc3MywiYXVkIjoibWVtYmVyIiwiaXNzIjoieGR4Iiwic3ViIjoieCIsImp0aSI6ImlkMSJ9.0pef9JFR-25iC0fi87vDW_n-K9HkuvxoVy9UblSxScc";
+          	const newProps = {
+          		name: "testuser",
+          		phonenumber: "123456",
+          		//email: "test@mail.com",
+          		//forcenew: new Data()/1000,
+          	}
+          	const x = await store.user.updateOwnUsercardPropsToServer(newProps);
+          	global.log("TEST UPDATE OWN USERCARD:: ", x);
+          }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
+          	UPDATE OWN USERCARD
+          </Button>
+
+          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
+          	const targetuserid = "03d9a6fe7b0a19303d35b2257a46d77c3ccbd705";
+          	const userid = "66f57373e76612339caf72ee103c4a52db256481";
+          	const servertoken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2lkIjoiNjZmNTczNzNlNzY2MTIzMzljYWY3MmVlMTAzYzRhNTJkYjI1NjQ4MSIsInB2ZCI6ImZhY2Vib29rIiwicGlkIjoiNTczOTI5Mzg5NzQyODYzIiwiaGFzaCI6IjJkZjYzYmQ5NWMwMTM5ZWEyN2MyZTJkMzlkYjgwYzA1OWNmN2U2OTEiLCJpYXQiOjE1NzcyOTM5NzMsImV4cCI6MTU3Nzg5ODc3MywiYXVkIjoibWVtYmVyIiwiaXNzIjoieGR4Iiwic3ViIjoieCIsImp0aSI6ImlkMSJ9.0pef9JFR-25iC0fi87vDW_n-K9HkuvxoVy9UblSxScc";
+          	const {err, res} = store.user.getUserFromServer(targetuserid                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            );
+          	global.log("TEST GET OTHER USER:: ", err, res);
+          }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
+          	GET OTHER USER
+          </Button>
+
+          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
+          	const targetuserid = "03d9a6fe7b0a19303d35b2257a46d77c3ccbd705";
+          	const userid = "66f57373e76612339caf72ee103c4a52db256481";
+          	const servertoken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2lkIjoiNjZmNTczNzNlNzY2MTIzMzljYWY3MmVlMTAzYzRhNTJkYjI1NjQ4MSIsInB2ZCI6ImZhY2Vib29rIiwicGlkIjoiNTczOTI5Mzg5NzQyODYzIiwiaGFzaCI6IjJkZjYzYmQ5NWMwMTM5ZWEyN2MyZTJkMzlkYjgwYzA1OWNmN2U2OTEiLCJpYXQiOjE1NzcyOTM5NzMsImV4cCI6MTU3Nzg5ODc3MywiYXVkIjoibWVtYmVyIiwiaXNzIjoieGR4Iiwic3ViIjoieCIsImp0aSI6ImlkMSJ9.0pef9JFR-25iC0fi87vDW_n-K9HkuvxoVy9UblSxScc";
+          	const {err, res} = store.user.getUsercard(userid, userid, servertoken);
+          	global.log("TEST GET USERCARD:: ", err, res);
+          }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
+          	USERCARD
+          </Button>
+	      </div>
 
         {store.system.app.bottomNavigation.visible && (<Toolbar disableGutters style={{ marginBottom: 25, }} />) /* extra padding for content below HeaderNavigationToolbar */ }
       </div>

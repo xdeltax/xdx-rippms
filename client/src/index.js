@@ -34,20 +34,6 @@ const startApp = async () => {
 	global.fingerprint = await promiseToFingerprint({ });	// this is async! about 100 ms...
 	global.log("index:: fingerprint:: ", global.fingerprint, );
 
-
-	// connect socket at app-start
-  if (!global.DEBUG_DISABLE_SOCKETCONNECT) {
-		global.log("index:: startApp:: connect socket. ", global);
-
-		const socketProtokoll = process.env.REACT_APP_SOCKETIO_HANDSHAKEVERSION || 10000;
-
-		store.socketio.connect(global.serverURL, socketProtokoll);
-	} else {
-		global.log("index:: startApp:: DEBUG DEBUG DEBUG:: connect to socket is DISABLED!!! ", global);		
-	}
-
-
-
   ReactDOM.render((
     <React.Suspense fallback={<AppLoadingScreen />}>
       <AppLandingPage store={store} />

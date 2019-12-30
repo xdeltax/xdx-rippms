@@ -1,60 +1,75 @@
 "use strict";
-
 const fse = require('fs-extra');
-
 const Datastore = require('nedb-promises');
 
-const validator = require('validator');
 const Joi = require('@hapi/joi');
-const JoiValidateThrow = requireX('tools/joivalidatethrow');
 const JoiValidateFallback = requireX('tools/joivalidatefallback');
-
-//const fbGraphAPI = require('fbgraph');
 
 const crypto = require('crypto');
 const jwt = requireX('tools/auth/jwt');
-const createErrorHash = requireX('tools/errorHash');
+
+const { SUCCESS, ERROR } = requireX('tools/errorhandler');
+
 
 const accountstatusREADONLY = ["default", "owner", "admin", "moderator", "reviewer", "hidden", "locked", "blocked", "banned", "removed", "disbanded" ];
 const memberstatusREADONLY  = ["default", "vip", "vip+", "idle", ];
 
-const schemaUser = Joi.object().keys({
+
+const joi_userid = 			Joi.string().alphanum().min(30).max(50).normalize();
+const joi_servertoken =	Joi.string().regex(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]*$/).min(30).max(499).normalize();
+
+const joi_memberstatus =Joi.array().items( Joi.number().integer().min(0).max(99).optional() );
+const joi_accountstatus=Joi.array().items( Joi.number().integer().min(0).max(99).optional() );
+const joi_createdAt = 	Joi.date();
+const joi_updatedAt = 	Joi.date();
+
+// private
+const joi_uid = 				Joi.string().allow('').min(0).max(99).alphanum().normalize();
+const joi_fingerprint = Joi.string().min(10).max(40).alphanum().normalize();
+const joi_provider =    Joi.string().trim().min(1).max(50).alphanum().normalize();
+const joi_providerid =  Joi.string().trim().min(1).max(50).alphanum().normalize();
+const joi_providertoken=Joi.string().min(30).max(499).normalize();
+const joi_forcenew = 		Joi.string().trim().min(1).max(99);
+
+const joi_name = 				Joi.string().alphanum().allow("").max(50).normalize();
+const joi_email = 			Joi.string().max(256).email().allow("").allow(null).normalize().default("");
+const joi_phonenumber = Joi.string().max(64).allow("").allow(null).normalize().default("");
+
+const joi_schemaObject = Joi.object().keys({
   //_id
 
   // public (store.user)
-  userid: 			Joi.string().alphanum().min(30).max(50).normalize().required(),
-  servertoken: 	Joi.string().regex(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]*$/).min(30).max(499).normalize().required(),
+  userid: 			joi_userid.required(),
+  servertoken: 	joi_servertoken.required(),
 
-  memberstatus :Joi.array().items( Joi.number().integer().min(0).max(99).optional() ).optional(),
-  accountstatus:Joi.array().items( Joi.number().integer().min(0).max(99).optional() ).optional(),
-  createdAt: 		Joi.date().optional(),
-  updatedAt: 		Joi.date().optional(),
+  accountstatus:joi_accountstatus,
+  memberstatus :joi_memberstatus,
+  createdAt: 		joi_createdAt,
+  updatedAt: 		joi_updatedAt,
 
   // private
-  uid: 					Joi.string().allow('').min(0).max(99).alphanum().normalize().optional(),
- 	fphash: 			Joi.string().min(10).max(40).alphanum().normalize().optional(),
-  facebookid:   Joi.string().trim().min(1).max(50).alphanum().normalize().optional(),
-  googleid:    	Joi.string().trim().min(1).max(50).alphanum().normalize().optional(),
-	provider:    	Joi.string().trim().min(1).max(50).alphanum().normalize().required(),
-	providertoken:Joi.string().min(30).max(499).normalize().required(),
-  forcenew: 		Joi.string().trim().min(1).max(99).optional(),
+  uid: 					joi_uid,
+ 	fphash: 			joi_fingerprint,
+	provider:    	joi_provider,
+  facebookid:   joi_providerid,
+  googleid:    	joi_providerid,
+	providertoken:joi_providertoken,
+  forcenew: 		joi_forcenew,
 
-  email: 				Joi.string().max(256).email().allow("").allow(null).normalize().optional().default(""),
-  phonenumber: 	Joi.string().max(64).allow("").allow(null).normalize().optional().default(""),
+  // modifiable
+  name: 				joi_name,
+  email: 				joi_email,
+  phonenumber:  joi_phonenumber,
 });
 
 
 module.exports = class DBUsers {
   static collectionName() { return 'users'; }
 
-  static databasePath()   { return global.abs_path("../"+process.env.DATABASE_NEDB); }
+  static databasePath()   { return global.abs_path("../" + process.env.DATABASE_NEDB); }
 
-  constructor() {
 
-  }
-
-  // internal function
-  static async _getUser(valid_userid, isOWN) {
+  static async _getINTERNAL(valid_userid, isOWN) {
     const dbResultLimited = (item) => { // keep or drop props
       // const dbGallery = array.map(( {propsToDrop1, propsToDrop2, ...keepAttrs}) => keepAttrs)
       // const dbGallery = array.map(( {propsToKeep1, propsToKeep2, } ) => ( {propsToKeep1, propsToKeep2, } ))
@@ -65,6 +80,7 @@ module.exports = class DBUsers {
         memberstatus,
         updatedAt,
         createdAt,
+        name,
       } = item;
       // modify object
       //fname = (viewgroup==="all") ? fname : fblur;
@@ -74,17 +90,19 @@ module.exports = class DBUsers {
         memberstatus,
         updatedAt,
         createdAt,
+        name,
       }
-    }; // of _getUser
+    };
 
     let res;
     try {
       const dbResultFull = await this.findOne( { "userid": valid_userid, }, ); // not found -> null
 
       // if isOwn -> return full database entry; if !isOwn -> return limited dataset only
-      if (dbResultFull && dbResultFull.hasOwnProperty("userid")) res = (isOWN) ? dbResultFull : dbResultLimited(dbResultFull);
+      if (dbResultFull && dbResultFull.hasOwnProperty("userid")) 
+      res = (isOWN) ? dbResultFull : dbResultLimited(dbResultFull);
     } catch (error) { // fail silent
-      global.log("DBUser:: _getUser:: ERROR:: ", error)
+      //global.log("DBUser:: _getINTERNAL:: ERROR:: ", error)
       res = null;
     } finally {
       return res;
@@ -92,10 +110,8 @@ module.exports = class DBUsers {
   }
 
 
-  //////////
-  // init / load database at startup of nodejs
-  ///////////////////////////////////////////////////////////////////////////////////////////////////////
-  static async load() { // static method (not affected by instance) -> called with classname: DBGeoData.load
+
+  static async loadDatabase() { // static method (not affected by instance) -> called with classname: DBGeoData.load
     try {
 			fse.ensureDir(this.databasePath(), { mode: 0o0700, });
       this.db = Datastore.create(this.databasePath() + this.collectionName() + ".db");
@@ -103,38 +119,38 @@ module.exports = class DBUsers {
       await this.db.ensureIndex({ fieldName: 'userid', }); // index for quick searching the userid
 
       return this.db;
-    } catch (error) { throw new Error(this.collectionName() + error); }
-    return false;
+    } catch (error) { 
+    	throw new Error(this.collectionName() + error); 
+    }
   }; // of load
 
 
-
-	static async loginWithProvider(provider, providerid, providertoken, uid, fingerprinthash) { // create or update database
+	static async loginWithProvider(unsafe_provider, unsafe_providerid, unsafe_providertoken, unsafe_uid, unsafe_fingerprinthash) { // create or update database
     const now = new Date() / 1000;
 		try {
 		  // ===============================================
 		  // normalize input
 		  // ===============================================
-	    const valid_provider = JoiValidateFallback(provider, null, Joi.string().min(1).max(30).alphanum().normalize().required(), ); 
-			if (!valid_provider || (valid_provider !== "facebook" && valid_provider !== "google")) throw "invalid provider";
+	    const valid_provider = JoiValidateFallback(unsafe_provider, null, joi_provider);
+			if (!valid_provider || (valid_provider !== "facebook" && valid_provider !== "google")) throw ERROR(1, "login failed", "invalid provider");
 
 			// user-id
-			// facebook: '573929389742863', (15)
-			// google: '115290779649011912108', (21)
-	    const valid_providerid = JoiValidateFallback(providerid, null, Joi.string().trim().min(1).max(50).alphanum().normalize().required(), ); 
-			if (!valid_providerid) throw "invalid provider-id";
+			// facebook: '578539389742863', (15)
+			// google: '115290746329011912108', (21)
+	    const valid_providerid = JoiValidateFallback(unsafe_providerid, null, joi_providerid);
+			if (!valid_providerid) throw ERROR(2, "login failed", "invalid provider-id");
 
 			// accesstoken
-			// facebook: 'EAAFSPeVOQKkBAJ6M6eGAJViYu1UwuKF9eumKV1cr2hMrEEehOayxGSgQhQmUBLZBsz3rc8ZAy4aurHOKUHZBqYt6XZCCZAedzXA6Mo9aJGCGZBAyApXLoReCDtzXOHWAAlUyflQ5ZCcwhW4lHN7z5M88QrICD7UeZBKup3a94gj8dAZDZD',
-			// google: 'ya29.ImC2B0PDxykRp-dr-k9SjTCBHSfwcxNEamphbOgVx0Z4POrqEo7IfnT7YCF6hTGwzZJnWKNAzEwjV29QmPwfIqtjUlkdgqnnfLBxDa8A-xrvKlC5Z9NXXk0LVq2GpjCL1lk',
-	    const valid_providertoken = JoiValidateFallback(providertoken, null, Joi.string().min(30).max(499).normalize().required(), ); 
-			if (!valid_providertoken) throw "invalid provider-token";
+			// facebook: 'EAAFSPeTSCKkBAJ6M6eGAJViYu1UwuKF9eumKV1cr2hMrEEehOayxGSgQhQmUBLZBsz3rc8ZAy4aurHOKUHZBqYt6XZCCZAedzXA6Mo9aJGCGZBAyApXLoReCDtzXOHWAAlUyflQ5ZCcwhW4lHN7z5M88QrICD7UeZBKup3a94gj8dAZDZD',
+			// google: 'ya29.ImC2B0PovckRp-dr-k9SjTCBHSfwcxNEamphbOgVx0Z4POrqEo7IfnT7YCF6hTGwzZJnWKNAzEwjV29QmPwfIqtjUlkdgqnnfLBxDa8A-xrvKlC5Z9NXXk0LVq2GpjCL1lk',
+	    const valid_providertoken = JoiValidateFallback(unsafe_providertoken, null, joi_providertoken);
+			if (!valid_providertoken) throw ERROR(3, "login failed", "invalid provider-token");
 
-	  	// fingerprint of client-device:: '47a9591391229e99a2417d27fbc32147' (32, alphanum:: a-z, A-Z, and 0-9)
-	    const valid_fingerprinthash = JoiValidateFallback(fingerprinthash, "", Joi.string().min(10).max(40).alphanum().normalize().optional(), ); 
+	  	// fingerprint of client-device:: '47a95917591229e99a2417d27fbc32147' (32, alphanum:: a-z, A-Z, and 0-9)
+	    const valid_fingerprinthash = JoiValidateFallback(unsafe_fingerprinthash, "", joi_fingerprint); 
 
 			// fake-username(-extension) for debugging:: 'fakeusername1',
-	    const valid_uid = JoiValidateFallback(uid, "", Joi.string().allow('').min(0).max(99).alphanum().normalize().optional(), ); 
+	    const valid_uid = JoiValidateFallback(unsafe_uid, "", joi_uid);
 
 		  // ===============================================
 		  // create userid from provider-id and uid 
@@ -147,16 +163,17 @@ module.exports = class DBUsers {
 		  // search db
 		  // ===============================================
 	    // check if user already exists (and get user data for login-count then)
-	    let thisUser = await this.findOne( { "userid": userid_created, }, ); // not found -> null
+	    //let thisUser = await this.findOne( { "userid": userid_created, }, ); // not found -> null
+      let thisObject = await this._getINTERNAL(userid_created, true); // result will be different (reduced) for isOWN = false
 
-	    const isNewUser = Boolean(!thisUser);
+	    const isNewObject = Boolean(!thisObject);
 
 		  // ===============================================
 		  // create user-object (if user not in db)
 		  // ===============================================
 	    // create new user-account in server-database if user not found
-	    if (isNewUser) {
-	      thisUser = {
+	    if (isNewObject) {
+	      thisObject = {
 	        //_id: (unique hash) generated by database
 
 	        userid: userid_created, // hash of facebook-id
@@ -165,10 +182,9 @@ module.exports = class DBUsers {
 	        uid: valid_uid,
 	        fphash: valid_fingerprinthash,
 
-	        //facebookid
-	        //googleid
-
 	    		provider: valid_provider,
+	        //facebookid: valid_providerid,
+	        //googleid: valid_providerid,
 	    		providertoken: valid_providertoken,
 
 	        forcenew: "0", // set this to anything else to force the servertoken of this user to be invalid -> new login with fb
@@ -181,115 +197,157 @@ module.exports = class DBUsers {
 	      };
 	    }
 
-
 		  // ===============================================
 		  // add / update userid of used login provider
 		  // ===============================================
-	    switch (provider) {
+	    switch (valid_provider) {
 	    	case "facebook": 	
-	    		thisUser.facebookid = valid_providerid; 
+	    		thisObject.facebookid = valid_providerid; 
 	    		break;
 	    	case "google": 		
-	    		thisUser.googleid = valid_providerid; 
+	    		thisObject.googleid = valid_providerid; 
 	    		break;
 	    	default: 
 	    		break;
 			}
 
-
 		  // ===============================================
 		  // create new servertoken
 		  // ===============================================
-	    const hash = crypto.createHash('sha1').update(JSON.stringify(thisUser.forcenew + thisUser.providertoken)).digest('hex');
-	    const jwtservertoken = jwt.sign(thisUser.userid, thisUser.provider, valid_providerid, hash); // (payload)
-
+	    const hash = crypto.createHash('sha1').update(JSON.stringify(thisObject.forcenew + thisObject.providertoken)).digest('hex');
+	    const jwtservertoken = jwt.sign(thisObject.userid, thisObject.provider, valid_providerid, hash); // (payload)
 
 		  // ===============================================
 	    // update userdata with new servertoken
 		  // ===============================================
-	    thisUser.servertoken = jwtservertoken;
-	    thisUser.updatedAt = now; 
-
+	    thisObject.servertoken = jwtservertoken;
+	    thisObject.updatedAt = now; 
 
 		  // ===============================================
 	    // check userdata
 		  // ===============================================
-	    const valid_user = JoiValidateFallback(thisUser, null, schemaUser, {abortEarly: true, convert: true, allowUnknown: false, stripUnknown: true, } );
-	    if (!valid_user) throw "invalid user-object";
-			//global.log("XXX1:", provider, isNewUser, valid_user)
-
+	    const valid_object = JoiValidateFallback(thisObject, null, joi_schemaObject);
+	    if (!valid_object) throw ERROR(4, "login failed", "invalid user-object");
 
 		  // ===============================================
 	    // update user in database
 		  // ===============================================
-	    const numReplace = await this.updateFull( {userid: valid_user.userid}, valid_user);
-	    if (numReplace !== 1) throw "invalid update count";
+	    const numReplace = await this.updateFull( {userid: valid_object.userid}, valid_object);
+	    if (numReplace !== 1) throw ERROR(5, "login failed", "invalid update count");
 
-			//global.log("XXX2:", provider, isNewUser, thisUser)
-			//global.log("XXX3:", provider, isNewUser, valid_user)
+		  // ===============================================
+	    // get user from database (own -> true)
+		  // ===============================================
+      const loadedObject = await this._getINTERNAL(valid_object.userid, true); // result will be different (reduced) for isOWN = false
 
-	    return ( { err: null, res: valid_user, } );
+	  	return SUCCESS(loadedObject);
 	  } catch (error) {
-	  	const hashcode = createErrorHash(error);
-	  	global.log("DBUsers:: loginWithProvider:: ERROR:: ", hashcode, error);
-	    return ( { err: `login failed (${hashcode})`, res: null, } );	  	
+	  	return ERROR(99, "login failed", error);
 	  }
 	}
 
 
-
-	static async getUser(targetuserid, userid, servertoken) { 
+	static async getUser(unsafe_targetuserid, unsafe_userid, unsafe_servertoken) { 
     try {
-			const valid_targetuserid= JoiValidateFallback(targetuserid, null, Joi.string().min(30).max(50).alphanum().normalize().required(),); 
-			const valid_userid      = JoiValidateFallback(userid      , null, Joi.string().min(30).max(50).alphanum().normalize().required(),); 
-	    const valid_servertoken = JoiValidateFallback(servertoken , null, Joi.string().regex(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]*$/).min(30).max(499).normalize().required(),); 
-			if (!valid_targetuserid || !valid_userid || !valid_servertoken) throw new Error("invalid input");
+			const valid_targetuserid= JoiValidateFallback(unsafe_targetuserid, null, joi_userid); 
+			const valid_userid      = JoiValidateFallback(unsafe_userid      , null, joi_userid);
+	    const valid_servertoken = JoiValidateFallback(unsafe_servertoken , null, joi_servertoken);
+			if (!valid_targetuserid || !valid_userid || !valid_servertoken) throw ERROR(1, "user query failed", "invalid id or token");
 
       const isOWN = (valid_userid === valid_targetuserid); // check if OWN-stuff is requestd -> more info is returned
 
-      const obj = await this._getUser(valid_targetuserid, isOWN); // result will be different (reduced) for isOWN = false
+      const thisObject = await this._getINTERNAL(valid_targetuserid, isOWN); // result will be different (reduced) for isOWN = false
 
-      global.log("DBUsers:: getUser:: obj:: ", obj)
-	    return ( { err: null, res: obj, } );
-    } catch(error) {
-	  	const hashcode = createErrorHash(error);
-	  	global.log("DBUsers:: getUser:: ERROR:: ", hashcode, error);
-	    return ( { err: `get user failed (${hashcode})`, res: null, } );
-    }
+	  	return SUCCESS(thisObject);
+	  } catch (error) {
+	  	return ERROR(99, "user query failed", error);
+	  }
 	}
 
 
-	/*
 	// only OWN allowed!
-	static async updateUser(targetuserid, userid, servertoken, obj) { 
+	static async updateProps(unsafe_targetuserid, unsafe_userid, unsafe_servertoken, unsafe_props) { 
+		/* allowed props:
+			 	unsave_obj: { 
+					forcenew,
+					name,
+					email,
+					phonenumber,
+				}
+		*/
+    const now = new Date() / 1000;
     try {
-			const valid_targetuserid= JoiValidateFallback(targetuserid, null, Joi.string().min(30).max(50).alphanum().normalize().required(),); 
-			const valid_userid      = JoiValidateFallback(userid      , null, Joi.string().min(30).max(50).alphanum().normalize().required(),); 
-	    const valid_servertoken = JoiValidateFallback(servertoken , null, Joi.string().regex(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]*$/).min(30).max(499).normalize().required(),); 
-			if (!valid_targetuserid || !valid_userid || !valid_servertoken) throw new Error("invalid input");
+			const valid_targetuserid= JoiValidateFallback(unsafe_targetuserid, null, joi_userid); 
+			const valid_userid      = JoiValidateFallback(unsafe_userid      , null, joi_userid);
+	    const valid_servertoken = JoiValidateFallback(unsafe_servertoken , null, joi_servertoken);
+			if (!valid_targetuserid || !valid_userid || !valid_servertoken) throw ERROR(1, "update user failed", "invalid id or token");
 
       const isOWN = (valid_userid === valid_targetuserid); // check if OWN-stuff is requestd -> more info is returned
-			if (!isOWN) throw new Error("invalid user");
+			if (!isOWN) throw ERROR(2, "update user failed", "invalid user",);
 
-      const thisUser = await this._getUser(valid_targetuserid, isOWN); // result will be different (reduced) for isOWN = false
-			if (!thisUser) throw new Error("user not found");
+		  // ===============================================
+	    // load userobject from database
+		  // ===============================================
+      let thisObject = await this._getINTERNAL(valid_targetuserid, isOWN); // result will be different (reduced) for isOWN = false
+			if (!thisObject) throw ERROR(2, "update user failed", "user not found",);
 
+			/*
+	    const isNewObject = Boolean(!thisObject);
 
-      if (obj.hasOwnProperty("forcenew")) thisUser.forcenew = JoiValidateFallback(servertoken, "", Joi.string().trim().min(1).max(99),);
+		  // ===============================================
+	    // create object if not found in database
+		  // ===============================================
+	    if (isNewObject) {
+	    	thisObject = {
+	        //_id: (unique hash) generated by database
 
+	        userid: userid_created, // hash of facebook-id
 
-	    const numReplace = await this.updateFull( {userid: valid_targetuserid}, thisUser);
-	    if (numReplace !== 1) throw "invalid update count";
+	        createdAt: now,
+	        //updatedAt: Date.now() / 1000,
+	    	}
+	    }
+			*/
+		  // ===============================================
+	    // manipulate props in object
+		  // ===============================================
+		  const _validateProperty = (_unsafe_obj, _prop, _joi_validate) => (_unsafe_obj.hasOwnProperty(_prop)) ? JoiValidateFallback(_unsafe_obj[_prop], null, _joi_validate) : null;
+		  /*
+		  const { 
+		  	forcenew: unsafe_forcenew,
+		  	name: unsafe_name,
+		  	email: unsafe_email,
+		  	phonenumber: unsafe_phonenumber,
+		  } = unsafe_props || {};
 
-      global.log("DBUsers:: updateUser:: user:: ", thisUser)
-	    return ( { err: null, res: thisUser, } );
-    } catch(error) {
-	  	const hashcode = createErrorHash(error);
-	  	global.log("DBUsers:: updateUser:: ERROR:: ", hashcode, error);
-	    return ( { err: `updating user failed (${hashcode})`, res: null, } );
-    }
+		  const valid_email = 
+		  */
+		  let v;
+		  let c = 0;
+		  v = _validateProperty(unsafe_props, "name", joi_name); if (v !== null) { c++; thisObject.name = v; }
+		  v = _validateProperty(unsafe_props, "email", joi_email); if (v !== null) { c++; thisObject.email = v; }
+		  v = _validateProperty(unsafe_props, "phonenumber", joi_phonenumber); if (v !== null) { c++; thisObject.phonenumber = v; }
+		  if (c <= 0) throw ERROR(3, "update user failed", "nothing to update");
+
+	    thisObject.updatedAt = now; 
+
+		  // ===============================================
+	    // validate data-object
+		  // ===============================================
+	    const valid_object = JoiValidateFallback(thisObject, null, joi_schemaObject);
+	    if (!valid_object) throw ERROR(4, "update user failed", "invalid user-object");
+
+		  // ===============================================
+	    // save userobject to database
+		  // ===============================================
+	    const numReplace = await this.updateFull( {userid: valid_targetuserid}, valid_object);
+	    if (numReplace !== 1) throw ERROR(5, "update user failed", "invalid update count");
+
+	  	return SUCCESS(valid_object);
+	  } catch (error) {
+	  	return ERROR(99, "update user failed", error);
+	  }
 	}
-	*/
 
 
   //////////

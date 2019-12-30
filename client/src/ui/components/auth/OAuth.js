@@ -17,7 +17,7 @@ export default class OAuth extends React.Component {
 
     global.log("OAuth:: constructor:: provider:: ", provider, socket);
 
-    const ioRoute = `clientapi.oauth.${provider}.io`;
+    const ioRoute = `client.oauth.${provider}.io`;
     socket && socket.on(ioRoute, (err, res) => { // get reply with logindata from server (provider/callback) via socket
     	//global.log("oAuth:: incomming socket message:: ", socket.id, provider, err, res)
       if (this.state && this.state.windowOpen) {
@@ -42,10 +42,10 @@ export default class OAuth extends React.Component {
 	    	if (this.state.windowOpen) this.closeWindow();
 				clearTimeout(timer);
 	      onAuthFailed && onAuthFailed(socket.id, provider, "login attempt timed out");
-	    }, 5000);			
+	    }, 10000);			
 
       this.setState({windowOpen: true, });
-      onWindowOpen && onWindowOpen(socket.id, )
+      onWindowOpen && onWindowOpen(socket.id);
     }
   };
 
@@ -54,7 +54,7 @@ export default class OAuth extends React.Component {
 
   	this.setState({windowOpen: false, disabled: false, });
 		clearTimeout(timer);
-    onWindowClose && onWindowClose(socket.id, )
+    onWindowClose && onWindowClose(socket.id);
   };
 
   render() {

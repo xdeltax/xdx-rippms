@@ -47,6 +47,9 @@ class Store extends ProtoStore {
         return true; //Boolean(!!this.usercard.email && !!this.usercard.phonenumber)
       }
 
+      get name() { return this.usercard.name; }
+      set name(v) { runInAction(() => { this.usercard.name = v; }) }
+
       get gender() { return this.usercard.gender; }
       set gender(v) { runInAction(() => { this.usercard.gender = v; }) }
 
@@ -61,7 +64,7 @@ class Store extends ProtoStore {
   getOwnFromServer = async () => {
   	if (!this.userid || !this.servertoken) return;
 
-	  const {err, res} = await this._getUser(this.userid, this.userid, this.servertoken);
+	  const {err, res} = await this.getUser(this.userid, this.userid, this.servertoken);
 	  if (!err) { 
 	  	this.user = Object.assign(this.user || {}, res);
 	  	
@@ -73,7 +76,7 @@ class Store extends ProtoStore {
   };
 
 
-  _getUsercard = async (targetuserid, userid, servertoken) => {
+  getUsercard = async (targetuserid, userid, servertoken) => {
 		let res = null;
 		let err = null;
 		try {
