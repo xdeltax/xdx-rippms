@@ -77,7 +77,6 @@ export default ( observer( class extends React.Component {
 		  // ===============================================
 			store.socketio.onSocketConnect = async (socket, isConnected) => {
 				global.log("AppLandingPage:: onSocketConnect:: ", socket.id)
-
 			  // ===============================================
 			  // update store-data (from persistent load) with fresh data from server-database (if there is a valid userid and a valid servertoken)
 			  // ===============================================
@@ -88,9 +87,19 @@ export default ( observer( class extends React.Component {
 		    }
 			}
 
-			store.socketio.onSocketForceLogout = async (socket) => {
-		    global.log("AppLandingPage:: onAppLoadEvent:: onSocketForceLogout", );
+			store.socketio.onSocketForceLogout = async () => {
+		    global.log("AppLandingPage:: onAppLoadEvent:: onSocketForceLogout:: trigger logout!", );
+			  // ===============================================
+			  // force logout if a verification of the servertoken failed in a server-request
+			  // ===============================================
 				store.user.doAuthLogout();
+			}
+
+			store.socketio.onSocketErrorMessageFromServer = async (error) => {
+			  // ===============================================
+			  // all errormessages from server 
+			  // ===============================================
+		    global.log("AppLandingPage:: onAppLoadEvent:: onSocketErrorMessageFromServer:: error", error);
 			}
 
 		  // ===============================================

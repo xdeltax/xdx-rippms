@@ -60,20 +60,29 @@ class SocketIO {
   initEvents = action(() => {
     global.log("store:: socket:: initEvents:: creating event-listeners", );
 
-    this.socket.on("client.force.logout", () => { 
-      global.log("store:: socket:: event:: client.force.logout:: ", this.socket.id, );
 
-      this.onSocketForceLogout && this.onSocketForceLogout(this.socket);
+    this.socket.on("client.force.logout", () => { 
+      //global.log("store:: socket:: event:: client.force.logout:: ", this.socket.id, );
+      // used in AppLandingPage
+      this.onSocketForceLogout && this.onSocketForceLogout();
     });
+
+
+    this.socket.on("error", (error) => { // triggered from next(new Error(xxx)) in socket.use-middleware of node
+      //global.log("store:: socket:: event:: ERROR:: ", error, this.socket.id, this.socket.connected, );
+      // used in AppLandingPage
+      this.onSocketErrorMessageFromServer && this.onSocketErrorMessageFromServer(error);
+    });
+
 
     this.socket.on("connect", () => {
-      global.log("store:: socket:: event:: connect:: ", this.socket.id, this.socket.connected, );
+      //global.log("store:: socket:: event:: connect:: ", this.socket.id, this.socket.connected, );
       this.isConnected = this.socket.connected;
-
+      // used in AppLandingPage
       this.onSocketConnect && this.onSocketConnect(this.socket, this.isConnected);
-
       this.clearSendBuffer(); // clear previously buffered data when reconnecting
     });
+
 
     this.socket.on("disconnect", () => {
       global.log("store:: socket:: event:: disconnect:: ", this.socket.id, this.socket.connected, );
@@ -82,6 +91,7 @@ class SocketIO {
       this.onSocketDisconnect && this.onSocketDisconnect(this.socket, this.isConnected);
       //this.socket.connect(); // force manually reconnect
     });
+
 
     this.socket.on('reconnect_attempt', () => {
       global.log("store:: socket:: event:: reconnect_attempt:: ", this.socket.id, this.socket.connected, );
@@ -92,41 +102,42 @@ class SocketIO {
       */
     })
 
+
     this.socket.on("reconnecting", (attempt) => {
       global.log("store:: socket:: event:: reconnecting:: ", attempt, this.socket.id, this.socket.connected, );
 
     });
+
 
     this.socket.on("reconnect", (attempt) => {
       global.log("store:: socket:: event:: reconnect:: ", attempt, this.socket.id, this.socket.connected, );
 
     });
 
+
     this.socket.on("connect_timeout", () => {
       global.log("store:: socket:: event:: connect_timeout:: ", this.socket.id, this.socket.connected, );
 
     });
+
 
     this.socket.on("connect_error", (error) => {
       global.log("store:: socket:: event:: connect_error:: ERROR:: ", error, this.socket.id, this.socket.connected, );
 
     });
 
+
     this.socket.on("reconnect_error", (error) => {
       global.log("store:: socket:: event:: reconnect_error:: ERROR:: ", error, this.socket.id, this.socket.connected, );
 
     });
+
 
     this.socket.on("reconnect_failed", () => {
       global.log("store:: socket:: event:: reconnect_failed:: ", this.socket.id, this.socket.connected, );
 
     });
 
-    this.socket.on("error", (error) => { // triggered from next(new Error(xxx)) in socket.use-middleware of node
-      global.log("store:: socket:: event:: error:: ERROR:: ", error, this.socket.id, this.socket.connected, );
-
-      this.onSocketError && this.onSocketError(this.socket, error);
-    });
 
     /*
     this.socket.on("ping", () => { // when a ping is fired to the server
