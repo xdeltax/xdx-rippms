@@ -88,6 +88,11 @@ export default ( observer( class extends React.Component {
 		    }
 			}
 
+			store.socketio.onSocketForceLogout = async (socket) => {
+		    global.log("AppLandingPage:: onAppLoadEvent:: onSocketForceLogout", );
+				store.user.doAuthLogout();
+			}
+
 		  // ===============================================
 			// connect socket to server
 		  // ===============================================

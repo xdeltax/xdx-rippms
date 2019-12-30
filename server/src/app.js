@@ -390,7 +390,7 @@ module.exports = async (config) => {
 
   io.on('connection', (socket) => {
     // new connection established
-    global.log('************ io.on:: client successfully connected:: ', socket.id);
+    global.log('io.on:: client successfully connected:: ', socket.id);
 
     io.xdx.connectionCount++;
 
@@ -445,19 +445,19 @@ module.exports = async (config) => {
 			  // ===============================================
     		if (route && route.indexOf("auth") === 0) {
     			const {userid, servertoken} = req || {};
-    			if (!req || !userid || !servertoken) throw ERROR(1, "api validation", "no id or token provided"); // throw new Error("no token found");
+    			if (!req || !userid || !servertoken) throw ERROR(1, "validation", "no id or token provided"); // throw new Error("no token found");
 
 				  // ===============================================
 				  // check servertoken-format
 				  // ===============================================
     			const valid_userid      = JoiValidateFallback(userid     , null, joi_userid); 
 			    const valid_servertoken = JoiValidateFallback(servertoken, null, joi_servertoken); 
-    			if (!valid_userid || !valid_servertoken) throw ERROR(2, "api validation", "invalid id or token format");
+    			if (!valid_userid || !valid_servertoken) throw ERROR(2, "validation", "invalid id or token format");
 
 				  // ===============================================
 				  // verify servertoken
 				  // ===============================================
-		      if (!jwt.verify(valid_servertoken)) throw ERROR(3, "api validation", 'token verification failed'); // check if the token was signed by this server and isnt expired		      
+		      if (!jwt.verify(valid_servertoken)) throw ERROR(3, "validation", 'token verification failed'); // check if the token was signed by this server and isnt expired		      
 
 				  // ===============================================
 				  // decode servertoken
@@ -469,10 +469,10 @@ module.exports = async (config) => {
 		      // pid: providerid
 	    		// hash: crypto.createHash('sha1').update(JSON.stringify(thisUser.forcenew + thisUser.providertoken)).digest('hex');
 					const { usid, pvd, pid, hash } = decodedServertoken || {};
-					if (!usid || !pvd || !pid || !hash) throw ERROR(4, "api validation", "invalid token structure");
-					if (usid !== valid_userid) throw ERROR(5, "api validation", "token / user mismatch");
+					if (!usid || !pvd || !pid || !hash) throw ERROR(4, "validation", "invalid token structure");
+					if (usid !== valid_userid) throw ERROR(5, "validation", "token / user mismatch");
 
-					if (socket.xdx.userid && socket.xdx.userid !== valid_userid) throw ERROR(5, "api validation", "connection misuse");
+					if (socket.xdx.userid && socket.xdx.userid !== valid_userid) throw ERROR(6, "validation", "connection misuse");
 					socket.xdx.routetype = "auth";
 			    socket.xdx.userid = valid_userid;
 			    socket.xdx.servertoken = valid_servertoken;
@@ -495,7 +495,7 @@ module.exports = async (config) => {
     		if (route && route.indexOf("free") === 0) {
     			const {userid, servertoken} = req || {};
 
-    			if (!req) throw ERROR(6, "api validation", "no id or token found");
+    			if (!req) throw ERROR(7, "validation", "no id or token found");
 
 					socket.xdx.routetype = "free";
 
@@ -507,13 +507,19 @@ module.exports = async (config) => {
 			  // ===============================================
 	    	throw new Error("invalid route");
 		  } catch (error) {
-		  	const {err, res} = ERROR(99, "api validation", error);
-		  	global.log("socket.use:: ERROR:: ", err);
+		  	const {err, res} = ERROR(99, "validation", error);
+		  	global.log("socket.use:: ERROR:: ", err, socket.id);
 
     		// callback:: send the error to client-emit-function
 	    	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
 
-		  	next(err); // stop here -> err-object will be send to client socket-event "onError"
+	    	// send a "force logout" signal to client
+		    socket.emit("client.force.logout", err); // emit logout-request to clients sotre.socketio.on("")
+		
+    		// send the error to on(error)
+				let newErr = new Error("validation failed");
+				newErr.data = err;
+		  	next(newErr); // stop here -> err-object will be send to client socket-event "onError"
 		  }
     });
 

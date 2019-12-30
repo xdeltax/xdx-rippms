@@ -164,6 +164,13 @@ export default ( withStyles(styles)( observer( class extends React.Component {
           }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
           	USERCARD
           </Button>
+
+          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
+          	store.user.servertoken = "FAKEATOKEN3452938495823498574875834.347587348257.3457834725837498";
+          	global.log("TEST CHANGE TOKEN:: ", store.user.servertoken);
+          }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
+          	SERVERTOKEN
+          </Button>
 	      </div>
 
         {store.system.app.bottomNavigation.visible && (<Toolbar disableGutters style={{ marginBottom: 25, }} />) /* extra padding for content below HeaderNavigationToolbar */ }

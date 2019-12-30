@@ -28,7 +28,6 @@ class SocketIO {
 
 
   connect = action((server_url, handshake_version) => {
-
     if (!server_url) { 
 	    global.log("store:: socket:: connect:: abort:: server_url missing:: ", server_url);
     	return;  // url for connection to server
@@ -60,6 +59,12 @@ class SocketIO {
   // events
   initEvents = action(() => {
     global.log("store:: socket:: initEvents:: creating event-listeners", );
+
+    this.socket.on("client.force.logout", () => { 
+      global.log("store:: socket:: event:: client.force.logout:: ", this.socket.id, );
+
+      this.onSocketForceLogout && this.onSocketForceLogout(this.socket);
+    });
 
     this.socket.on("connect", () => {
       global.log("store:: socket:: event:: connect:: ", this.socket.id, this.socket.connected, );
