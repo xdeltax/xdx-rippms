@@ -16,6 +16,7 @@
     "directory": "client"
   },
   "scripts": {
+  	"ssl": "set NODE_PATH=&&set HTTPS=true&&npm start",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",

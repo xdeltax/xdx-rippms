@@ -2,6 +2,8 @@
 const fse = require('fs-extra');
 const Datastore = require('nedb-promises');
 
+const path = require('path');
+
 const Joi = require('@hapi/joi');
 const JoiValidateFallback = requireX('tools/joivalidatefallback');
 
@@ -35,6 +37,7 @@ module.exports = class DBUsercards {
   
   static databasePath()   { return global.abs_path("../" + process.env.DATABASE_NEDB); }
 
+  static stop() { return ; }
 
   static async _getINTERNAL(valid_userid, isOWN) {
     const dbResultLimited = (item) => { // keep or drop props
@@ -78,7 +81,8 @@ module.exports = class DBUsercards {
   static async loadDatabase() { // static method (not affected by instance) -> called with classname: DBGeoData.load
     try {
 			fse.ensureDir(this.databasePath(), { mode: 0o0700, });
-      this.db = Datastore.create(this.databasePath() + this.collectionName() + ".db");
+      this.db = Datastore.create(path.join(this.databasePath(), this.collectionName() + ".txt"));
+			this.db.persistence.setAutocompactionInterval(5);
 
       await this.db.ensureIndex({ fieldName: 'userid', }); // index for quick searching the userid
 

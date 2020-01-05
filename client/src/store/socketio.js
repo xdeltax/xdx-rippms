@@ -95,11 +95,7 @@ class SocketIO {
 
     this.socket.on('reconnect_attempt', () => {
       global.log("store:: socket:: event:: reconnect_attempt:: ", this.socket.id, this.socket.connected, );
-      /*
-      socket.io.opts.query = {
-        token: 'fgh'
-      }
-      */
+      // socket.io.opts.query = { token: 'fgh' }
     })
 
 
@@ -116,25 +112,25 @@ class SocketIO {
 
 
     this.socket.on("connect_timeout", () => {
-      global.log("store:: socket:: event:: connect_timeout:: ", this.socket.id, this.socket.connected, );
+      //global.log("store:: socket:: event:: connect_timeout:: ", this.socket.id, this.socket.connected, );
 
     });
 
 
     this.socket.on("connect_error", (error) => {
-      global.log("store:: socket:: event:: connect_error:: ERROR:: ", error, this.socket.id, this.socket.connected, );
+      //global.log("store:: socket:: event:: connect_error:: ERROR:: ", error, this.socket.id, this.socket.connected, );
 
     });
 
 
     this.socket.on("reconnect_error", (error) => {
-      global.log("store:: socket:: event:: reconnect_error:: ERROR:: ", error, this.socket.id, this.socket.connected, );
+      //global.log("store:: socket:: event:: reconnect_error:: ERROR:: ", error, this.socket.id, this.socket.connected, );
 
     });
 
 
     this.socket.on("reconnect_failed", () => {
-      global.log("store:: socket:: event:: reconnect_failed:: ", this.socket.id, this.socket.connected, );
+      //global.log("store:: socket:: event:: reconnect_failed:: ", this.socket.id, this.socket.connected, );
 
     });
 
@@ -153,6 +149,7 @@ class SocketIO {
   });
 
 
+  /*
   emitWithTimeoutAndConvertStatusToError = (url_param, req, timeout) => {
     return new Promise( (resolve, reject) => {
       // check connection
@@ -179,6 +176,7 @@ class SocketIO {
       }
     }); // of promise
   }
+	*/
 
 
   emitWithTimeout = (ioRoute, req, timeout) => {

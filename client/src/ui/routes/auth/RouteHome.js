@@ -13,7 +13,7 @@ import AllInclusiveICON from '@material-ui/icons/AllInclusive';
 
 import HeaderNavigationToolbar from "ui/components/header/HeaderNavigationToolbar";
 
-import { saveToPersistentDatabase} from "db/persistent";
+import { saveToPersistentDatabase} from "persistentdb";
 
 import store from 'store';
 

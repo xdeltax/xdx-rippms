@@ -17,6 +17,7 @@ require("./AppConfiguration"); // import globals
 // global.app-config
 //
 global.serverURL = process.env.REACT_APP_SERVERURL || "";
+global.log("index:: startApp:: process.env:: ", process.env);
 
 ////////////////////////////////////////////////////////////////////////////////
 

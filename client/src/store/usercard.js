@@ -3,7 +3,7 @@ import ProtoStore from "./protoStore";
 import deepCopy from 'tools/deepCopyObject';
 import deepMerge from 'tools/deepMergeObject';
 
-import { saveToPersistentDatabase, deletePersistentDatabase, } from "db/persistent";
+import { saveToPersistentDatabase, deletePersistentDatabase, } from "persistentdb";
 
 import store from "store";
 

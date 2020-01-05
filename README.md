@@ -177,6 +177,7 @@ express.js
 
 session
 	npm i -s express-session
+	npm i -s memorystore
 
 socket.io
   npm i -s socket.io

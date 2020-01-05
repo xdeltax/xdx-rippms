@@ -2,6 +2,8 @@
 const isPROD = Boolean(process.env.NODE_ENV === "production");
 
 const fse = require('fs-extra');
+const path = require('path');
+const requestIp = require('request-ip');
 
 const socketio = require('socket.io');
 
@@ -10,11 +12,10 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const helmet = require('helmet');
 //const morgan = require('morgan');
+
 const	session = require('express-session');
-
-const path = require('path');
-
-const requestIp = require('request-ip');
+const MemoryStore = require('memorystore')(session);
+//const NedbStore = require('connect-nedb-session')(session);;
 
 const passport = require('passport');
 const PassportFacebookStrategy = require('passport-facebook').Strategy; //const { Strategy: FacebookStrategy } = require('passport-facebook');
@@ -42,6 +43,7 @@ function logErrors(err, req, res, next) {
   next(err);
 }
 
+
 function clientErrorHandler(err, req, res, next) { 
   if (req.xhr) {
     res.status(500).send({ error: 'Something failed!' });
@@ -50,10 +52,12 @@ function clientErrorHandler(err, req, res, next) {
   }
 }
 
+
 function errorHandler(err, req, res, next) { // catch all
   res.status(500);
   res.render('error', { error: err });
 }
+
 
 // main
 module.exports = async (config) => {
@@ -68,6 +72,12 @@ module.exports = async (config) => {
 	} else {
 		global.debug = false;
 	}
+
+	global.log("isPROD:: ", isPROD);
+	global.log("DEBUG:: ", global.debug);
+	global.log("base_dir:: ", global.base_dir);
+	global.log("facebook callbackURL", isPROD ? process.env.FACEBOOK_CALLBACK_PROD : process.env.FACEBOOK_CALLBACK_DEV);
+	global.log("google callbackURL", isPROD ? process.env.GOOGLE_CALLBACK_PROD : process.env.GOOGLE_CALLBACK_DEV);
 
 
   // ===============================================
@@ -114,20 +124,22 @@ module.exports = async (config) => {
     // ===============================================
     // http-webserver
     // ===============================================
-    port = Number(process.env.PORT || 8080);
+    port = Number(process.env.HTTPPORT || 8080);
     server = require('http').createServer(app); // init the server
+    global.log("HTTP:: no SSL", );
   } else {
     // ===============================================
     // https-webserver
     // ===============================================
-    port = Number(process.env.PORT || 443);
+    port = Number(process.env.HTTPSPORT || 443);
     // https://itnext.io/node-express-letsencrypt-generate-a-free-ssl-certificate-and-run-an-https-server-in-5-minutes-a730fbe528ca
     const ssl_credentials = { // in linux: openssl req -new -newkey rsa:2048 -nodes -out mydomain.csr -keyout private.key
-      key: fse.readFileSync('./ssl/xdeltax.key'), // ssl_key
-      cert:fse.readFileSync('./ssl/xdeltax.crt'), // ssl_cert
-      //ca:fse.readFileSync('./ssl/encryption/intermediate.crt' ), // ssl-ca
-    }
+      key: fse.readFileSync(global.abs_path("../" + process.env.SSLCERT_KEY)), //'./ssl/xdeltax_xyz_cloudflare_cert.key')), // ssl_key private key
+      cert:fse.readFileSync(global.abs_path("../" + process.env.SSLCERT_PEM)), //'./ssl/xdeltax_xyz_cloudflare_cert.pem')), // ssl_cert 
+      //ca:fse.readFileSync(global.abs_path('./ssl/encryption/intermediate.crt')), // ssl-ca
+    };
     server = require('https').createServer(ssl_credentials, app); // init the server
+    global.log("HTTPS:: SSL:: port", port,);
   }
   global.log("app:: using webserver:: port:: ", port);
 
@@ -150,8 +162,30 @@ module.exports = async (config) => {
   app.use(bodyParser.json({limit: '50mb'}));                        // allow 50mb in post for imageupload; use bodyParser to support JSON-encoded bodies -> to parse application/json content-type
   app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));  // allow 50mb in post for imageupload; to support URL-encoded bodies
   //app.use(morgan('combined'));    // log HTTP requests
-	app.use(session({ secret: process.env.SESSION_SECRET || "something", resave: true, saveUninitialized: true }));
 
+  // ===============================================
+  // session-store
+  // ===============================================
+	app.use(session({ // memorystore
+ 		secret: process.env.SESSION_SECRET || "something", 
+		resave: true, 
+		saveUninitialized: true,
+    cookie: { maxAge: 24 * 3600 * 1000 },
+    store: new MemoryStore({
+      checkPeriod: 24 * 3600 * 1000, // prune expired entries every 24h
+    }),
+	}));
+	/*
+	app.use(session({ // connect-nedb-session
+ 		secret: process.env.SESSION_SECRET || "something", 
+    resave: false,
+    saveUninitialized: false,
+    cookie: { path: '/', httpOnly: true, maxAge: 24 * 3600 * 1000 }, 
+    store: new NedbStore({ 
+    	filename: global.abs_path(path.join("../" + process.env.DATABASE_NEDB, "session.txt")), //'path_to_nedb_persistence_file' 
+    }),
+	}));
+  */              
 
   // ===============================================
   // socket.io: initialize the WebSocket server instance
@@ -429,7 +463,6 @@ module.exports = async (config) => {
     global.log("socketio:: socket.use:: apicalls:: count:: ", socket.apicalls.count, socket.apicalls.updatedAt);
 
 
-
 	  // ===============================================
 	  // middleware: check routes
 	  // ===============================================
@@ -586,8 +619,6 @@ module.exports = async (config) => {
 
 	}); // of io.on(connection)
 
-  //socketioRoutes(app, io);
-
 
   // ===============================================
   // route: socket.io for first handshake
@@ -651,16 +682,24 @@ module.exports = async (config) => {
   // route: client-build:: serve client's build-directory at route-path ("https://node-server.path/") of this node-server
   // ===============================================
   const path2build = path.join(__dirname, '..', '..', 'client', 'build')
-  global.log("app:: static serving:: local path to build folder:: ", path2build);
-
-  app.use(express.static(path2build));  //global.log("__dirname::", __dirname) -> g:\autogit\xdx1\server\src -> target: g:\autogit\xdx1\client\build
+  //global.log("app:: static serving:: local path to build folder:: ", path2build);
+  //app.use(express.static(path2build));  //global.log("__dirname::", __dirname) -> g:\autogit\xdx1\server\src -> target: g:\autogit\xdx1\client\build
 
 
   // ===============================================
   // route: catch-all:: redirect everthing else (except the things before this command like /images /gallery /api ..)
   // ===============================================
   app.get('/*', function(req, res) { 
-    res.status(404).end();
+    res.status(200).json({ 
+	   	app: "/", 
+	    debug: global.debug,
+			base_dir: global.base_dir,
+			index_mtime: fse.statSync(global.base_dir + "/index.js").mtime,
+			app_mtime: fse.statSync(global.base_dir + "/app.js").mtime,
+			//env: process.env,
+			//global: global,
+    });
+    //res.status(404).end();
     //res.sendFile(path.join(path2build, 'index.html')); // serve index.html for any unknown path
   });
 
@@ -692,10 +731,32 @@ module.exports = async (config) => {
   // server: start the server by listening to a port
   // ===============================================
   try {
-    server.listen(port, () => {
+  	const hostname = "0.0.0.0"; // ip address to listen to
+    server.listen(port, hostname, () => {
       global.log('app:: server running on port ', port);
+
+      // Here we send the ready signal to PM2
+  		process.send('ready');
     });
   } catch (error) {
      throw Error("app:: starting server:: ERROR:: " + error);
   }
+
+
+  // pm2 Graceful Stop
+	process.on('SIGINT', async () => {
+		try {
+	  	await DBUsers.stop();
+			await DBUsercards.stop()MemoryStore
+	    process.exit(0);
+		} catch (err) {
+	    process.exit(1);			
+		}
+	});
+
+
+  global.log('app:: node process.version:: ', process.version);
+  global.log(`app:: *** modtime idx::  ${fse.statSync(global.base_dir + "/index.js").mtime}`);
+  global.log(`app:: *** modtime app::  ${fse.statSync(global.base_dir + "/app.js").mtime}`);
+  global.log(`app:: *** server time::  ${new Date()}`);
 } // of module.exports (main)

@@ -67,10 +67,10 @@ export default class OAuth extends React.Component {
 
     const url = `${server}/${provider}.io?sid=${socketid}&fp=${fphash}&uid=${_uid}&username=1&password=1`;
 
-    const width = window.innerWidth;
-    const height= window.innerHeight;
-    const left= (window.innerWidth / 2) - (width / 2);
-    const top = (window.innerHeight / 2) - (height / 2);
+    const width = 1200; //window.innerWidth;
+    const height= 1200; //window.innerHeight;
+    const left= 0; //(window.innerWidth / 2) - (width / 2);
+    const top = 0; //(window.innerHeight / 2) - (height / 2);
 
     const windowFeatures = {width: width, height: height, center: true, toolbar: false, location: false, directories: false, status: false, menubar: false, scrollbars: false, resizable: false, copyhistory: false, };
 
