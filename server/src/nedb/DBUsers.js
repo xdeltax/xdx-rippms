@@ -1,14 +1,14 @@
 "use strict";
 const fse = require('fs-extra');
-const Datastore = require('nedb-promises');
-
 const path = require('path');
+
+const Datastore = require('nedb-promises');
 
 const Joi = require('@hapi/joi');
 const JoiValidateFallback = requireX('tools/joivalidatefallback');
 
 const crypto = require('crypto');
-const jwt = requireX('tools/auth/jwt');
+const jwt = requireX('tools/jwt');
 
 const { SUCCESS, ERROR } = requireX('tools/errorhandler');
 

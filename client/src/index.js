@@ -16,9 +16,17 @@ require("./AppConfiguration"); // import globals
 ////////////////////////////////////////////////////////////////////////////////
 // global.app-config
 //
-global.serverURL = process.env.REACT_APP_SERVERURL || "";
+global.serverURL = process.env.REACT_APP_SERVERTARGET === "localhost" ? process.env.REACT_APP_SERVERURL_LOCALHOST : process.env.REACT_APP_SERVERURL_VPSSERVER;
 global.log("index:: startApp:: process.env:: ", process.env);
 
+/*
+// some noob checks
+global.info(`INFO:: process.env.NODE_ENV is set to "${process.env.NODE_ENV}".`,);
+global.info(`INFO:: process.env.REACT_APP_SERVERURL is set to "${process.env.REACT_APP_SERVERURL}".`,); // for socket.io
+// attn: socket.io:: .env-file needs url to nodejs-server for socket-connection
+if (!process.env.REACT_APP_SERVERURL ) global.warn(`ATTN:: process.env.REACT_APP_SERVERURL no found! set it in .env`)
+if (!process.env.REACT_APP_APPVERSION) global.warn(`ATTN:: process.env.REACT_APP_APPVERSION no found! set it in .env`);
+*/
 ////////////////////////////////////////////////////////////////////////////////
 
 const startApp = async () => {

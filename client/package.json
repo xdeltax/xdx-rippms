@@ -16,9 +16,19 @@
     "directory": "client"
   },
   "scripts": {
-  	"ssl": "set NODE_PATH=&&set HTTPS=true&&npm start",
     "start": "react-scripts start",
     "build": "react-scripts build",
+
+  	"ssl": "set NODE_PATH=&&set HTTPS=true&&npm start",
+
+    "ssldevloc": 	 "set NODE_PATH=&&set HTTPS=true&&set NODE_ENV=development&&set REACT_APP_SERVERTARGET=localhost&&npm start",
+    "ssldevvps": 	 "set NODE_PATH=&&set HTTPS=true&&set NODE_ENV=development&&set REACT_APP_SERVERTARGET=vps&&npm start",
+    "sslprod":   	 "set NODE_PATH=&&set HTTPS=true&&set NODE_ENV=production&&set REACT_APP_SERVERTARGET=vps&&npm start",
+
+    "nossldevloc": "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=development&&set REACT_APP_SERVERTARGET=localhost&&npm start",
+    "nossldevvps": "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=development&&set REACT_APP_SERVERTARGET=vps&&npm start",
+    "nosslprod":   "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=production&&set REACT_APP_SERVERTARGET=vps&&npm start",
+
     "test": "react-scripts test",
     "cordova": "cordova",
     "build:android": "cordova build android",

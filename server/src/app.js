@@ -1,8 +1,7 @@
 "use strict";
-const isPROD = Boolean(process.env.NODE_ENV === "production");
-
 const fse = require('fs-extra');
 const path = require('path');
+
 const requestIp = require('request-ip');
 
 const socketio = require('socket.io');
@@ -26,8 +25,8 @@ const PassportGoogleStrategy = require('passport-google-oauth20').Strategy;
 //const socketioRoutes = requireX('routes/socketio');
 //const socketValidateServertoken = requireX("socket/validateServertoken");
 
-const jwt = requireX('tools/auth/jwt');
 const Joi = require('@hapi/joi');
+const jwt = requireX('tools/jwt');
 const JoiValidateFallback = requireX('tools/joivalidatefallback');
 
 const { SUCCESS, ERROR } = requireX('tools/errorhandler');
@@ -62,30 +61,26 @@ function errorHandler(err, req, res, next) { // catch all
 // main
 module.exports = async (config) => {
 
-  // ===============================================
-  // dev-stuff
-  // ===============================================
-	if (!isPROD) {
-		global.debug = true;
-		//global.log("app:: env:: ", process.env)
-		//global.log("app:: global:: ", global)
-	} else {
-		global.debug = false;
-	}
-
-	global.log("isPROD:: ", isPROD);
-	global.log("DEBUG:: ", global.debug);
-	global.log("base_dir:: ", global.base_dir);
-	global.log("facebook callbackURL", isPROD ? process.env.FACEBOOK_CALLBACK_PROD : process.env.FACEBOOK_CALLBACK_DEV);
-	global.log("google callbackURL", isPROD ? process.env.GOOGLE_CALLBACK_PROD : process.env.GOOGLE_CALLBACK_DEV);
-
+  global.log("app:: ########################################");
+  global.log("app:: now:: ", new Date());
+  global.log("app:: process.env.NODE_ENV:: ", process.env.NODE_ENV);
+  global.log("app:: process.env.SERVERTARGET:: ", process.env.SERVERTARGET);
+  global.log("app:: process.env.HTTPS:: ", process.env.HTTPS);
+  global.log("app:: process.env.NODE_PATH:: ", process.env.NODE_PATH);
+	global.log("app:: isPROD:: ", global.isPROD);
+  global.log("app:: ");
+	global.log("app:: base_dir:: ", global.base_dir);
+  global.log('app:: process.version:: ', process.version);
+  global.log("app:: process.env.NUMBER_OF_PROCESSORS:: ", process.env.NUMBER_OF_PROCESSORS);
+  global.log("app:: process.env.PORT:: ", process.env.PORT);
+	global.log("app:: process.env.FACEBOOK_CALLBACK:: ", process.env.FACEBOOK_CALLBACK);
+	global.log("app:: process.env.GOOGLE_CALLBACK:: ", process.env.GOOGLE_CALLBACK);
 
   // ===============================================
   // DATABASE: init
   // ===============================================
-  const DBUsers 		= requireX('database/nedb/DBUsers');
-  const DBUsercards = requireX('database/nedb/DBUsercards');
-
+  const DBUsers 		= requireX('./nedb/DBUsers');
+  const DBUsercards = requireX('./nedb/DBUsercards');
 
   // ===============================================
   // DATABASE: load
@@ -117,31 +112,26 @@ module.exports = async (config) => {
   // ===============================================
   // Webserver
   // ===============================================
-  let port;
   let server;
   global.log("app:: configurating webserver:: https:: ", process.env.HTTPS)
   if (process.env.HTTPS === "false") {
     // ===============================================
     // http-webserver
     // ===============================================
-    port = Number(process.env.HTTPPORT || 8080);
     server = require('http').createServer(app); // init the server
-    global.log("HTTP:: no SSL", );
+    global.log("app:: HTTP:: no SSL", );
   } else {
     // ===============================================
     // https-webserver
     // ===============================================
-    port = Number(process.env.HTTPSPORT || 443);
-    // https://itnext.io/node-express-letsencrypt-generate-a-free-ssl-certificate-and-run-an-https-server-in-5-minutes-a730fbe528ca
     const ssl_credentials = { // in linux: openssl req -new -newkey rsa:2048 -nodes -out mydomain.csr -keyout private.key
       key: fse.readFileSync(global.abs_path("../" + process.env.SSLCERT_KEY)), //'./ssl/xdeltax_xyz_cloudflare_cert.key')), // ssl_key private key
       cert:fse.readFileSync(global.abs_path("../" + process.env.SSLCERT_PEM)), //'./ssl/xdeltax_xyz_cloudflare_cert.pem')), // ssl_cert 
       //ca:fse.readFileSync(global.abs_path('./ssl/encryption/intermediate.crt')), // ssl-ca
     };
     server = require('https').createServer(ssl_credentials, app); // init the server
-    global.log("HTTPS:: SSL:: port", port,);
+    global.log("app:: HTTPS:: SSL:: ", process.env.SSLCERT_PEM);
   }
-  global.log("app:: using webserver:: port:: ", port);
 
 
   /*
@@ -159,6 +149,10 @@ module.exports = async (config) => {
   // ===============================================
   app.use(cors());                // enable all CORS requests
   app.use(helmet());              // enhance your app security with Helmet
+  
+  // ===============================================
+  // upload-limit
+  // ===============================================
   app.use(bodyParser.json({limit: '50mb'}));                        // allow 50mb in post for imageupload; use bodyParser to support JSON-encoded bodies -> to parse application/json content-type
   app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));  // allow 50mb in post for imageupload; to support URL-encoded bodies
   //app.use(morgan('combined'));    // log HTTP requests
@@ -167,7 +161,7 @@ module.exports = async (config) => {
   // session-store
   // ===============================================
 	app.use(session({ // memorystore
- 		secret: process.env.SESSION_SECRET || "something", 
+ 		secret: process.env.SESSION_SECRET || "something" + new Date()/1000, 
 		resave: true, 
 		saveUninitialized: true,
     cookie: { maxAge: 24 * 3600 * 1000 },
@@ -177,7 +171,7 @@ module.exports = async (config) => {
 	}));
 	/*
 	app.use(session({ // connect-nedb-session
- 		secret: process.env.SESSION_SECRET || "something", 
+ 		secret: process.env.SESSION_SECRET || "something" + new Date()/1000,
     resave: false,
     saveUninitialized: false,
     cookie: { path: '/', httpOnly: true, maxAge: 24 * 3600 * 1000 }, 
@@ -193,15 +187,6 @@ module.exports = async (config) => {
   global.log("app:: configurating socketio")
   var io = socketio.listen(server);	// connect sockets to the server
 	//app.set('io', io); // add sockets to the request so that we can access them later in the controller -> const _io = req.app.get('io');
-
-  // ===============================================
-  // dev-stuff
-  // ===============================================
-  global.log("app:: process.env.NODE_ENV:: ", process.env.NODE_ENV);
-  if (!isPROD) {
-    //app.use(express.logger('dev'));
-    //app.use(errorhandler())
-  }
 
 
   // ===============================================
@@ -289,14 +274,14 @@ module.exports = async (config) => {
 	  clientID			: process.env.FACEBOOK_KEY,
 	  clientSecret	: process.env.FACEBOOK_SECRET,
 	  profileFields	: ['id', 'emails', 'name', 'picture.width(250)'],
-	  callbackURL		: isPROD ? process.env.FACEBOOK_CALLBACK_PROD : process.env.FACEBOOK_CALLBACK_DEV,
+	  callbackURL		: process.env.FACEBOOK_CALLBACK,
 	  enableProof		: true, // enable app secret proof
 	};
 
 	const passportStrategyGoogleConfig = {
 	  clientID			: process.env.GOOGLE_CLIENT_ID,
 	  clientSecret	: process.env.GOOGLE_CLIENT_SECRET,
-	  callbackURL		: isPROD ? process.env.GOOGLE_CALLBACK_PROD : process.env.GOOGLE_CALLBACK_DEV,
+	  callbackURL		: process.env.GOOGLE_CALLBACK,
 	  enableProof		: true, // enable app secret proof
 	};
 
@@ -473,6 +458,13 @@ module.exports = async (config) => {
     socket.use( (packet, next) => {    	
   		const [route, req, clientEmitCallback] = packet || {};
     	try {
+		    // check (own app-)protocol-version is set in connect-function of socketio.js in client
+		    // this way we can force clients to update their mobile app
+		    let { version } = socket.handshake.query; // const token = socket.handshake.query.token;
+		    global.log("socketio:: io.use:: checking communication protocol version:: ", version);
+		    if (!version || !Number.isInteger(version) || version < process.env.SOCKETIO_HANDSHAKEVERSION) throw ERROR(0, "validation", "invalid app communication protocol version");
+
+
 			  // ===============================================
 			  // auth-routes: routes starting with "auth" needs a valid servertoken 
 			  // ===============================================
@@ -665,23 +657,23 @@ module.exports = async (config) => {
 
 
   // ===============================================
-  // route: static images:: serve images in gallery-directory at gallery-path ("https://node-server.path/gallery/") of this node-server
+  // route: static images:: serve images in assets-directory at asset-path ("https://node-server.path/assets/") of this node-server
   // ===============================================
   /*
-  const path2images = path.join(__dirname, '..', 'uploads');
-  const path2gallery = path.join(__dirname, process.env.ASSETS_SUBFOLDER_GALLERY);
-  global.log("app:: static serving:: /images:: ", path2images);
-  global.log("app:: static serving:: /gallery:: ", path2gallery);
+  const path2uploads= global.abs_path("../" + process.env.FOLDER_UPLOADS); //path.join(__dirname, '..', 'uploads');
+  const path2assets = global.abs_path("../" + process.env.FOLDER_ASSETS); //path.join(__dirname, process.env.ASSETS_SUBFOLDER_GALLERY);
+  global.log("app:: static serving:: /uploads:: ", path2uploads);
+  global.log("app:: static serving:: /assets:: ", path2assets);
 
-  app.use('/images', express.static(path2images));    // __dirname: G:\autogit\xdx1\server\src -> target: g:\autogit\xdx1\uploads ->
-  app.use('/gallery', express.static(path2gallery));  // http://localhost:8080/gallery/qH0nDN57jIt130Bp/8ba6305a48c87fe650daacce1af4bca1.jpeg
+  app.use('/uploads', express.static(path2uploads));// __dirname: (fullpath)\server\src -> target: (fullpath)\uploads ->
+  app.use('/assets', express.static(path2assets));  // http://localhost:8080/assets/qH0nDN57jIt130Bp/8ba6305a48c87fe650daacce1af4bca1.jpeg
   */
 
 
   // ===============================================
   // route: client-build:: serve client's build-directory at route-path ("https://node-server.path/") of this node-server
   // ===============================================
-  const path2build = path.join(__dirname, '..', '..', 'client', 'build')
+  //const path2build = path.join(__dirname, '..', '..', 'client', 'build')
   //global.log("app:: static serving:: local path to build folder:: ", path2build);
   //app.use(express.static(path2build));  //global.log("__dirname::", __dirname) -> g:\autogit\xdx1\server\src -> target: g:\autogit\xdx1\client\build
 
@@ -692,7 +684,7 @@ module.exports = async (config) => {
   app.get('/*', function(req, res) { 
     res.status(200).json({ 
 	   	app: "/", 
-	    debug: global.debug,
+	    isProd: global.isPROD,
 			base_dir: global.base_dir,
 			index_mtime: fse.statSync(global.base_dir + "/index.js").mtime,
 			app_mtime: fse.statSync(global.base_dir + "/app.js").mtime,
@@ -731,12 +723,11 @@ module.exports = async (config) => {
   // server: start the server by listening to a port
   // ===============================================
   try {
-  	const hostname = "0.0.0.0"; // ip address to listen to
-    server.listen(port, hostname, () => {
-      global.log('app:: server running on port ', port);
+    server.listen(process.env.PORT, process.env.HOST, () => { // port and ip-address to listen to
+      global.log('app:: server running on port ', process.env.PORT);
 
       // Here we send the ready signal to PM2
-  		process.send('ready');
+  		//process.send('ready');
     });
   } catch (error) {
      throw Error("app:: starting server:: ERROR:: " + error);
@@ -747,16 +738,15 @@ module.exports = async (config) => {
 	process.on('SIGINT', async () => {
 		try {
 	  	await DBUsers.stop();
-			await DBUsercards.stop()MemoryStore
-	    process.exit(0);
+			await DBUsercards.stop();
+	    //process.exit(0);
 		} catch (err) {
-	    process.exit(1);			
+	    //process.exit(1);			
 		}
 	});
 
 
-  global.log('app:: node process.version:: ', process.version);
-  global.log(`app:: *** modtime idx::  ${fse.statSync(global.base_dir + "/index.js").mtime}`);
-  global.log(`app:: *** modtime app::  ${fse.statSync(global.base_dir + "/app.js").mtime}`);
-  global.log(`app:: *** server time::  ${new Date()}`);
+  global.log(`app:: *** modtime idx:: ${fse.statSync(global.base_dir + "/index.js").mtime}`);
+  global.log(`app:: *** modtime app:: ${fse.statSync(global.base_dir + "/app.js").mtime}`);
+  global.log(`app:: *** server time:: ${new Date()}`);
 } // of module.exports (main)

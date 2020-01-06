@@ -17,13 +17,18 @@
     "directory": "server"
   },
   "scripts": {
-    "start": "npx nodemon --inspect src",
+    "start": "npm run nodemon",
     "node": "node src",
+    "nodemon": "npx nodemon src",
+    "inspect": "npx nodemon --inspect src",
 
-    "ssldev": "set NODE_PATH=&&set HTTPS=true&&set NODE_ENV=development&&npm start",
-    "sslprod": "set NODE_PATH=&&set HTTPS=true&&set NODE_ENV=production&&node src",
-    "nossldev": "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=development&&npm start",
-    "nosslprod": "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=production&&npm start",
+    "ssldevloc": "set NODE_PATH=&&set HTTPS=true&&set NODE_ENV=development&&set SERVERTARGET=localhost&&npm run nodemon",
+    "ssldevvps": "set NODE_PATH=&&set HTTPS=true&&set NODE_ENV=development&&set SERVERTARGET=vps&&npm run nodemon",
+    "sslprod":   "set NODE_PATH=&&set HTTPS=true&&set NODE_ENV=production&&set SERVERTARGET=vps&&npm run node",
+
+    "nossldevloc": "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=development&&set SERVERTARGET=localhost&&npm run nodemon",
+    "nossldevvps": "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=development&&set SERVERTARGET=vps&&npm run nodemon",
+    "nosslprod":   "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=production&&set SERVERTARGET=vps&&npm start",
 
     "ssh": "ssh -p 22 root@208.167.253.67",
     "reboot": "ssh -p 22 root@208.167.253.67 reboot",

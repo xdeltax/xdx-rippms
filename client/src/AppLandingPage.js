@@ -36,13 +36,6 @@ export default ( observer( class extends React.Component {
     global.log("AppLandingPage:: constructor:: ", global.nowDatePretty(), global.nowTimePretty(), )
 
     store.showSpinner("loading");
-
-    // some noob checks
-    global.info(`INFO:: process.env.NODE_ENV is set to "${process.env.NODE_ENV}".`,);
-    global.info(`INFO:: process.env.REACT_APP_SERVERURL is set to "${process.env.REACT_APP_SERVERURL}".`,); // for socket.io
-    // attn: socket.io:: .env-file needs url to nodejs-server for socket-connection
-    if (!process.env.REACT_APP_SERVERURL ) global.warn(`ATTN:: process.env.REACT_APP_SERVERURL no found! set it in .env`)
-    if (!process.env.REACT_APP_APPVERSION) global.warn(`ATTN:: process.env.REACT_APP_APPVERSION no found! set it in .env`);
   }
 
   /*
