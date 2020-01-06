@@ -177,7 +177,9 @@ express.js
 
 session
 	npm i -s express-session
-	npm i -s memorystore
+	npm i -s nedb-session-store
+	//npm i -s connect-nedb-session
+	//npm i -s memorystore
 
 socket.io
   npm i -s socket.io

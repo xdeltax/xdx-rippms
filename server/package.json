@@ -21,15 +21,12 @@
     "node": "node src",
     "nodemon": "npx nodemon src",
     "inspect": "npx nodemon --inspect src",
-
     "ssldevloc": "set NODE_PATH=&&set HTTPS=true&&set NODE_ENV=development&&set SERVERTARGET=localhost&&npm run nodemon",
     "ssldevvps": "set NODE_PATH=&&set HTTPS=true&&set NODE_ENV=development&&set SERVERTARGET=vps&&npm run nodemon",
-    "sslprod":   "set NODE_PATH=&&set HTTPS=true&&set NODE_ENV=production&&set SERVERTARGET=vps&&npm run node",
-
+    "sslprod": "set NODE_PATH=&&set HTTPS=true&&set NODE_ENV=production&&set SERVERTARGET=vps&&npm run node",
     "nossldevloc": "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=development&&set SERVERTARGET=localhost&&npm run nodemon",
     "nossldevvps": "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=development&&set SERVERTARGET=vps&&npm run nodemon",
-    "nosslprod":   "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=production&&set SERVERTARGET=vps&&npm start",
-
+    "nosslprod": "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=production&&set SERVERTARGET=vps&&npm start",
     "ssh": "ssh -p 22 root@208.167.253.67",
     "reboot": "ssh -p 22 root@208.167.253.67 reboot",
     "pm2list": "ssh -p 22 root@208.167.253.67 pm2 list",
@@ -41,17 +38,12 @@
     "pm2restart": "ssh -p 22 root@208.167.253.67 pm2 restart",
     "pm2delete": "ssh -p 22 root@208.167.253.67 pm2 delete all",
     "pm2hotreload": "ssh -p 22 root@208.167.253.67 pm2 reload all",
-
     "log": "ssh -p 22 root@208.167.253.67 cat /root/.pm2/logs/npm-out.log",
-
     "ufwstatus": "ssh -p 22 root@208.167.253.67 sudo ufw status",
     "ufwopen8443": "ssh -p 22 root@208.167.253.67 sudo ufw allow 8443",
-
     "chmod600": "ssh -p 22 root@208.167.253.67 chmod -R 0600 0600.database;chmod -R 0600 0600.sslcert",
-
     "deploy": "scp -P 22 -r src root@208.167.253.67:./server/",
     "scp": "scp -P 22 -r src root@208.167.253.67:./server/",
-
     "budossl": "npx budo src --live --ssl --cors",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -67,10 +59,10 @@
     "helmet": "^3.21.1",
     "jimp": "^0.8.4",
     "jsonwebtoken": "^8.5.1",
-    "memorystore": "^1.6.1",
     "morgan": "^1.9.1",
     "nedb": "^1.8.0",
     "nedb-promises": "^4.0.0",
+    "nedb-session-store": "^1.1.2",
     "passport": "^0.4.1",
     "passport-facebook": "^3.0.0",
     "passport-google-oauth20": "^2.0.0",

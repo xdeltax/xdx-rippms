@@ -13,8 +13,9 @@ const helmet = require('helmet');
 //const morgan = require('morgan');
 
 const	session = require('express-session');
-const MemoryStore = require('memorystore')(session);
-//const NedbStore = require('connect-nedb-session')(session);;
+const NedbStore = require('nedb-session-store')(session);
+//const NedbStore = require('connect-nedb-session')(session);
+//const MemoryStore = require('memorystore')(session); // no memory-leaks
 
 const passport = require('passport');
 const PassportFacebookStrategy = require('passport-facebook').Strategy; //const { Strategy: FacebookStrategy } = require('passport-facebook');
@@ -160,6 +161,7 @@ module.exports = async (config) => {
   // ===============================================
   // session-store
   // ===============================================
+	/* memory is no good idea for scaling in production env -> only use in dev
 	app.use(session({ // memorystore
  		secret: process.env.SESSION_SECRET || "something" + new Date()/1000, 
 		resave: true, 
@@ -169,17 +171,18 @@ module.exports = async (config) => {
       checkPeriod: 24 * 3600 * 1000, // prune expired entries every 24h
     }),
 	}));
-	/*
-	app.use(session({ // connect-nedb-session
+  */              
+	app.use(session({ // nedb-session-store
  		secret: process.env.SESSION_SECRET || "something" + new Date()/1000,
     resave: false,
     saveUninitialized: false,
-    cookie: { path: '/', httpOnly: true, maxAge: 24 * 3600 * 1000 }, 
+    cookie: { path: '/', httpOnly: true, maxAge: 24 * 3600 * 1000 }, // 24 hours
     store: new NedbStore({ 
     	filename: global.abs_path(path.join("../" + process.env.DATABASE_NEDB, "session.txt")), //'path_to_nedb_persistence_file' 
     }),
+    autoCompactInterval: 1 * 3600 * 1000, // 1 hour
 	}));
-  */              
+
 
   // ===============================================
   // socket.io: initialize the WebSocket server instance
