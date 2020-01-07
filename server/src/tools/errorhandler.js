@@ -9,7 +9,7 @@ module.exports.SUCCESS = (res) => {
 	return { err: null, res: res }
 };
 
-module.exports.ERROR = (code, header, error, includeraw) => {
+module.exports.ERROR = (code, topic, header, error, includeraw) => {
 	let message;
 	let errobj;
 	if (error && error.hasOwnProperty("err") && error.err.hasOwnProperty("hash")) {
@@ -17,8 +17,9 @@ module.exports.ERROR = (code, header, error, includeraw) => {
 	} else {
 		message = error.hasOwnProperty("message") ? error.message : error;
 		errobj = {
-			date: new Date() / 1000,
+			date: new Date(),
 			code: code,
+			topic: topic,
 			header: header,
 			message: message,
 			hash: this.errorhash(message),

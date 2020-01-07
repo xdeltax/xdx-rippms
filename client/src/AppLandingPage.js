@@ -100,8 +100,9 @@ export default ( observer( class extends React.Component {
 		  // ===============================================
 		  if (!global.DEBUG_DISABLE_SOCKETCONNECT) {
 				const socketProtokoll = process.env.REACT_APP_SOCKETIO_HANDSHAKEVERSION || 10000;
-				global.log("index:: startApp:: connect socket. ", socketProtokoll)
-				store.socketio.connect(global.serverURL, socketProtokoll);
+				const appVersion = process.env.REACT_APP_APPVERSION || 0;
+				global.log("index:: startApp:: connect socket. ", socketProtokoll, appVersion);
+				store.socketio.connect(global.serverURL, socketProtokoll, appVersion);
 			} else {
 				global.log("index:: startApp:: DEBUG DEBUG DEBUG:: connect to socket is DISABLED!!! ", global);		
 			}

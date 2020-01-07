@@ -12,6 +12,8 @@ const jwt = requireX('tools/jwt');
 
 const { SUCCESS, ERROR } = requireX('tools/errorhandler');
 
+const joi_databaseid = 	Joi.string().alphanum().allow(null).allow("").max(200).normalize();
+
 const joi_userid = 			Joi.string().alphanum().min(30).max(50).normalize();
 const joi_servertoken =	Joi.string().regex(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]*$/).min(30).max(499).normalize();
 
@@ -23,7 +25,7 @@ const joi_email = 			Joi.string().max(256).email().allow("").allow(null).normali
 const joi_phonenumber = Joi.string().max(64).allow("").allow(null).normalize().default("");
 
 const joi_schemaObject = Joi.object().keys({
-  //_id
+  _id: 					joi_databaseid.optional(),
 
   // public (store.user)
   userid: 			joi_userid.required(),
@@ -32,6 +34,9 @@ const joi_schemaObject = Joi.object().keys({
   name: 				joi_name,
   email: 				joi_email,
   phonenumber:  joi_phonenumber,
+
+  createdAt: 		joi_createdAt,
+  updatedAt: 		joi_updatedAt,
 });
 
 
@@ -67,7 +72,7 @@ module.exports = class DBUsercards {
 
     let res;
     try {
-      const dbResultFull = await this.findOne( { "userid": valid_userid, }, ); // not found -> null
+      const dbResultFull = await this.findOne({ "userid": valid_userid, },); // not found -> null
 
       // if isOwn -> return full database entry; if !isOwn -> return limited dataset only
       if (dbResultFull && dbResultFull.hasOwnProperty("userid")) 
@@ -83,11 +88,11 @@ module.exports = class DBUsercards {
 
   static async loadDatabase() { // static method (not affected by instance) -> called with classname: DBGeoData.load
     try {
-			fse.ensureDir(this.databasePath(), { mode: 0o0700, });
+			fse.ensureDirSync(this.databasePath(), { mode: 0o0600, });
       this.db = Datastore.create(path.join(this.databasePath(), this.collectionName() + ".txt"));
 			this.db.persistence.setAutocompactionInterval(5);
 
-      await this.db.ensureIndex({ fieldName: 'userid', }); // index for quick searching the userid
+      await this.db.ensureIndex({ fieldName: 'userid',  unique: true, }); // index for quick searching the userid
 
       return this.db;
     } catch (error) { 
@@ -101,7 +106,7 @@ module.exports = class DBUsercards {
 			const valid_targetuserid= JoiValidateFallback(unsafe_targetuserid, null, joi_userid); 
 			const valid_userid      = JoiValidateFallback(unsafe_userid      , null, joi_userid);
 	    const valid_servertoken = JoiValidateFallback(unsafe_servertoken , null, joi_servertoken);
-			if (!valid_targetuserid || !valid_userid || !valid_servertoken) throw ERROR(1, "usercard query failed", "invalid id or token");
+			if (!valid_targetuserid || !valid_userid || !valid_servertoken) throw ERROR(1, "DBUsercards.js: getUsercard", "usercard query failed", "invalid id or token");
 
       const isOWN = (valid_userid === valid_targetuserid); // check if OWN-stuff is requestd -> more info is returned
 
@@ -109,7 +114,7 @@ module.exports = class DBUsercards {
 
 	  	return SUCCESS(thisObject);
 	  } catch (error) {
-	  	return ERROR(99, "usercard query failed", error);
+	  	return ERROR(99, "DBUsercards.js: getUsercard", "usercard query failed", error);
 	  }
 	}
 
@@ -121,10 +126,10 @@ module.exports = class DBUsercards {
 			const valid_targetuserid= JoiValidateFallback(unsafe_targetuserid, null, joi_userid); 
 			const valid_userid      = JoiValidateFallback(unsafe_userid      , null, joi_userid);
 	    const valid_servertoken = JoiValidateFallback(unsafe_servertoken , null, joi_servertoken);
-			if (!valid_targetuserid || !valid_userid || !valid_servertoken) throw ERROR(1, "update usercard failed", "invalid id or token");
+			if (!valid_targetuserid || !valid_userid || !valid_servertoken) throw ERROR(1, "DBUsercards.js: updateProps", "update usercard failed", "invalid id or token");
 
       const isOWN = (valid_userid === valid_targetuserid); // check if OWN-stuff is requestd -> more info is returned
-			if (!isOWN) throw ERROR(2, "update usercard failed", "invalid user",);
+			if (!isOWN) throw ERROR(2, "DBUsercards.js: updateProps", "update usercard failed", "invalid user",);
 
 		  // ===============================================
 	    // load userobject from database
@@ -148,7 +153,7 @@ module.exports = class DBUsercards {
 	    }
 
 		  // ===============================================
-	    // manipulate props in object
+	    // validate / manipulate props of object
 		  // ===============================================
 		  const _validateProperty = (_unsafe_obj, _prop, _joi_validate) => (_unsafe_obj.hasOwnProperty(_prop)) ? JoiValidateFallback(_unsafe_obj[_prop], null, _joi_validate) : null;
 
@@ -157,7 +162,7 @@ module.exports = class DBUsercards {
 		  v = _validateProperty(unsafe_props, "name", joi_name); if (v !== null) { c++; thisObject.name = v; }
 		  v = _validateProperty(unsafe_props, "email", joi_email); if (v !== null) { c++; thisObject.email = v; }
 		  v = _validateProperty(unsafe_props, "phonenumber", joi_phonenumber); if (v !== null) { c++; thisObject.phonenumber = v; }
-		  if (c <= 0) throw ERROR(2, "update usercard failed", "nothing to update");
+		  if (c <= 0) throw ERROR(3, "DBUsercards.js: updateProps", "update usercard failed", "nothing to update");
 
 	    thisObject.updatedAt = now; 
 
@@ -165,17 +170,17 @@ module.exports = class DBUsercards {
 	    // validate data-object
 		  // ===============================================
 	    const valid_object = JoiValidateFallback(thisObject, null, joi_schemaObject);
-	    if (!valid_object) throw ERROR(3, "update usercard failed", "invalid user-object");
+	    if (!valid_object) throw ERROR(4, "DBUsercards.js: updateProps", "update usercard failed", "invalid schema");
 
 		  // ===============================================
 	    // save userobject to database
 		  // ===============================================
 	    const numReplace = await this.updateFull( {userid: valid_targetuserid}, valid_object);
-	    if (numReplace !== 1) throw ERROR(4, "update usercard failed", "invalid update count");
+	    if (numReplace !== 1) throw ERROR(5, "DBUsercards.js: updateProps", "update usercard failed", "invalid update count");
 
 	  	return SUCCESS(valid_object);
 	  } catch (error) {
-	  	return ERROR(99, "update usercard failed", error);
+	  	return ERROR(99, "DBUsercards.js: updateProps", "update usercard failed", error);
 	  }
 	}
 

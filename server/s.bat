@@ -1,1 +1,1 @@
-npm run nosslprod
+npm run nossldevloc

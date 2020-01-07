@@ -27,15 +27,21 @@ class SocketIO {
   });
 
 
-  connect = action((server_url, handshake_version) => {
+  connect = action((server_url, handshake_version, app_version) => {
     if (!server_url) { 
 	    global.log("store:: socket:: connect:: abort:: server_url missing:: ", server_url);
     	return;  // url for connection to server
   	}	
     if (!handshake_version) handshake_version = 10000; // internal version of socket-api of app (if client has older than required by server -> reject)
+    if (!app_version) app_version = 0; 
 
     // send "version" to check on serverside app-version for connection
-    const manager_options = { query: { version: handshake_version, } }
+    const manager_options = { 
+    	query: { 
+    		handshakeversion: handshake_version,
+    		appversion: app_version,
+    	},
+    }
 
     global.log("store:: socket:: connect:: creating connection:: ", server_url);
     // connect

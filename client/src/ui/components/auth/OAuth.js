@@ -1,8 +1,10 @@
 import React from 'react';
-import NewWindow from 'react-new-window';
 import Button from '@material-ui/core/Button';
 
-let timer; 
+//import NewWindow from 'react-new-window';
+import NewWindow from './NewWindow';
+
+let timer;
 
 export default class OAuth extends React.Component {
   state = {
@@ -36,14 +38,14 @@ export default class OAuth extends React.Component {
 
   openWindow = () => {
     const { server, provider, socket, onAuthFailed, onWindowOpen } = this.props;
-
     if (!this.state.disabled && server && provider && socket && socket.id) {
+      /*
 	    timer = setTimeout(() => {
 	    	if (this.state.windowOpen) this.closeWindow();
 				clearTimeout(timer);
 	      onAuthFailed && onAuthFailed(socket.id, provider, "login attempt timed out");
-	    }, 10000);			
-
+	    }, 10000);
+      */
       this.setState({windowOpen: true, });
       onWindowOpen && onWindowOpen(socket.id);
     }
@@ -53,7 +55,7 @@ export default class OAuth extends React.Component {
     const { socket, onWindowClose } = this.props;
 
   	this.setState({windowOpen: false, disabled: false, });
-		clearTimeout(timer);
+		if (timer) clearTimeout(timer);
     onWindowClose && onWindowClose(socket.id);
   };
 
@@ -72,14 +74,37 @@ export default class OAuth extends React.Component {
     const left= 0; //(window.innerWidth / 2) - (width / 2);
     const top = 0; //(window.innerHeight / 2) - (height / 2);
 
-    const windowFeatures = {width: width, height: height, center: true, toolbar: false, location: false, directories: false, status: false, menubar: false, scrollbars: false, resizable: false, copyhistory: false, };
+    const windowFeatures = {
+      width: width,
+      height: height,
+      center: true,
+      toolbar: false,
+      location: false,
+      directories: false,
+      status: false,
+      menubar: false,
+      scrollbars: false,
+      resizable: false,
+      copyhistory: false,
+    };
 
     return (!fphash || !socketid) ? null : (
     	<React.Fragment>
-    	 	{windowOpen && <NewWindow url={url} name={provider || "oAuthWindow"} features={windowFeatures} onUnload={ () => { this.closeWindow(); }} onBlock={onWindowBlocked} /> }
+    	 	{windowOpen &&
+          <NewWindow url={url}
+            name={provider || "oAuthWindow"}
+            center="screen"
+            features={windowFeatures}
+            onUnload={ () => { this.closeWindow(); }}
+            onBlock={onWindowBlocked}
+          />
+        }
         <Button disabled={windowOpen} style={{ margin: 5, }} variant="outlined" color="primary" onClick={this.openWindow}>
           {providerLogo && <img width="25px" height="25px" src={providerLogo} alt="" style={{marginRight: 15,}} />}
           {buttonText}
+        </Button>
+        <Button style={{ margin: 5, }} variant="outlined" color="primary" onClick={this.closeWindow}>
+          CLOSE
         </Button>
       </React.Fragment>
     )

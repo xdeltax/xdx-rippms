@@ -80,6 +80,7 @@ module.exports = async (config) => {
   // ===============================================
   // DATABASE: init
   // ===============================================
+  const DBSockets		= requireX('./nedb/DBSockets');
   const DBUsers 		= requireX('./nedb/DBUsers');
   const DBUsercards = requireX('./nedb/DBUsercards');
 
@@ -87,11 +88,19 @@ module.exports = async (config) => {
   // DATABASE: load
   // ===============================================
   try {
+    global.log("app:: nedb:: loading Sockets:: ", DBSockets.databasePath());
+    await DBSockets.loadDatabase();
+    global.log("app:: nedb:: DBSockets count:", await DBSockets.count());
+  } catch (error) { 
+  	throw new Error("app:: nedb:: ERROR:: loading DBSockets::" + error.message); 
+  }
+
+  try {
     global.log("app:: nedb:: loading DBUsers:: ", DBUsers.databasePath());
     await DBUsers.loadDatabase();
     global.log("app:: nedb:: DBUsers count:", await DBUsers.count());
   } catch (error) { 
-  	throw new Error("app:: error:: loading DBUsers::" + error.message); 
+  	throw new Error("app::nedb:: ERROR:: loading DBUsers::" + error.message); 
   }
 
   try {
@@ -99,7 +108,7 @@ module.exports = async (config) => {
     await DBUsercards.loadDatabase();
     global.log("app:: nedb:: DBUsercards count:", await DBUsercards.count());
   } catch (error) { 
-  	throw new Error("app:: error:: loading DBUsercards::" + error.message); 
+  	throw new Error("app:: nedb:: ERROR:: loading DBUsercards::" + error.message); 
   }
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
 
@@ -125,6 +134,9 @@ module.exports = async (config) => {
     // ===============================================
     // https-webserver
     // ===============================================
+   	fse.ensureDirSync(path.dirname(global.abs_path("../" + process.env.SSLCERT_KEY)), { mode: 0o0600, });
+   	fse.ensureDirSync(path.dirname(global.abs_path("../" + process.env.SSLCERT_PEM)), { mode: 0o0600, });
+
     const ssl_credentials = { // in linux: openssl req -new -newkey rsa:2048 -nodes -out mydomain.csr -keyout private.key
       key: fse.readFileSync(global.abs_path("../" + process.env.SSLCERT_KEY)), //'./ssl/xdeltax_xyz_cloudflare_cert.key')), // ssl_key private key
       cert:fse.readFileSync(global.abs_path("../" + process.env.SSLCERT_PEM)), //'./ssl/xdeltax_xyz_cloudflare_cert.pem')), // ssl_cert 
@@ -395,39 +407,69 @@ module.exports = async (config) => {
   // ===============================================
   // route: socket.io-routing
   // ===============================================
+  /*
   io.xdx = { // add object to io -> track number of connections
     connectionCount: 0,
     useridARRAY: [],
   };
-	
+	*/
 
   // ===============================================
   // route: middleware for every new socket-connect
   // ===============================================
   io.use( (socket, next) => {
-  	global.log("+++ io.use:: socket:: ", socket.id)
-  	next();
+  	try {
+	  	global.log("+++ io.use:: socket connect middleware:: ", socket.id,);// socket.handshake.query)
+
+		  // ===============================================
+	    // check handshake-version of client and server
+		  // ===============================================
+	    // check (own app-)protocol-version is set in connect-function of socketio.js in client
+	    // this way we can force clients to update their mobile app
+	    let { 
+	    	handshakeversion,
+	    	appversion,
+	    } = socket.handshake.query; // const token = socket.handshake.query.token;
+
+	    let clientHandshakeVersion = +handshakeversion; // convert string to number
+	    let clientAppVersion = +appversion; // convert string to number
+	    
+	    if (!clientHandshakeVersion) clientHandshakeVersion = 0;
+	    if (!clientAppVersion) clientAppVersion = 0;
+
+	    let serverHandshakeVersion = +process.env.SOCKETIO_HANDSHAKEVERSION;
+	    let serverAppVersion = +process.env.SOCKETIO_APPVALIDVERSION;
+
+	    if (!serverHandshakeVersion) serverHandshakeVersion = clientHandshakeVersion;
+	    if (!serverAppVersion) serverAppVersion = clientAppVersion;
+
+	    global.log("### socketio:: io.use:: checking communication protocol version:: ", clientAppVersion, clientHandshakeVersion, serverHandshakeVersion, clientHandshakeVersion < serverHandshakeVersion);
+	    
+	    if (!clientHandshakeVersion || !Number.isInteger(clientHandshakeVersion) || clientHandshakeVersion < serverHandshakeVersion)
+    	throw ERROR(901, "app.js: io.use", "socket protocol validation", "invalid app communication protocol version " + clientHandshakeVersion + " / " + serverHandshakeVersion);
+
+  		next();
+	  } catch (error) {
+	  	const {err, res} = ERROR(999, "app.js: io.use", "socket protocol validation", error);
+	  	global.log("io.use:: ERROR:: ", err, socket.id);
+
+    	// send a "force logout" signal to client
+	    socket.emit("client.force.logout", err); // emit logout-request to clients sotre.socketio.on("")
+	
+  		// send the error to on(error)
+			let newErr = new Error("socket protocol validation failed");
+			newErr.data = err;
+	  	next(newErr); // stop here -> err-object will be send to client socket-event "onError"
+	  };
   });
 
 
-  io.on('connection', (socket) => {
-    // new connection established
-    global.log('io.on:: client successfully connected:: ', socket.id);
-
-    io.xdx.connectionCount++;
-
-    socket.xdx = {
-    	routetype: null,
-      userid: null, // update after verification
-      servertoken: null,
-    };
-
-    //todo: -> db-call to update onlineStatus
-
+  io.on('connection', async (socket) => {
+	  // ===============================================
     // handle disconnect-event
-    socket.on('disconnect', (operation) => {
-      global.log('socket.on:: client disconnect:: ', socket.id, operation);
-
+	  // ===============================================
+    socket.on('disconnect', async (operation) => {
+      /*
       io.xdx.connectionCount--;
       if (io.xdx.connectionCount < 0) io.xdx.connectionCount = 0;
 
@@ -439,53 +481,70 @@ module.exports = async (config) => {
       ) {
         io.xdx.useridARRAY = arrayRemoveElementByValue(io.xdx.useridARRAY, socket.xdx.userid);
       }
-
-      //todo: -> db-call to update onlineStatus
+			*/      
+      // db-call to update onlineStatus -> remove socket
+ 	    const {err: removeError, res: numRemoved} = await DBSockets.remove(socket.id);
+      global.log('socket.on:: client disconnect:: ', socket.id, operation, removeError, numRemoved);
     }); // of socket.on(disconnect)
 
 
+	  // ===============================================
+    // new connection established
+	  // ===============================================
+    global.log('io.on:: new client connected:: ', socket.id);
+
+    
+    //io.xdx.connectionCount++;
+    socket.xdx = {
+    	routetype: null,
+      userid: null, // update after verification
+      servertoken: null,
+    };
+		
+	  // ===============================================
+    // update database -> add socket to onlinelist
+	  // ===============================================
+    const {err: updateError, res: loadedObject} = await DBSockets.createOrUpdate(socket.id, null /*userid*/);
+    global.log('io.on:: new client connected:: added to database:: ', updateError, loadedObject);
+
+
+    /*
     // every api-call for this client (socket) is counted here.
     if (!socket.apicalls) socket.apicalls = { count: 0, };
     socket.apicalls.count++;
     socket.apicalls.updatedAt = new Date() / 1000;
     global.log("socketio:: socket.use:: apicalls:: count:: ", socket.apicalls.count, socket.apicalls.updatedAt);
+		*/
 
 
 	  // ===============================================
-	  // middleware: check routes
+	  // middleware: check routes of api-calles
 	  // ===============================================
 	  // routes with "auth/..." are valid if req contains "userid" and (a valid) "servertoken"
 	  // routes with "free/..." are always valid
 	  // all other routes are invalid
 	  // ===============================================
-    socket.use( (packet, next) => {    	
+    socket.use(async (packet, next) => {    	
   		const [route, req, clientEmitCallback] = packet || {};
     	try {
-		    // check (own app-)protocol-version is set in connect-function of socketio.js in client
-		    // this way we can force clients to update their mobile app
-		    let { version } = socket.handshake.query; // const token = socket.handshake.query.token;
-		    global.log("socketio:: io.use:: checking communication protocol version:: ", version);
-		    if (!version || !Number.isInteger(version) || version < process.env.SOCKETIO_HANDSHAKEVERSION) throw ERROR(0, "validation", "invalid app communication protocol version");
-
-
 			  // ===============================================
 			  // auth-routes: routes starting with "auth" needs a valid servertoken 
 			  // ===============================================
     		if (route && route.indexOf("auth") === 0) {
     			const {userid, servertoken} = req || {};
-    			if (!req || !userid || !servertoken) throw ERROR(1, "validation", "no id or token provided"); // throw new Error("no token found");
+    			if (!req || !userid || !servertoken) throw ERROR(1, "app.js: socket.use", "validation", "no id or token provided"); // throw new Error("no token found");
 
 				  // ===============================================
 				  // check servertoken-format
 				  // ===============================================
     			const valid_userid      = JoiValidateFallback(userid     , null, joi_userid); 
 			    const valid_servertoken = JoiValidateFallback(servertoken, null, joi_servertoken); 
-    			if (!valid_userid || !valid_servertoken) throw ERROR(2, "validation", "invalid id or token format");
+    			if (!valid_userid || !valid_servertoken) throw ERROR(2, "app.js: socket.use", "validation", "invalid id or token format");
 
 				  // ===============================================
 				  // verify servertoken
 				  // ===============================================
-		      if (!jwt.verify(valid_servertoken)) throw ERROR(3, "validation", 'token verification failed'); // check if the token was signed by this server and isnt expired		      
+		      if (!jwt.verify(valid_servertoken)) throw ERROR(3, "app.js: socket.use", "validation", 'token verification failed'); // check if the token was signed by this server and isnt expired		      
 
 				  // ===============================================
 				  // decode servertoken
@@ -497,14 +556,16 @@ module.exports = async (config) => {
 		      // pid: providerid
 	    		// hash: crypto.createHash('sha1').update(JSON.stringify(thisUser.forcenew + thisUser.providertoken)).digest('hex');
 					const { usid, pvd, pid, hash } = decodedServertoken || {};
-					if (!usid || !pvd || !pid || !hash) throw ERROR(4, "validation", "invalid token structure");
+					if (!usid || !pvd || !pid || !hash) throw ERROR(4, "app.js: socket.use", "validation", "invalid token structure");
 					if (usid !== valid_userid) throw ERROR(5, "validation", "token / user mismatch");
-
-					if (socket.xdx.userid && socket.xdx.userid !== valid_userid) throw ERROR(6, "validation", "connection misuse");
+					
+					if (socket.xdx.userid && socket.xdx.userid !== valid_userid) throw ERROR(6, "app.js: socket.use", "validation", "connection misuse");
+					
 					socket.xdx.routetype = "auth";
 			    socket.xdx.userid = valid_userid;
 			    socket.xdx.servertoken = valid_servertoken;
 
+			    /*
 				  // ===============================================
 				  // add user to list of valid users beeing online
 				  // ===============================================
@@ -513,6 +574,10 @@ module.exports = async (config) => {
 			      io.xdx.useridARRAY.push(socket.xdx.userid);
 			      //todo: -> db-call to update onlineStatus
 			    };
+					*/
+					
+			    const {err: updateError, res: loadedObject} = await DBSockets.createOrUpdate(socket.id, /*userid*/ valid_userid );
+			    global.log('io.on:: new client validated:: updated userid to database:: ', updateError, loadedObject);
 
     			return next();
     		};
@@ -523,7 +588,7 @@ module.exports = async (config) => {
     		if (route && route.indexOf("free") === 0) {
     			const {userid, servertoken} = req || {};
 
-    			if (!req) throw ERROR(7, "validation", "no id or token found");
+    			if (!req) throw ERROR(7, "app.js: socket.use", "validation", "no id or token found");
 
 					socket.xdx.routetype = "free";
 
@@ -535,8 +600,8 @@ module.exports = async (config) => {
 			  // ===============================================
 	    	throw new Error("invalid route");
 		  } catch (error) {
-		  	const {err, res} = ERROR(99, "validation", error);
-		  	global.log("socket.use:: ERROR:: ", err, socket.id);
+		  	const {err, res} = ERROR(99, "app.js: socket.use", "validation", error);
+		  	global.log("socket.use:: ERROR:: ", error, err, socket.id);
 
     		// callback:: send the error to client-emit-function
 	    	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
@@ -548,6 +613,10 @@ module.exports = async (config) => {
 				let newErr = new Error("validation failed");
 				newErr.data = err;
 		  	next(newErr); // stop here -> err-object will be send to client socket-event "onError"
+		  } finally {
+		    //db-call to update onlineStatus -> add socket to onlinelist
+	    	const {err: updateCountError, res: count} = await DBSockets.updateCount(socket.id);
+	    	global.log('io.on:: new client connected:: updateCount:: ', route, updateCountError, count);
 		  }
     });
 
@@ -667,6 +736,9 @@ module.exports = async (config) => {
   const path2assets = global.abs_path("../" + process.env.FOLDER_ASSETS); //path.join(__dirname, process.env.ASSETS_SUBFOLDER_GALLERY);
   global.log("app:: static serving:: /uploads:: ", path2uploads);
   global.log("app:: static serving:: /assets:: ", path2assets);
+
+	fse.ensureDirSync(path2uploads, { mode: 0o0600, });
+	fse.ensureDirSync(path2assets, { mode: 0o0600, });
 
   app.use('/uploads', express.static(path2uploads));// __dirname: (fullpath)\server\src -> target: (fullpath)\uploads ->
   app.use('/assets', express.static(path2assets));  // http://localhost:8080/assets/qH0nDN57jIt130Bp/8ba6305a48c87fe650daacce1af4bca1.jpeg

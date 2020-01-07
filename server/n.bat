@@ -1,1 +1,1 @@
-npm run nossldev
+npm run nossldevloc

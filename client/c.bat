@@ -1,1 +1,1 @@
-set NODE_PATH=&&set HTTPS=false&&npm run start
+npm run nossldevloc
