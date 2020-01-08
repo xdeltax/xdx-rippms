@@ -4,13 +4,13 @@ const path = require('path');
 
 const requestIp = require('request-ip');
 
-const socketio = require('socket.io');
-
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const helmet = require('helmet');
 //const morgan = require('morgan');
+
+const socketio = require('socket.io');
 
 const	session = require('express-session');
 const NedbStore = require('nedb-session-store')(session);
@@ -22,15 +22,12 @@ const PassportFacebookStrategy = require('passport-facebook').Strategy; //const 
 const PassportGoogleStrategy = require('passport-google-oauth20').Strategy;
 //const PassportLocalStrategy = require('passport-local').Strategy;
 
-//const jwt = requireX('tools/auth/jwt');
-//const socketioRoutes = requireX('routes/socketio');
-//const socketValidateServertoken = requireX("socket/validateServertoken");
-
 const Joi = require('@hapi/joi');
 const jwt = requireX('tools/jwt');
 const JoiValidateFallback = requireX('tools/joivalidatefallback');
 
 const { SUCCESS, ERROR } = requireX('tools/errorhandler');
+
 
 const joi_userid = 			Joi.string().alphanum().min(30).max(50).normalize();
 const joi_servertoken =	Joi.string().regex(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]*$/).min(30).max(499).normalize();
@@ -38,13 +35,13 @@ const joi_servertoken =	Joi.string().regex(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-
 const arrayRemoveElementByValue = (arr, value) => { return arr.filter( function(element){ return element !== value; }) }
 
 
-function logErrors(err, req, res, next) {
+const logErrors = (err, req, res, next) => {
   global.log("app:: logErrors:: ", err.stack);
   next(err);
 }
 
 
-function clientErrorHandler(err, req, res, next) { 
+const clientErrorHandler = (err, req, res, next) => {
   if (req.xhr) {
     res.status(500).send({ error: 'Something failed!' });
   } else {
@@ -53,7 +50,7 @@ function clientErrorHandler(err, req, res, next) {
 }
 
 
-function errorHandler(err, req, res, next) { // catch all
+const errorHandler = (err, req, res, next) => { // catch all
   res.status(500);
   res.render('error', { error: err });
 }
@@ -77,6 +74,14 @@ module.exports = async (config) => {
 	global.log("app:: process.env.FACEBOOK_CALLBACK:: ", process.env.FACEBOOK_CALLBACK);
 	global.log("app:: process.env.GOOGLE_CALLBACK:: ", process.env.GOOGLE_CALLBACK);
 
+
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+
+
   // ===============================================
   // DATABASE: init
   // ===============================================
@@ -91,78 +96,63 @@ module.exports = async (config) => {
     global.log("app:: nedb:: loading Sockets:: ", DBSockets.databasePath());
     await DBSockets.loadDatabase();
     global.log("app:: nedb:: DBSockets count:", await DBSockets.count());
-  } catch (error) { 
-  	throw new Error("app:: nedb:: ERROR:: loading DBSockets::" + error.message); 
+  } catch (error) {
+  	throw new Error("app:: nedb:: ERROR:: loading DBSockets::" + error.message);
   }
 
   try {
     global.log("app:: nedb:: loading DBUsers:: ", DBUsers.databasePath());
     await DBUsers.loadDatabase();
     global.log("app:: nedb:: DBUsers count:", await DBUsers.count());
-  } catch (error) { 
-  	throw new Error("app::nedb:: ERROR:: loading DBUsers::" + error.message); 
+  } catch (error) {
+  	throw new Error("app::nedb:: ERROR:: loading DBUsers::" + error.message);
   }
 
   try {
     global.log("app:: nedb:: loading DBUsercards:: ", DBUsercards.databasePath());
     await DBUsercards.loadDatabase();
     global.log("app:: nedb:: DBUsercards count:", await DBUsercards.count());
-  } catch (error) { 
-  	throw new Error("app:: nedb:: ERROR:: loading DBUsercards::" + error.message); 
+  } catch (error) {
+  	throw new Error("app:: nedb:: ERROR:: loading DBUsercards::" + error.message);
   }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+
 
   // ===============================================
-  // EXPRESS
+  // EXPRESS: init
   // ===============================================
   global.log("app:: configurating express")
-  var app = express();
+  const app = express();
 
 
   // ===============================================
-  // Webserver
+  // WEBSERVER: config the webserver http or https
   // ===============================================
-  let server;
-  global.log("app:: configurating webserver:: https:: ", process.env.HTTPS)
   if (process.env.HTTPS === "false") {
-    // ===============================================
-    // http-webserver
-    // ===============================================
-    server = require('http').createServer(app); // init the server
-    global.log("app:: HTTP:: no SSL", );
-  } else {
-    // ===============================================
-    // https-webserver
-    // ===============================================
-   	fse.ensureDirSync(path.dirname(global.abs_path("../" + process.env.SSLCERT_KEY)), { mode: 0o0600, });
-   	fse.ensureDirSync(path.dirname(global.abs_path("../" + process.env.SSLCERT_PEM)), { mode: 0o0600, });
-
-    const ssl_credentials = { // in linux: openssl req -new -newkey rsa:2048 -nodes -out mydomain.csr -keyout private.key
-      key: fse.readFileSync(global.abs_path("../" + process.env.SSLCERT_KEY)), //'./ssl/xdeltax_xyz_cloudflare_cert.key')), // ssl_key private key
-      cert:fse.readFileSync(global.abs_path("../" + process.env.SSLCERT_PEM)), //'./ssl/xdeltax_xyz_cloudflare_cert.pem')), // ssl_cert 
-      //ca:fse.readFileSync(global.abs_path('./ssl/encryption/intermediate.crt')), // ssl-ca
-    };
-    server = require('https').createServer(ssl_credentials, app); // init the server
-    global.log("app:: HTTPS:: SSL:: ", process.env.SSLCERT_PEM);
+    fse.ensureDirSync(path.dirname(global.abs_path("../" + process.env.SSLCERT_KEY)), { mode: 0o0600, });
+    fse.ensureDirSync(path.dirname(global.abs_path("../" + process.env.SSLCERT_PEM)), { mode: 0o0600, });
   }
 
-
-  /*
-  // Redirect from http port 80 to https
-  var http = require('http');
-  http.createServer(function (req, res) {
-    res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
-    res.end();
-  }).listen(80);
-  */
+  const server = (process.env.HTTPS === "false")
+  ? require('http').createServer(app)
+  : require('https').createServer({
+    key: fse.readFileSync(global.abs_path("../" + process.env.SSLCERT_KEY)), //'./ssl/xdeltax_xyz_cloudflare_cert.key')), // ssl_key private key
+    cert:fse.readFileSync(global.abs_path("../" + process.env.SSLCERT_PEM)), //'./ssl/xdeltax_xyz_cloudflare_cert.pem')), // ssl_cert
+  }, app);
 
 
   // ===============================================
-  // EXPRESS: middlewares
+  // EXPRESS: middleware
   // ===============================================
   app.use(cors());                // enable all CORS requests
   app.use(helmet());              // enhance your app security with Helmet
-  
+
   // ===============================================
   // upload-limit
   // ===============================================
@@ -175,33 +165,25 @@ module.exports = async (config) => {
   // ===============================================
 	/* memory is no good idea for scaling in production env -> only use in dev
 	app.use(session({ // memorystore
- 		secret: process.env.SESSION_SECRET || "something" + new Date()/1000, 
-		resave: true, 
+ 		secret: process.env.SESSION_SECRET || "something" + new Date()/1000,
+		resave: true,
 		saveUninitialized: true,
     cookie: { maxAge: 24 * 3600 * 1000 },
     store: new MemoryStore({
       checkPeriod: 24 * 3600 * 1000, // prune expired entries every 24h
     }),
 	}));
-  */              
+  */
 	app.use(session({ // nedb-session-store
  		secret: process.env.SESSION_SECRET || "something" + new Date()/1000,
     resave: false,
     saveUninitialized: false,
     cookie: { path: '/', httpOnly: true, maxAge: 24 * 3600 * 1000 }, // 24 hours
-    store: new NedbStore({ 
-    	filename: global.abs_path(path.join("../" + process.env.DATABASE_NEDB, "session.txt")), //'path_to_nedb_persistence_file' 
+    store: new NedbStore({
+    	filename: global.abs_path(path.join("../" + process.env.DATABASE_NEDB, "session.txt")), //'path_to_nedb_persistence_file'
     }),
     autoCompactInterval: 1 * 3600 * 1000, // 1 hour
 	}));
-
-
-  // ===============================================
-  // socket.io: initialize the WebSocket server instance
-  // ===============================================
-  global.log("app:: configurating socketio")
-  var io = socketio.listen(server);	// connect sockets to the server
-	//app.set('io', io); // add sockets to the request so that we can access them later in the controller -> const _io = req.app.get('io');
 
 
   // ===============================================
@@ -218,16 +200,27 @@ module.exports = async (config) => {
   // app.use(enforce.HTTPS({ trustProtoHeader: true }));
   // Use enforce.HTTPS({ trustProtoHeader: true }) in case you are behind a load balancer (e.g. Heroku).
 
+  /*
+  const forceSSL = (req, res, next) => {
+    if (req.headers['x-forwarded-proto'] !== 'https') {
+      return res.redirect(['https://', req.get('Host'), req.url].join(''));
+    }
+    return next();
+  };
+  if (global.isPROD) {
+    app.use(forceSSL);
+  }
+  */
 
   /*
   //app.enable('trust proxy'); // if we are behind a proxy, loadbalancer,
-  app.use (function (req, res, next) {
+  app.use((req, res, next) => {
     if (req.secure) {
       // request was via https, so do no special handling
       next();
     } else {
       // request was via http, so redirect to https
-      res.redirect('https://' + req.headers.host + req.url);
+      return res.redirect('https://' + req.headers.host + req.url);
     }
   });
   */
@@ -242,11 +235,18 @@ module.exports = async (config) => {
   // ===============================================
   // middleware: inject something to req
   // ===============================================
-  app.use( (req, res, next) => {
+  app.use((req, res, next) => {
     //console.log('inject to res');
     req.testing = 'testing';
     return next();
   });
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
 
 
   // ===============================================
@@ -257,7 +257,7 @@ module.exports = async (config) => {
 	// session.
 	app.use(passport.initialize());
 	//require("./passport/strategies")(); // configure passport-strategies
-  
+
 	// *** Configure Passport authenticated session persistence
 	// In order to restore authentication state across HTTP requests, Passport needs
 	// to serialize users into and deserialize users out of the session.  In a
@@ -277,7 +277,7 @@ module.exports = async (config) => {
 	const passportGoogleAuth   = passport.authenticate('google'  , { scope: ['profile'], session: false, }); // disable req.session.passport
 	//const passportLocalAuth    = passport.authenticate('local'   , { session: false, successRedirect: '/local.io.callback', failureRedirect: '/', }); // disable req.session.passport
 
- 	
+
 
 	// *** Configure the Facebook strategy for use by Passport.
 	// OAuth 2.0-based strategies require a `verify` function which receives the
@@ -310,7 +310,7 @@ module.exports = async (config) => {
   // ===============================================
   // passport:: auth against server database
   // ===============================================
-  passport.use(new PassportFacebookStrategy(passportStrategyFacebookConfig, (accessToken, refreshToken, profile, cb) => { 
+  passport.use(new PassportFacebookStrategy(passportStrategyFacebookConfig, (accessToken, refreshToken, profile, cb) => {
   	profile.accessToken = accessToken;
   	profile.refreshToken = refreshToken;
   	cb(null, profile);
@@ -348,7 +348,7 @@ module.exports = async (config) => {
   	// req.user from passport.use() -> cb(null, user)
   	// req.session from passportInjectSession()
   	// req.testing from app.use()
-  	const { 
+  	const {
   		user, 		// injected from passport.authenticate()
   		session, 	// injected from passport / passportInjectSession
   	} = req;
@@ -369,7 +369,7 @@ module.exports = async (config) => {
   		emails,
   		username,
   	} = user || { };
-  	
+
 	  if (socketid && provider) { // valid: (provider === "google" || provider === "facebook" || provider === "local")) {
 			const _providerid = id ? id : null;
 	  	const _providertoken =	refreshToken ? refreshToken : accessToken ? accessToken : null;
@@ -380,11 +380,11 @@ module.exports = async (config) => {
 			// query db -> update or create db
 	  	const {err, res: res_user} = await DBUsers.loginWithProvider(provider, _providerid, _providertoken, _uid, _fingerprinthash);
 	  	if (!err && res_user) {
-	  		res = { 
+	  		res = {
 	  			user: res_user,
 	  			usercard: null,
 	  		};
-				// query usercard 
+				// query usercard
 	  		const {err: err_usercard, res: res_usercard} = await DBUsercards.getUsercard(res_user.userid, res_user.userid, res_user.servertoken);
 		  	if (!err_usercard) {
 		  		res.usercard = res_usercard;
@@ -402,6 +402,19 @@ module.exports = async (config) => {
 	};
 
 
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+
+
+  // ===============================================
+  // socket.io: initialize the WebSocket server instance
+  // ===============================================
+  global.log("app:: configurating socketio")
+  var io = socketio.listen(server);	// connect sockets to the server
+	//app.set('io', io); // add sockets to the request so that we can access them later in the controller -> const _io = req.app.get('io');
 
 
   // ===============================================
@@ -419,21 +432,21 @@ module.exports = async (config) => {
   // ===============================================
   io.use( (socket, next) => {
   	try {
-	  	global.log("+++ io.use:: socket connect middleware:: ", socket.id,);// socket.handshake.query)
+	  	global.log("+++ io.use:: socket connect middleware:: ", socket.id, socket.handshake.query);
 
 		  // ===============================================
 	    // check handshake-version of client and server
 		  // ===============================================
 	    // check (own app-)protocol-version is set in connect-function of socketio.js in client
 	    // this way we can force clients to update their mobile app
-	    let { 
+	    let {
 	    	handshakeversion,
 	    	appversion,
 	    } = socket.handshake.query; // const token = socket.handshake.query.token;
 
 	    let clientHandshakeVersion = +handshakeversion; // convert string to number
 	    let clientAppVersion = +appversion; // convert string to number
-	    
+
 	    if (!clientHandshakeVersion) clientHandshakeVersion = 0;
 	    if (!clientAppVersion) clientAppVersion = 0;
 
@@ -444,9 +457,9 @@ module.exports = async (config) => {
 	    if (!serverAppVersion) serverAppVersion = clientAppVersion;
 
 	    global.log("### socketio:: io.use:: checking communication protocol version:: ", clientAppVersion, clientHandshakeVersion, serverHandshakeVersion, clientHandshakeVersion < serverHandshakeVersion);
-	    
+
 	    if (!clientHandshakeVersion || !Number.isInteger(clientHandshakeVersion) || clientHandshakeVersion < serverHandshakeVersion)
-    	throw ERROR(901, "app.js: io.use", "socket protocol validation", "invalid app communication protocol version " + clientHandshakeVersion + " / " + serverHandshakeVersion);
+    	throw ERROR(901, "app.js: io.use", "socket protocol validation", "invalid app communication protocol version c / s: " + clientHandshakeVersion + " / " + serverHandshakeVersion);
 
   		next();
 	  } catch (error) {
@@ -455,7 +468,7 @@ module.exports = async (config) => {
 
     	// send a "force logout" signal to client
 	    socket.emit("client.force.logout", err); // emit logout-request to clients sotre.socketio.on("")
-	
+
   		// send the error to on(error)
 			let newErr = new Error("socket protocol validation failed");
 			newErr.data = err;
@@ -481,7 +494,7 @@ module.exports = async (config) => {
       ) {
         io.xdx.useridARRAY = arrayRemoveElementByValue(io.xdx.useridARRAY, socket.xdx.userid);
       }
-			*/      
+			*/
       // db-call to update onlineStatus -> remove socket
  	    const {err: removeError, res: numRemoved} = await DBSockets.remove(socket.id);
       global.log('socket.on:: client disconnect:: ', socket.id, operation, removeError, numRemoved);
@@ -493,14 +506,14 @@ module.exports = async (config) => {
 	  // ===============================================
     global.log('io.on:: new client connected:: ', socket.id);
 
-    
+
     //io.xdx.connectionCount++;
     socket.xdx = {
     	routetype: null,
       userid: null, // update after verification
       servertoken: null,
     };
-		
+
 	  // ===============================================
     // update database -> add socket to onlinelist
 	  // ===============================================
@@ -524,11 +537,11 @@ module.exports = async (config) => {
 	  // routes with "free/..." are always valid
 	  // all other routes are invalid
 	  // ===============================================
-    socket.use(async (packet, next) => {    	
+    socket.use(async (packet, next) => {
   		const [route, req, clientEmitCallback] = packet || {};
     	try {
 			  // ===============================================
-			  // auth-routes: routes starting with "auth" needs a valid servertoken 
+			  // auth-routes: routes starting with "auth" needs a valid servertoken
 			  // ===============================================
     		if (route && route.indexOf("auth") === 0) {
     			const {userid, servertoken} = req || {};
@@ -537,14 +550,14 @@ module.exports = async (config) => {
 				  // ===============================================
 				  // check servertoken-format
 				  // ===============================================
-    			const valid_userid      = JoiValidateFallback(userid     , null, joi_userid); 
-			    const valid_servertoken = JoiValidateFallback(servertoken, null, joi_servertoken); 
+    			const valid_userid      = JoiValidateFallback(userid     , null, joi_userid);
+			    const valid_servertoken = JoiValidateFallback(servertoken, null, joi_servertoken);
     			if (!valid_userid || !valid_servertoken) throw ERROR(2, "app.js: socket.use", "validation", "invalid id or token format");
 
 				  // ===============================================
 				  // verify servertoken
 				  // ===============================================
-		      if (!jwt.verify(valid_servertoken)) throw ERROR(3, "app.js: socket.use", "validation", 'token verification failed'); // check if the token was signed by this server and isnt expired		      
+		      if (!jwt.verify(valid_servertoken)) throw ERROR(3, "app.js: socket.use", "validation", 'token verification failed'); // check if the token was signed by this server and isnt expired
 
 				  // ===============================================
 				  // decode servertoken
@@ -558,9 +571,9 @@ module.exports = async (config) => {
 					const { usid, pvd, pid, hash } = decodedServertoken || {};
 					if (!usid || !pvd || !pid || !hash) throw ERROR(4, "app.js: socket.use", "validation", "invalid token structure");
 					if (usid !== valid_userid) throw ERROR(5, "validation", "token / user mismatch");
-					
+
 					if (socket.xdx.userid && socket.xdx.userid !== valid_userid) throw ERROR(6, "app.js: socket.use", "validation", "connection misuse");
-					
+
 					socket.xdx.routetype = "auth";
 			    socket.xdx.userid = valid_userid;
 			    socket.xdx.servertoken = valid_servertoken;
@@ -575,7 +588,7 @@ module.exports = async (config) => {
 			      //todo: -> db-call to update onlineStatus
 			    };
 					*/
-					
+
 			    const {err: updateError, res: loadedObject} = await DBSockets.createOrUpdate(socket.id, /*userid*/ valid_userid );
 			    global.log('io.on:: new client validated:: updated userid to database:: ', updateError, loadedObject);
 
@@ -583,7 +596,7 @@ module.exports = async (config) => {
     		};
 
 			  // ===============================================
-			  // unauth-routes: routes starting with "free" needs no servertoken 
+			  // unauth-routes: routes starting with "free" needs no servertoken
 			  // ===============================================
     		if (route && route.indexOf("free") === 0) {
     			const {userid, servertoken} = req || {};
@@ -596,7 +609,7 @@ module.exports = async (config) => {
     		};
 
 			  // ===============================================
-			  // invalid-routes: all other routes are invalid 
+			  // invalid-routes: all other routes are invalid
 			  // ===============================================
 	    	throw new Error("invalid route");
 		  } catch (error) {
@@ -608,7 +621,7 @@ module.exports = async (config) => {
 
 	    	// send a "force logout" signal to client
 		    socket.emit("client.force.logout", err); // emit logout-request to clients sotre.socketio.on("")
-		
+
     		// send the error to on(error)
 				let newErr = new Error("validation failed");
 				newErr.data = err;
@@ -625,12 +638,12 @@ module.exports = async (config) => {
 	  	let res = null;
 	  	const {err, res: res_user} = await DBUsers.getUser(targetuserid, userid, servertoken);
 	  	if (!err && res_user) {
-	  		res = { 
+	  		res = {
 	  			user: res_user,
 	  			usercard: null,
 	  		};
 
-				// query usercard 
+				// query usercard
 	  		const {err: err_usercard, res: res_usercard} = await DBUsercards.getUsercard(res_user.userid, res_user.userid, res_user.servertoken);
 		  	if (!err_usercard) {
 		  		res.usercard = res_usercard;
@@ -639,13 +652,14 @@ module.exports = async (config) => {
 	  	return {err: err, res: res};
     };
 
+
 	  // ===============================================
 	  // all routes witgh "free/" and "auth/" are valid
 	  // ===============================================
     socket.on('auth/store/userstore/get', async (req, clientEmitCallback) => {
     	const { targetuserid, userid, servertoken, } = req || {};
     	global.log("*****socket.on(auth/userstore/get):: ", req,);
-    	const {err, res} = await _getUserStore(targetuserid, userid, servertoken,);   
+    	const {err, res} = await _getUserStore(targetuserid, userid, servertoken,);
     	global.log("socket.on(auth/userstore/get):: ", socket.xdx.userid, err, res,);
     	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
     });
@@ -658,13 +672,14 @@ module.exports = async (config) => {
     	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
     });
 
+
     socket.on('auth/store/user/update', async (req, clientEmitCallback) => {
     	const { targetuserid, userid, servertoken, props, } = req || {};
 	  	const {err, res} = await DBUsers.updateProps(targetuserid, userid, servertoken, props);
     	global.log("socket.on(auth/user/update):: ", socket.xdx.userid, err, res);
     	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
     });
-		
+
 
     socket.on('auth/store/usercard/get', async (req, clientEmitCallback) => {
     	const { targetuserid, userid, servertoken, } = req || {};
@@ -673,13 +688,13 @@ module.exports = async (config) => {
     	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
     });
 
+
     socket.on('auth/store/usercard/update', async (req, clientEmitCallback) => {
     	const { targetuserid, userid, servertoken, props, } = req || {};
 	  	const {err, res} = await DBUsercards.updateProps(targetuserid, userid, servertoken, props);
     	global.log("socket.on(auth/user/update):: ", socket.xdx.userid, err, res);
     	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
     });
-    
 
 	}); // of io.on(connection)
 
@@ -706,6 +721,7 @@ module.exports = async (config) => {
     //res.status(200).end();
   });
 
+
   app.get('/test.io.callback', (req, res, next) => {
     console.log('get route "/test.io.callback"', req.testing);
     res.status(200).json({ route: "/test.io.callback", });
@@ -722,7 +738,7 @@ module.exports = async (config) => {
 
   // ===============================================
   // route: passport callback:: triggerd by callbacks from oauth-provider
-  // ===============================================	
+  // ===============================================
 	app.get('/facebook.io.callback', passportFacebookAuth, passportAuthCallback); // callback from provider
 	app.get('/google.io.callback'	 , passportGoogleAuth  , passportAuthCallback); // callback from provider
 	//app.get('/local.io.callback'	 , passportLocalAuth   , passportAuthCallback); // callback from provider
@@ -756,9 +772,9 @@ module.exports = async (config) => {
   // ===============================================
   // route: catch-all:: redirect everthing else (except the things before this command like /images /gallery /api ..)
   // ===============================================
-  app.get('/*', function(req, res) { 
-    res.status(200).json({ 
-	   	app: "/", 
+  app.get('/*', (req, res) => {
+    res.status(200).json({
+	   	app: "/",
 	    isProd: global.isPROD,
 			base_dir: global.base_dir,
 			index_mtime: fse.statSync(global.base_dir + "/index.js").mtime,
@@ -775,7 +791,7 @@ module.exports = async (config) => {
   // ===============================================
   // middleware: async something
   // ===============================================
-  app.use( async (req, res, next) => {
+  app.use(async (req, res, next) => {
     // await test();
     next();
   });
@@ -785,7 +801,7 @@ module.exports = async (config) => {
   // ===============================================
   // middleware: error handling
   // ===============================================
-  app.use( (err, req, res, next) => {
+  app.use((err, req, res, next) => {
     if (err.name === 'UnauthorizedError') { // Send the error rather than to show it on the console
       res.status(401).send(err);
     } else {
@@ -794,8 +810,15 @@ module.exports = async (config) => {
   });
 
 
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+
+
   // ===============================================
-  // server: start the server by listening to a port
+  // webserver: start the server by listening to port
   // ===============================================
   try {
     server.listen(process.env.PORT, process.env.HOST, () => { // port and ip-address to listen to
@@ -816,7 +839,7 @@ module.exports = async (config) => {
 			await DBUsercards.stop();
 	    //process.exit(0);
 		} catch (err) {
-	    //process.exit(1);			
+	    //process.exit(1);
 		}
 	});
 
