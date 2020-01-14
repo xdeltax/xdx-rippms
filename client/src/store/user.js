@@ -99,7 +99,7 @@ class Store extends ProtoStore {
   doAuthLogout = async () => {
 		global.log("USER:: doAuthLogout:: ", this.userid,)
     // send logout signal to server
-    //await this.apiCALL_DBUsers_logout(this.userid, this.servertoken);
+    this.logoutUserFromServer(this.userid);
 
     // clear local persistent store
 		await deletePersistentDatabase();
@@ -116,16 +116,16 @@ class Store extends ProtoStore {
   	//	 usercard: { ... }
   	// }
   	const {
-  		user, 
+  		user,
   		usercard,
   	} = userdataFromServer || {};
 
   	const {
-  		userid, 
-  		servertoken, 
-  		accountstatus, 
-  		memberstatus, 
-  		createdAt, 
+  		userid,
+  		servertoken,
+  		accountstatus,
+  		memberstatus,
+  		createdAt,
   		updatedAt,
   	} = user || {};
 
@@ -134,7 +134,7 @@ class Store extends ProtoStore {
 
 
 		global.log("store.user:: doAuthLogin:: ", this.userid, userid,);
-  	
+
   	if (userid !== this.userid) {
 	  	await this.doAuthLogout();
   	};
@@ -152,6 +152,29 @@ class Store extends ProtoStore {
 
 	    await saveToPersistentDatabase();
   	};
+  };
+
+
+  logoutUserFromServer = async (targetuserid) => {
+  	if (!this.userid || !this.servertoken) return;
+
+		let res = null;
+		let err = null;
+		try {
+			const ioRoute = "auth/store/user/logout";
+			const req = {
+				targetuserid: targetuserid,
+				userid: this.userid,
+				servertoken: this.servertoken,
+			}
+	  	global.log("*** logoutUserFromServer:: ", req, store.socketio.socketID)
+    	res = await store.socketio.emitWithTimeout(ioRoute, req,);
+		} catch (error) {
+    	err = error;
+		} finally {
+			global.log("store.user:: logoutUserFromServer:: ", targetuserid, err, res)
+	  	return { err: err, res: res };
+		}
   };
 
 
@@ -253,9 +276,9 @@ class Store extends ProtoStore {
   	//global.log("+++++++1 getUserStoreFromServerANDMergeWithStore:: ", this.userid)
 	  const {err, res} = await this.getUserStoreFromServer(this.userid);
   	//global.log("+++++++2 getUserStoreFromServerANDMergeWithStore:: ", err, res)
-	  if (!err) { 
-	  	const { 
-	  		user, 
+	  if (!err) {
+	  	const {
+	  		user,
 	  		usercard,
 	  	} = res || {};
 
@@ -272,7 +295,7 @@ class Store extends ProtoStore {
   	return { err: err, res: res };
   };
 
-	
+
 	// used in AppLandingPage @ componentWillUnmount
   saveUserStoreToServer = async () => {
   	if (!this.userid || !this.servertoken) return;

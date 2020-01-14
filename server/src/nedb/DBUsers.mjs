@@ -1,16 +1,16 @@
-"use strict";
-const fse = require('fs-extra');
-const path = require('path');
+import fse from 'fs-extra';
+import path from 'path';
+import crypto from 'crypto';
 
-const Datastore = require('nedb-promises');
+import Datastore from 'nedb-promises';
+import Joi from '@hapi/joi';
 
-const Joi = require('@hapi/joi');
-const JoiValidateFallback = requireX('tools/joivalidatefallback');
-
-const crypto = require('crypto');
-const jwt = requireX('tools/jwt');
-
-const { SUCCESS, ERROR } = requireX('tools/errorhandler');
+import {abs_path, } from "../basepath.mjs";
+import {clog, } from "../tools/consoleLog.mjs";
+import {unixtime,} from "../tools/datetime.mjs";
+import {isERROR, isSUCCESS, } from "../tools/isErrorIsSuccess.mjs";
+import * as jwt from '../tools/jwt.mjs';
+import joiValidateFallback from '../tools/joiValidateFallback.mjs';
 
 
 const accountstatusREADONLY = ["default", "owner", "admin", "moderator", "reviewer", "hidden", "locked", "blocked", "banned", "removed", "disbanded" ];
@@ -67,11 +67,11 @@ const joi_schemaObject = Joi.object().keys({
 });
 
 
-module.exports = class DBUsers {
+export default class DBUsers {
   db = null;
 
   constructor(...props) {
-    clog("DBUsers::constructor:: ", ...props);
+    clog("DBUsers:: constructor:: ", ...props);
     this.db = null;
   }
 
@@ -111,54 +111,47 @@ module.exports = class DBUsers {
       if (dbResultFull && dbResultFull.hasOwnProperty("userid"))
       return (isOWN) ? dbResultFull : dbResultLimited(dbResultFull);
     } catch (error) { // fail silent
-      //global.log("DBUser:: _getINTERNAL:: ERROR:: ", error)
+      //clog("DBUser:: _getINTERNAL:: ERROR:: ", error)
       return null;
     }
   }
 
 
-
   static async loadDatabase() { // static method (not affected by instance) -> called with classname: DBGeoData.load
-    try {
-			fse.ensureDirSync(this.databasePath(), { mode: 0o0600, });
-      this.db = Datastore.create(path.join(this.databasePath(), this.collectionName() + ".txt"));
-			this.db.persistence.setAutocompactionInterval(5);
+		fse.ensureDirSync(this.databasePath(), { mode: 0o0600, });
+    this.db = Datastore.create(path.join(this.databasePath(), this.collectionName() + ".txt"));
+		this.db.persistence.setAutocompactionInterval(5);
 
-      await this.db.ensureIndex({ fieldName: 'userid',  unique: true, }); // index for quick searching the userid
-
-      return this.db;
-    } catch (error) {
-    	throw new Error(this.collectionName() + error);
-    }
+    await this.db.ensureIndex({ fieldName: 'userid',  unique: true, }); // index for quick searching the userid
   }; // of load
 
 
 	static async loginWithProvider(unsafe_provider, unsafe_providerid, unsafe_providertoken, unsafe_uid, unsafe_fingerprinthash) { // create or update database
-    const now = new Date() / 1000;
+    const now = unixtime();
 		try {
 		  // ===============================================
 		  // normalize input
 		  // ===============================================
-	    const valid_provider = JoiValidateFallback(unsafe_provider, null, joi_provider);
-			if (!valid_provider || (valid_provider !== "facebook" && valid_provider !== "google")) throw ERROR(1, "DBUsers.js: loginWithProvider", "login failed", "invalid provider");
+	    const valid_provider = joiValidateFallback(unsafe_provider, null, joi_provider);
+			if (!valid_provider || (valid_provider !== "facebook" && valid_provider !== "google")) throw isERROR(1, "DBUsers: loginWithProvider", "login failed", "invalid provider");
 
 			// user-id
-			// facebook: '578539389742863', (15)
-			// google: '115290746329011912108', (21)
-	    const valid_providerid = JoiValidateFallback(unsafe_providerid, null, joi_providerid);
-			if (!valid_providerid) throw ERROR(2, "DBUsers.js: loginWithProvider", "login failed", "invalid provider-id");
+			// facebook: '578539382222863', (15)
+			// google: '115290744429011912108', (21)
+	    const valid_providerid = joiValidateFallback(unsafe_providerid, null, joi_providerid);
+			if (!valid_providerid) throw isERROR(2, "DBUsers: loginWithProvider", "login failed", "invalid provider-id");
 
 			// accesstoken
 			// facebook: 'EAAFSPeTSCKkBAJ6M6eGAJViYu1UwuKF9eumKV1cr2hMrEEehOayxGSgQhQmUBLZBsz3rc8ZAy4aurHOKUHZBqYt6XZCCZAedzXA6Mo9aJGCGZBAyApXLoReCDtzXOHWAAlUyflQ5ZCcwhW4lHN7z5M88QrICD7UeZBKup3a94gj8dAZDZD',
 			// google: 'ya29.ImC2B0PovckRp-dr-k9SjTCBHSfwcxNEamphbOgVx0Z4POrqEo7IfnT7YCF6hTGwzZJnWKNAzEwjV29QmPwfIqtjUlkdgqnnfLBxDa8A-xrvKlC5Z9NXXk0LVq2GpjCL1lk',
-	    const valid_providertoken = JoiValidateFallback(unsafe_providertoken, null, joi_providertoken);
-			if (!valid_providertoken) throw ERROR(3, "DBUsers.js: loginWithProvider", "login failed", "invalid provider-token");
+	    const valid_providertoken = joiValidateFallback(unsafe_providertoken, null, joi_providertoken);
+			if (!valid_providertoken) throw isERROR(3, "DBUsers: loginWithProvider", "login failed", "invalid provider-token");
 
 	  	// fingerprint of client-device:: '47a95917591229e99a2417d27fbc32147' (32, alphanum:: a-z, A-Z, and 0-9)
-	    const valid_fingerprinthash = JoiValidateFallback(unsafe_fingerprinthash, "", joi_fingerprint);
+	    const valid_fingerprinthash = joiValidateFallback(unsafe_fingerprinthash, "", joi_fingerprint);
 
 			// fake-username(-extension) for debugging:: 'fakeusername1',
-	    const valid_uid = JoiValidateFallback(unsafe_uid, "", joi_uid, /*options*/null, /*dontLogError*/true);
+	    const valid_uid = joiValidateFallback(unsafe_uid, "", joi_uid, /*options*/null, /*dontLogError*/true);
 
 		  // ===============================================
 		  // create userid from provider-id and uid
@@ -234,41 +227,41 @@ module.exports = class DBUsers {
 		  // ===============================================
 	    // check userdata
 		  // ===============================================
-	    const valid_object = JoiValidateFallback(thisObject, null, joi_schemaObject);
-	    if (!valid_object) throw ERROR(4, "DBUsers.js: loginWithProvider", "login failed", "invalid schema");
+	    const valid_object = joiValidateFallback(thisObject, null, joi_schemaObject);
+	    if (!valid_object) throw isERROR(4, "DBUsers: loginWithProvider", "login failed", "invalid schema");
 
 		  // ===============================================
 	    // update user in database
 		  // ===============================================
 	    const numReplace = await this.updateFull( {userid: valid_object.userid}, valid_object);
-	    if (numReplace !== 1) throw ERROR(5, "DBUsers.js: loginWithProvider", "login failed", "invalid update count");
+	    if (numReplace !== 1) throw isERROR(5, "DBUsers: loginWithProvider", "login failed", "invalid update count");
 
 		  // ===============================================
 	    // get user from database (own -> true)
 		  // ===============================================
       const loadedObject = await this._getINTERNAL(valid_object.userid, true); // result will be different (reduced) for isOWN = false
 
-	  	return SUCCESS(loadedObject);
+	  	return isSUCCESS(loadedObject);
 	  } catch (error) {
-	  	return ERROR(99, "DBUsers.js: loginWithProvider", "login failed", error);
+	  	return isERROR(99, "DBUsers: loginWithProvider", "login failed", error);
 	  }
 	}
 
 
 	static async getUser(unsafe_targetuserid, unsafe_userid, unsafe_servertoken) {
     try {
-			const valid_targetuserid= JoiValidateFallback(unsafe_targetuserid, null, joi_userid);
-			const valid_userid      = JoiValidateFallback(unsafe_userid      , null, joi_userid);
-	    const valid_servertoken = JoiValidateFallback(unsafe_servertoken , null, joi_servertoken);
-			if (!valid_targetuserid || !valid_userid || !valid_servertoken) throw ERROR(1, "DBUsers.js: getUser", "user query failed", "invalid id or token");
+			const valid_targetuserid= joiValidateFallback(unsafe_targetuserid, null, joi_userid);
+			const valid_userid      = joiValidateFallback(unsafe_userid      , null, joi_userid);
+	    const valid_servertoken = joiValidateFallback(unsafe_servertoken , null, joi_servertoken);
+			if (!valid_targetuserid || !valid_userid || !valid_servertoken) throw isERROR(1, "DBUsers: getUser", "user query failed", "invalid id or token");
 
       const isOWN = (valid_userid === valid_targetuserid); // check if OWN-stuff is requestd -> more info is returned
 
       const thisObject = await this._getINTERNAL(valid_targetuserid, isOWN); // result will be different (reduced) for isOWN = false
 
-	  	return SUCCESS(thisObject);
+	  	return isSUCCESS(thisObject);
 	  } catch (error) {
-	  	return ERROR(99, "DBUsers.js: getUser", "user query failed", error);
+	  	return isERROR(99, "DBUsers: getUser", "user query failed", error);
 	  }
 	}
 
@@ -283,21 +276,21 @@ module.exports = class DBUsers {
 					phonenumber,
 				}
 		*/
-    const now = new Date() / 1000;
+    const now = unixtime();
     try {
-			const valid_targetuserid= JoiValidateFallback(unsafe_targetuserid, null, joi_userid);
-			const valid_userid      = JoiValidateFallback(unsafe_userid      , null, joi_userid);
-	    const valid_servertoken = JoiValidateFallback(unsafe_servertoken , null, joi_servertoken);
-			if (!valid_targetuserid || !valid_userid || !valid_servertoken) throw ERROR(1, "DBUsers.js: updateProps", "update user failed", "invalid id or token");
+			const valid_targetuserid= joiValidateFallback(unsafe_targetuserid, null, joi_userid);
+			const valid_userid      = joiValidateFallback(unsafe_userid      , null, joi_userid);
+	    const valid_servertoken = joiValidateFallback(unsafe_servertoken , null, joi_servertoken);
+			if (!valid_targetuserid || !valid_userid || !valid_servertoken) throw isERROR(1, "DBUsers: updateProps", "update user failed", "invalid id or token");
 
       const isOWN = (valid_userid === valid_targetuserid); // check if OWN-stuff is requestd -> more info is returned
-			if (!isOWN) throw ERROR(2, "DBUsers.js: updateProps", "update user failed", "invalid user",);
+			if (!isOWN) throw isERROR(2, "DBUsers: updateProps", "update user failed", "invalid user",);
 
 		  // ===============================================
 	    // load userobject from database
 		  // ===============================================
       let thisObject = await this._getINTERNAL(valid_targetuserid, isOWN); // result will be different (reduced) for isOWN = false
-			if (!thisObject) throw ERROR(3, "DBUsers.js: updateProps", "update user failed", "user not found",);
+			if (!thisObject) throw isERROR(3, "DBUsers: updateProps", "update user failed", "user not found",);
 
 			/*
 	    const isNewObject = Boolean(!thisObject);
@@ -319,7 +312,7 @@ module.exports = class DBUsers {
 		  // ===============================================
 	    // manipulate props in object
 		  // ===============================================
-		  const _validateProperty = (_unsafe_obj, _prop, _joi_validate) => (_unsafe_obj.hasOwnProperty(_prop)) ? JoiValidateFallback(_unsafe_obj[_prop], null, _joi_validate) : null;
+		  const _validateProperty = (_unsafe_obj, _prop, _joi_validate) => (_unsafe_obj.hasOwnProperty(_prop)) ? joiValidateFallback(_unsafe_obj[_prop], null, _joi_validate) : null;
 		  /*
 		  const {
 		  	forcenew: unsafe_forcenew,
@@ -335,25 +328,25 @@ module.exports = class DBUsers {
 		  v = _validateProperty(unsafe_props, "name", joi_name); if (v !== null) { c++; thisObject.name = v; }
 		  v = _validateProperty(unsafe_props, "email", joi_email); if (v !== null) { c++; thisObject.email = v; }
 		  v = _validateProperty(unsafe_props, "phonenumber", joi_phonenumber); if (v !== null) { c++; thisObject.phonenumber = v; }
-		  if (c <= 0) throw ERROR(4, "DBUsers.js: updateProps", "update user failed", "nothing to update");
+		  if (c <= 0) throw ERROR(4, "DBUsers: updateProps", "update user failed", "nothing to update");
 
 	    thisObject.updatedAt = now;
 
 		  // ===============================================
 	    // validate data-object
 		  // ===============================================
-	    const valid_object = JoiValidateFallback(thisObject, null, joi_schemaObject);
-	    if (!valid_object) throw ERROR(5, "DBUsers.js: updateProps", "update user failed", "invalid user-object");
+	    const valid_object = joiValidateFallback(thisObject, null, joi_schemaObject);
+	    if (!valid_object) throw isERROR(5, "DBUsers: updateProps", "update user failed", "invalid user-object");
 
 		  // ===============================================
 	    // save userobject to database
 		  // ===============================================
 	    const numReplace = await this.updateFull( {userid: valid_targetuserid}, valid_object);
-	    if (numReplace !== 1) throw ERROR(6, "DBUsers.js: updateProps", "update user failed", "invalid update count");
+	    if (numReplace !== 1) throw isERROR(6, "DBUsers: updateProps", "update user failed", "invalid update count");
 
-	  	return SUCCESS(valid_object);
+	  	return isSUCCESS(valid_object);
 	  } catch (error) {
-	  	return ERROR(99, "DBUsers.js: updateProps", "update user failed", error);
+	  	return isERROR(99, "DBUsers: updateProps", "update user failed", error);
 	  }
 	}
 

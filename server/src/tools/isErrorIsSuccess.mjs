@@ -1,15 +1,16 @@
 "use strict";
+import crypto from "crypto";
 
-module.exports.errorhash = (error) => {
+export const errorhash = (error) => {
 	const message = (error && error.hasOwnProperty("message")) ? error.message : error;
-	return require('crypto').createHash('sha1').update(JSON.stringify(message)).digest('hex');
+	return crypto.createHash('sha1').update(JSON.stringify(message)).digest('hex');
 }
 
-module.exports.SUCCESS = (res) => {
+export const isSUCCESS = (res) => {
 	return { err: null, res: res }
 };
 
-module.exports.ERROR = (code, topic, header, error, includeraw) => {
+export const isERROR = (code, topic, header, error, includeraw) => {
 	let message;
 	let errobj;
 	if (error && error.hasOwnProperty("err") && error.err.hasOwnProperty("hash")) {
@@ -22,7 +23,7 @@ module.exports.ERROR = (code, topic, header, error, includeraw) => {
 			topic: topic,
 			header: header,
 			message: message,
-			hash: this.errorhash(message),
+			hash: errorhash(message),
 		}
 	}
 	return { err: errobj, res: null }

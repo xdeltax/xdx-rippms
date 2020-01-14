@@ -11,17 +11,22 @@ export default class OAuth extends React.Component {
   	windowOpen: false,
     disabled: false,
   };
-
+  /*
   constructor(props) {
   	super(props);
 
     const { socket, provider, onAuthSuccess, onAuthFailed, } = props;
-
     global.log("OAuth:: constructor:: provider:: ", provider, socket);
+  }
+  */
+  componentDidMount() {
+    const { socket, provider, onAuthSuccess, onAuthFailed, } = this.props;
+
+    global.log("OAuth:: componentDidMount:: provider:: ", provider, socket);
 
     const ioRoute = `client.oauth.${provider}.io`;
     socket && socket.on(ioRoute, (err, res) => { // get reply with logindata from server (provider/callback) via socket
-    	//global.log("oAuth:: incomming socket message:: ", socket.id, provider, err, res)
+    	global.log("oAuth:: incomming socket message:: ", socket.id, provider, err, res)
       if (this.state && this.state.windowOpen) {
 	      this.closeWindow();
 	      if (!err) {
@@ -31,9 +36,6 @@ export default class OAuth extends React.Component {
 	      }
 	    }
     });
-  }
-
-  componentDidMount() {
   };
 
   openWindow = () => {

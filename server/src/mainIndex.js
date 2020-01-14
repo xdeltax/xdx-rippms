@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 "use strict";
-//const isBoolean = (n) => !!n === n;
-//const isNumber = (n) => +n === n;
-//const isString = (n) => ''+n === n;
 const path = require('path');
+
+require("./globals")("main::");
 
 // ===============================================
 // load .env
@@ -20,8 +19,8 @@ if (!process.env.SERVERTARGET) process.env.SERVERTARGET = "vps"; // default to s
 if (!process.env.HTTPS) process.env.HTTPS = "true";
 
 // server-port
-if (!process.env.HTTPPORT) 	process.env.HTTPPORT = 8080;
-if (!process.env.HTTPSPORT) process.env.HTTPSPORT= 8443;
+if (!process.env.MAINSERVER_PORT_HTTP) 	process.env.MAINSERVER_PORT_HTTP = 8080;
+if (!process.env.MAINSERVER_PORT_HTTPS) process.env.MAINSERVER_PORT_HTTPS= 8443;
 
 // folder of nedb-database
 if (!process.env.DATABASE_NEDB) process.env.DATABASE_NEDB = "0600.database/nedb/"; // basepath: ./
@@ -43,8 +42,8 @@ if (!process.env.ASSETS_SUBFOLDER_GALLERY) process.env.ASSETS_SUBFOLDER_GALLERY 
 // ===============================================
 // eval .env
 // ===============================================
-process.env.HOST = "0.0.0.0"; // port and ip-address to listen to
-process.env.PORT = process.env.HTTPS === "true" ? process.env.HTTPSPORT : process.env.HTTPPORT; // port and ip-address to listen to
+//process.env.HOST = "0.0.0.0"; // port and ip-address to listen to
+process.env.PORT = process.env.HTTPS === "true" ? process.env.MAINSERVER_PORT_HTTPS : process.env.MAINSERVER_PORT_HTTP; // port and ip-address to listen to
 process.env.GOOGLE_CALLBACK  = process.env.SERVERTARGET === "localhost" ? process.env.GOOGLE_CALLBACK_LOCALHOST  : process.env.GOOGLE_CALLBACK_VPSSERVER;
 process.env.FACEBOOK_CALLBACK= process.env.SERVERTARGET === "localhost" ? process.env.FACEBOOK_CALLBACK_LOCALHOST: process.env.FACEBOOK_CALLBACK_VPSSERVER;
 
@@ -52,40 +51,22 @@ global.isPROD = Boolean(process.env.NODE_ENV === "production");
 
 
 // ===============================================
-// global-helpers
-// ===============================================
-global.base_dir = __dirname;
-global.abs_path = (p) => { return path.join(global.base_dir, p) } // abs_path('lib/Utils.js');
-global.requireX = (f) => { return require(abs_path('/' + f)) } // instead of: require('../../../lib/Utils.js'); -> requireX('lib/Utils.js');
-
-global.getRandomInt = (max) => { return Math.floor(Math.random() * Math.floor(max)); }
-global.absRandom 		= (max) => Math.floor(max*Math.random());
-global.randomHash 	= () => "hash"+Math.floor(100000000*Math.random());
-
-global.now = () => new Date().toLocaleTimeString();
-global.clog  = console.log.bind(console);
-global.log 	 = ( ...restArgs ) => { clog (global.now(), restArgs); };
-
-
-global.numCPU = process.env.NUMBER_OF_PROCESSORS;
-
-
-// ===============================================
 // global-error-handlers
 // ===============================================
 process.on('unhandledRejection', (reason, p) => {
     //I just caught an unhandled promise rejection, since we already have fallback handler for unhandled errors (see below), let throw and let him handle that
-    console.error("######## index.js:: xdx unhandledRejection:: ", reason);
+    global.gerror("######## index.js:: xdx unhandledRejection:: ", reason);
     //process.exit(1);
     throw reason;
 });
 
 process.on('uncaughtException', (error) => {
     //I just received an error that was never handled, time to handle it and then decide whether a restart is needed
-    console.error("######## index.js:: xdx uncaughtException:: ", error);
+    global.gerror("######## index.js:: xdx uncaughtException:: ", error);
     //errorManagement.handler.handleError(error);
     //if (!errorManagement.handler.isTrustedError(error))
     process.exit(1);
 });
 
-require('./app')(); 
+
+require('./mainserver/mainApp.js')();

@@ -1,0 +1,2 @@
+cd server
+smain.bat

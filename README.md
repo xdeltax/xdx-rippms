@@ -37,7 +37,7 @@ with a high performance isometric tilemap implementation
 
 [Tilemap Scene](https://github.com/xdeltax/xdx-rippms/blob/master/client/src/game/phaser/scenes/Tilemap.js)
 
-#### demo	
+#### demo
 
 [https://client.xdeltax.now.sh/#/game/phaser](https://client.xdeltax.now.sh/#/game/phaser)
 
@@ -71,7 +71,7 @@ $ npm i
 # start server for development
 $ npm start
 
-# start server 
+# start server
 $ npm run node
 ```
 
@@ -183,6 +183,7 @@ session
 
 socket.io
   npm i -s socket.io
+  npm i -s socket.io-client
 
 auth
 	npm i -s passport
@@ -211,9 +212,14 @@ tools
   npm i -s dotenv
   npm i -s fs-extra     
   npm i -s request-ip
+  npm i -s scribbles
+
+nodejs monitoring
+  npm i -s appmetrics-dash
 
 dev
   npm i --save-dev nodemon
+  npm i --save memwatch-next
 ~~~~
 
 
@@ -299,9 +305,9 @@ creating animated sprite-atlas tiles using blender and texturepacker (free-versi
 load rendered png's from blender in texture-packer to create a spritesheet
 
 ```bash
-- select data-format: JSON(Array) (no need to use commercial data-format: Phaser); 
+- select data-format: JSON(Array) (no need to use commercial data-format: Phaser);
 - select texture-format: PNG-32;
-- uncheck: 
+- uncheck:
 - load in phaser with this.load.atlas("key", PNG, JSON);
 ```
 

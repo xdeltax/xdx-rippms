@@ -1,16 +1,15 @@
-"use strict";
-const fse = require('fs-extra');
-const path = require('path');
+import fse from 'fs-extra';
+import path from 'path';
+import crypto from 'crypto';
 
-const Datastore = require('nedb-promises');
+import Datastore from 'nedb-promises';
+import Joi from '@hapi/joi';
 
-const Joi = require('@hapi/joi');
-const JoiValidateFallback = requireX('tools/joivalidatefallback');
-
-const crypto = require('crypto');
-const jwt = requireX('tools/jwt');
-
-const { SUCCESS, ERROR } = requireX('tools/errorhandler');
+import {abs_path, } from "../basepath.mjs";
+import {clog, } from "../tools/consoleLog.mjs";
+import {unixtime,} from "../tools/datetime.mjs";
+import {isERROR, isSUCCESS, } from "../tools/isErrorIsSuccess.mjs";
+import joiValidateFallback from '../tools/joiValidateFallback.mjs';
 
 
 const joi_databaseid= Joi.string().alphanum().allow(null).allow("").max(200).normalize();
@@ -39,10 +38,17 @@ const joi_schemaObject = Joi.object().keys({
 });
 
 
-module.exports = class DBSockets {
+export default class DBSockets {
+  db = null;
+
+  constructor(...props) {
+    clog("DBSockets:: constructor:: ", ...props);
+    this.db = null;
+  }
+
   static collectionName() { return 'sockets'; }
 
-  static databasePath()   { return global.abs_path("../" + process.env.DATABASE_NEDB); }
+  static databasePath()   { return process.env.DATABASE_NEDB ? abs_path("../" + process.env.DATABASE_NEDB) : null; }
 
   static stop() { return ; }
 
@@ -70,66 +76,57 @@ module.exports = class DBSockets {
         createdAt,
       }
     };
-
     try {
       const dbResultFull = await this.findOne({ "socketid": valid_socketid, },); // not found -> null
-
       // if isOwn -> return full database entry; if !isOwn -> return limited dataset only
       if (dbResultFull && dbResultFull.hasOwnProperty("socketid"))
       return (isOWN) ? dbResultFull : dbResultLimited(dbResultFull);
     } catch (error) { // fail silent
-      //global.log("DBSockets:: _getINTERNAL:: ERROR:: ", error)
+      //clog("DBSockets:: _getINTERNAL:: ERROR:: ", error)
       return null;
     }
   }
 
 
-
   static async loadDatabase() { // static method (not affected by instance) -> called with classname: DBGeoData.load
-    try {
-			fse.ensureDirSync(this.databasePath(), { mode: 0o0600, });
-      this.db = Datastore.create(path.join(this.databasePath(), this.collectionName() + ".txt"));
-			this.db.persistence.setAutocompactionInterval(5);
+		fse.ensureDirSync(this.databasePath(), { mode: 0o0600, });
+    this.db = Datastore.create(path.join(this.databasePath(), this.collectionName() + ".txt"));
+		this.db.persistence.setAutocompactionInterval(5);
 
-      await this.db.ensureIndex({ fieldName: 'socketid', unique: true, }); // index for quick searching the socketid
-      await this.db.ensureIndex({ fieldName: 'userid', unique: false, }); // false because "null" is allowed
-
-      return this.db;
-    } catch (error) {
-    	throw new Error(this.collectionName() + error);
-    }
+    await this.db.ensureIndex({ fieldName: 'socketid', unique: true, }); // index for quick searching the socketid
+    await this.db.ensureIndex({ fieldName: 'userid', unique: false, }); // false because "null" is allowed
   }; // of load
 
 
 	static async remove(unsafe_socketid) { // create or update database
-    const now = new Date() / 1000;
+    const now = unixtime();
 		try {
 		  // ===============================================
 		  // normalize input
 		  // ===============================================
-	    const safe_socketid = JoiValidateFallback(unsafe_socketid, null, joi_socketid);
-			if (!safe_socketid) throw ERROR(1, "DBSockets.js: remove", "remove socket failed", "invalid socket id");
+	    const safe_socketid = joiValidateFallback(unsafe_socketid, null, joi_socketid);
+			if (!safe_socketid) throw isERROR(1, "DBSockets: remove", "remove socket failed", "invalid socket id");
 
 	    const numRemoved = await this.deleteOne({ socketid: safe_socketid });
 			//if (!numRemoved !== 1) throw ERROR(2, "remove socket failed", "invalid count: " + numRemoved);
 
-	  	return SUCCESS(numRemoved);
+	  	return isSUCCESS(numRemoved);
 	  } catch (error) {
-	  	return ERROR(99, "DBSockets.js: remove", "remove socket failed", error);
+	  	return isERROR(99, "DBSockets: remove", "remove socket failed", error);
 	  }
 	};
 
 
 	static async createOrUpdate(unsafe_socketid, unsafe_userid, ) { // create or update database
-    const now = new Date() / 1000;
+    const now = unixtime();
 		try {
 		  // ===============================================
 		  // normalize input
 		  // ===============================================
-	    const valid_socketid = JoiValidateFallback(unsafe_socketid, null, joi_socketid);
-			if (!valid_socketid) throw ERROR(1, "DBSockets.js: createOrUpdate", "update socket failed", "invalid socket id");
+	    const valid_socketid = joiValidateFallback(unsafe_socketid, null, joi_socketid);
+			if (!valid_socketid) throw isERROR(1, "DBSockets: createOrUpdate", "update socket failed", "invalid socket id");
 
-			const valid_userid = JoiValidateFallback(unsafe_userid, null, joi_userid, /*options*/null, /*dontLogError*/true);
+			const valid_userid = joiValidateFallback(unsafe_userid, null, joi_userid, /*options*/null, /*dontLogError*/true);
 
 		  // ===============================================
 		  // search db
@@ -167,52 +164,52 @@ module.exports = class DBSockets {
 		  // ===============================================
 	    // check userdata
 		  // ===============================================
-	    const valid_object = JoiValidateFallback(thisObject, null, joi_schemaObject);
-	    //global.log("DBSockets:: createOrUpdate:: object:: ", valid_object.userid)
-	    if (!valid_object) throw ERROR(2, "DBSockets.js: createOrUpdate", "update socket failed", "invalid schema");
+	    const valid_object = joiValidateFallback(thisObject, null, joi_schemaObject);
+	    //clog("DBSockets:: createOrUpdate:: object:: ", valid_object.userid)
+	    if (!valid_object) throw isERROR(2, "DBSockets: createOrUpdate", "update socket failed", "invalid schema");
 
 		  // ===============================================
 	    // update user in database
 		  // ===============================================
 	    const numReplace = await this.updateFull( {socketid: valid_object.socketid}, valid_object);
-	    if (numReplace !== 1) throw ERROR(3, "DBSockets.js: createOrUpdate", "update socket failed", "invalid update count");
+	    if (numReplace !== 1) throw isERROR(3, "DBSockets: createOrUpdate", "update socket failed", "invalid update count");
 
 		  // ===============================================
 	    // get user from database (own -> true)
 		  // ===============================================
       const loadedObject = await this._getINTERNAL(valid_object.socketid, /*isOwn:*/ true); // result will be different (reduced) for isOWN = false
 
-	  	return SUCCESS(loadedObject);
+	  	return isSUCCESS(loadedObject);
 	  } catch (error) {
-	  	global.log("DBSocket:: ERROR:: ", unsafe_socketid, error)
-	  	return ERROR(99, "DBSockets.js: createOrUpdate", "update socket failed", error);
+	  	//clog("DBSockets:: ERROR:: ", unsafe_socketid, error)
+	  	return isERROR(99, "DBSockets: createOrUpdate", "update socket failed", error);
 	  }
 	}
 
 
 	static async updateCount(unsafe_socketid) {
-    const now = new Date() / 1000;
+    const now = unixtime();
 		try {
 		  // ===============================================
 		  // normalize input
 		  // ===============================================
-	    const valid_socketid = JoiValidateFallback(unsafe_socketid, null, joi_socketid);
-			if (!valid_socketid) throw ERROR(1, "DBSockets.js: updateCount", "update api-count failed", "invalid socket id");
+	    const valid_socketid = joiValidateFallback(unsafe_socketid, null, joi_socketid);
+			if (!valid_socketid) throw isERROR(1, "DBSockets: updateCount", "update api-count failed", "invalid socket id");
 
 		  // ===============================================
 		  // search db
 		  // ===============================================
       let thisObject = await this._getINTERNAL(valid_socketid, /*isOwn:*/ true); // result will be different (reduced) for isOWN = false
-	    if (!thisObject) throw ERROR(2, "DBSockets.js: updateCount", "update api-count failed", "socket id not found");
+	    if (!thisObject) throw isERROR(2, "DBSockets: updateCount", "update api-count failed", "socket id not found");
 
       thisObject.count++;
 
 	    const numReplace = await this.updateFull( {socketid: thisObject.socketid}, thisObject);
-	    if (numReplace !== 1) throw ERROR(3, "DBSockets.js: updateCount", "update api-count failed", "invalid update count");
+	    if (numReplace !== 1) throw isERROR(3, "DBSockets: updateCount", "update api-count failed", "invalid update count");
 
-	  	return SUCCESS(thisObject.count);
+	  	return isSUCCESS(thisObject.count);
 	  } catch (error) {
-	  	return ERROR(99, "DBSockets.js: updateCount", "update api-count failed", error);
+	  	return isERROR(99, "DBSockets: updateCount", "update api-count failed", error);
 	  }
 	}
 

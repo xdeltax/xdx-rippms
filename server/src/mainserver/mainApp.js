@@ -1,8 +1,12 @@
 "use strict";
+
+const util = require('util');
+
 const fse = require('fs-extra');
 const path = require('path');
 
 const requestIp = require('request-ip');
+//const scribbles = require('scribbles');
 
 const express = require('express');
 const cors = require('cors');
@@ -11,6 +15,7 @@ const helmet = require('helmet');
 //const morgan = require('morgan');
 
 const socketio = require('socket.io');
+const socketioclient = require("socket.io-client");
 
 const	session = require('express-session');
 const NedbStore = require('nedb-session-store')(session);
@@ -23,7 +28,7 @@ const PassportGoogleStrategy = require('passport-google-oauth20').Strategy;
 //const PassportLocalStrategy = require('passport-local').Strategy;
 
 const Joi = require('@hapi/joi');
-const jwt = requireX('tools/jwt');
+const jwt = global.requireX('tools/jwt');
 const JoiValidateFallback = requireX('tools/joivalidatefallback');
 
 const { SUCCESS, ERROR } = requireX('tools/errorhandler');
@@ -57,7 +62,7 @@ const errorHandler = (err, req, res, next) => { // catch all
 
 
 // main
-module.exports = async (config) => {
+module.exports = async () => {
 
   global.log("app:: ########################################");
   global.log("app:: now:: ", new Date());
@@ -145,6 +150,13 @@ module.exports = async (config) => {
     key: fse.readFileSync(global.abs_path("../" + process.env.SSLCERT_KEY)), //'./ssl/xdeltax_xyz_cloudflare_cert.key')), // ssl_key private key
     cert:fse.readFileSync(global.abs_path("../" + process.env.SSLCERT_PEM)), //'./ssl/xdeltax_xyz_cloudflare_cert.pem')), // ssl_cert
   }, app);
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
 
 
   // ===============================================
@@ -384,19 +396,20 @@ module.exports = async (config) => {
 	  			user: res_user,
 	  			usercard: null,
 	  		};
+
 				// query usercard
 	  		const {err: err_usercard, res: res_usercard} = await DBUsercards.getUsercard(res_user.userid, res_user.userid, res_user.servertoken);
 		  	if (!err_usercard) {
 		  		res.usercard = res_usercard;
 		  	}
-			  global.log(`***(X) passportAuthCallback:: /${provider}.io.callback:: STEP2:: `, err_usercard, res_usercard);
+			  //global.log(`***(X) passportAuthCallback:: /${provider}.io.callback:: STEP2:: `, err_usercard, res_usercard);
 	  	}
 
 		  // send error or (full) user-object to client -> OAuth.js -> RouteLogin.js -> onAuthSuccess / onAuthFailed -> store.user.doAuthLogin(user)
 		  const ioRoute = `client.oauth.${provider}.io`;
 		  io.in(socketid).emit(ioRoute, err, res); // emit to client:: userobject OR null
 
-		  global.log(`***(X) passportAuthCallback:: /${provider}.io.callback:: `, err, res );
+		  global.log(`*** passportAuthCallback:: /${provider}.io.callback:: `, ioRoute, socketid, err, res.user.userid );
 	  }
 	  res.status(200).end();
 	};
@@ -413,7 +426,7 @@ module.exports = async (config) => {
   // socket.io: initialize the WebSocket server instance
   // ===============================================
   global.log("app:: configurating socketio")
-  var io = socketio.listen(server);	// connect sockets to the server
+  const io = socketio.listen(server);	// connect sockets to the server
 	//app.set('io', io); // add sockets to the request so that we can access them later in the controller -> const _io = req.app.get('io');
 
 
@@ -432,7 +445,7 @@ module.exports = async (config) => {
   // ===============================================
   io.use( (socket, next) => {
   	try {
-	  	global.log("+++ io.use:: socket connect middleware:: ", socket.id, socket.handshake.query);
+	  	global.log("app:: io.use:: socket connect middleware:: ", socket.id);//, socket.handshake.query);
 
 		  // ===============================================
 	    // check handshake-version of client and server
@@ -456,7 +469,7 @@ module.exports = async (config) => {
 	    if (!serverHandshakeVersion) serverHandshakeVersion = clientHandshakeVersion;
 	    if (!serverAppVersion) serverAppVersion = clientAppVersion;
 
-	    global.log("### socketio:: io.use:: checking communication protocol version:: ", clientAppVersion, clientHandshakeVersion, serverHandshakeVersion, clientHandshakeVersion < serverHandshakeVersion);
+	    global.log("app:: io.use:: versions:: ", clientAppVersion, clientHandshakeVersion, serverHandshakeVersion, clientHandshakeVersion < serverHandshakeVersion);
 
 	    if (!clientHandshakeVersion || !Number.isInteger(clientHandshakeVersion) || clientHandshakeVersion < serverHandshakeVersion)
     	throw ERROR(901, "app.js: io.use", "socket protocol validation", "invalid app communication protocol version c / s: " + clientHandshakeVersion + " / " + serverHandshakeVersion);
@@ -504,7 +517,7 @@ module.exports = async (config) => {
 	  // ===============================================
     // new connection established
 	  // ===============================================
-    global.log('io.on:: new client connected:: ', socket.id);
+    global.log('app:: io.on:: new client connected:: ', socket.id);
 
 
     //io.xdx.connectionCount++;
@@ -518,7 +531,7 @@ module.exports = async (config) => {
     // update database -> add socket to onlinelist
 	  // ===============================================
     const {err: updateError, res: loadedObject} = await DBSockets.createOrUpdate(socket.id, null /*userid*/);
-    global.log('io.on:: new client connected:: added to database:: ', updateError, loadedObject);
+    if (updateError) global.log('app:: io.on:: new client connected:: added to database:: ERROR:: ', updateError, loadedObject.userid);
 
 
     /*
@@ -570,7 +583,7 @@ module.exports = async (config) => {
 	    		// hash: crypto.createHash('sha1').update(JSON.stringify(thisUser.forcenew + thisUser.providertoken)).digest('hex');
 					const { usid, pvd, pid, hash } = decodedServertoken || {};
 					if (!usid || !pvd || !pid || !hash) throw ERROR(4, "app.js: socket.use", "validation", "invalid token structure");
-					if (usid !== valid_userid) throw ERROR(5, "validation", "token / user mismatch");
+					if (usid !== valid_userid) throw ERROR(5, "app.js: socket.use", "validation", "token / user mismatch");
 
 					if (socket.xdx.userid && socket.xdx.userid !== valid_userid) throw ERROR(6, "app.js: socket.use", "validation", "connection misuse");
 
@@ -590,7 +603,7 @@ module.exports = async (config) => {
 					*/
 
 			    const {err: updateError, res: loadedObject} = await DBSockets.createOrUpdate(socket.id, /*userid*/ valid_userid );
-			    global.log('io.on:: new client validated:: updated userid to database:: ', updateError, loadedObject);
+			    if (updateError) global.log('app:: io.on:: new client validated:: updated userid to database:: ERROR:: ', updateError, loadedObject.userid);
 
     			return next();
     		};
@@ -614,7 +627,7 @@ module.exports = async (config) => {
 	    	throw new Error("invalid route");
 		  } catch (error) {
 		  	const {err, res} = ERROR(99, "app.js: socket.use", "validation", error);
-		  	global.log("socket.use:: ERROR:: ", error, err, socket.id);
+		  	global.log("app:: socket.use:: ERROR:: ", error, err, socket.id);
 
     		// callback:: send the error to client-emit-function
 	    	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
@@ -629,7 +642,7 @@ module.exports = async (config) => {
 		  } finally {
 		    //db-call to update onlineStatus -> add socket to onlinelist
 	    	const {err: updateCountError, res: count} = await DBSockets.updateCount(socket.id);
-	    	global.log('io.on:: new client connected:: updateCount:: ', route, updateCountError, count);
+	    	global.log('app:: io.on:: new client connected:: updateCount:: ', route, updateCountError, count);
 		  }
     });
 
@@ -654,13 +667,26 @@ module.exports = async (config) => {
 
 
 	  // ===============================================
-	  // all routes witgh "free/" and "auth/" are valid
+	  // all routes with "free/" and "auth/" are valid
 	  // ===============================================
+
+    socket.on('auth/store/user/logout', async (req, clientEmitCallback) => {
+      const { targetuserid, userid, servertoken, } = req || {};
+      global.log("socket.on(auth/store/user/logout)::1:: ", req, socket.xdx.userid);
+
+      socket.xdx.userid = null;
+      socket.xdx.servertoken = null;
+      const err = null;
+      const res = true;
+      global.log("socket.on(auth/store/user/logout)::2:: ", socket.xdx.userid, err, res,);
+      clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
+    });
+
     socket.on('auth/store/userstore/get', async (req, clientEmitCallback) => {
     	const { targetuserid, userid, servertoken, } = req || {};
-    	global.log("*****socket.on(auth/userstore/get):: ", req,);
+    	global.log("socket.on(auth/userstore/get):: ", req,);
     	const {err, res} = await _getUserStore(targetuserid, userid, servertoken,);
-    	global.log("socket.on(auth/userstore/get):: ", socket.xdx.userid, err, res,);
+    	global.log("socket.on(auth/userstore/get):: ", socket.xdx.userid, err, res.userid,);
     	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
     });
 
@@ -668,7 +694,7 @@ module.exports = async (config) => {
     socket.on('auth/store/user/get', async (req, clientEmitCallback) => {
     	const { targetuserid, userid, servertoken, } = req || {};
 	  	const {err, res} = await DBUsers.getUser(targetuserid, userid, servertoken);
-    	global.log("socket.on(auth/user/get):: ", socket.xdx.userid, err, res,);
+    	global.log("socket.on(auth/user/get):: ", socket.xdx.userid, err, res.userid,);
     	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
     });
 
@@ -676,7 +702,7 @@ module.exports = async (config) => {
     socket.on('auth/store/user/update', async (req, clientEmitCallback) => {
     	const { targetuserid, userid, servertoken, props, } = req || {};
 	  	const {err, res} = await DBUsers.updateProps(targetuserid, userid, servertoken, props);
-    	global.log("socket.on(auth/user/update):: ", socket.xdx.userid, err, res);
+    	global.log("socket.on(auth/user/update):: ", socket.xdx.userid, err, res.userid);
     	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
     });
 
@@ -684,7 +710,7 @@ module.exports = async (config) => {
     socket.on('auth/store/usercard/get', async (req, clientEmitCallback) => {
     	const { targetuserid, userid, servertoken, } = req || {};
 	  	const {err, res} = await DBUsercards.getUsercard(targetuserid, userid, servertoken);
-    	global.log("socket.on(auth/usercard/get):: ", socket.xdx.userid, err, res);
+    	global.log("socket.on(auth/usercard/get):: ", socket.xdx.userid, err, res.userid);
     	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
     });
 
@@ -692,7 +718,7 @@ module.exports = async (config) => {
     socket.on('auth/store/usercard/update', async (req, clientEmitCallback) => {
     	const { targetuserid, userid, servertoken, props, } = req || {};
 	  	const {err, res} = await DBUsercards.updateProps(targetuserid, userid, servertoken, props);
-    	global.log("socket.on(auth/user/update):: ", socket.xdx.userid, err, res);
+    	global.log("socket.on(auth/user/update):: ", socket.xdx.userid, err, res.userid);
     	clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function
     });
 
@@ -774,11 +800,9 @@ module.exports = async (config) => {
   // ===============================================
   app.get('/*', (req, res) => {
     res.status(200).json({
-	   	app: "/",
+	   	app: "mainserver",
 	    isProd: global.isPROD,
 			base_dir: global.base_dir,
-			index_mtime: fse.statSync(global.base_dir + "/index.js").mtime,
-			app_mtime: fse.statSync(global.base_dir + "/app.js").mtime,
 			//env: process.env,
 			//global: global,
     });
@@ -818,18 +842,155 @@ module.exports = async (config) => {
 
 
   // ===============================================
-  // webserver: start the server by listening to port
+  // WEBSERVER: start the server by listening to port
   // ===============================================
   try {
-    server.listen(process.env.PORT, process.env.HOST, () => { // port and ip-address to listen to
+    server.listen(process.env.PORT, /*process.env.HOST,*/ () => { // port and ip-address to listen to
       global.log('app:: server running on port ', process.env.PORT);
-
-      // Here we send the ready signal to PM2
-  		//process.send('ready');
     });
+    //const serverlisten = util.promisify( server.listen.bind(server) );
+    //await serverlisten( process.env.PORT, listen );
+
+    //const listen = util.promisify(server.listen);
+    //await listen(process.env.PORT, /*process.env.HOST,*/);
+    //global.log('app:: >>> server running on port ', process.env.PORT);
+  	//process && process.hasOwnProperty("send") && process.send('ready');       // Here we send the ready signal to PM2
   } catch (error) {
      throw Error("app:: starting server:: ERROR:: " + error);
   }
+
+  global.log("app: await server listening or error");
+  await { then(resolve, fail) { server.on('listening', resolve); server.on('error', fail); } };
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+
+  // ===============================================
+  // SERVER2SERVER SOCKET: connect main-server as a client to gameserver
+  // ===============================================
+  const gameserverAddr = process.env.GAMESERVER_ADDR || "localhost";
+  const gameserverPort = process.env.GAMESERVER_PORT_HTTP || "2052";
+  const gameserverManagerOptions = {
+    query: {
+      serverid: "01",
+      servertype: "main",
+      mainserveridentkey: process.env.MAINSERVER_PRIVATE_IDENTKEY || "",
+    },
+  }
+  const gameServerSocket = socketioclient.connect(`http://${gameserverAddr}:${gameserverPort}`, gameserverManagerOptions);
+  global.log("gameServerSocket:: connect:: ", gameServerSocket.query.serverid, );
+
+
+  // ===============================================
+  // SERVER2SERVER SOCKET: helper functions
+  // ===============================================
+  const disconnectSocket = (_socket) => {
+    if (_socket) _socket.disconnect();
+  }
+
+  const clearSendBufferSocket = (_socket) => { // clear emit-buffer (after offline-phase)
+    if (_socket) _socket.sendBuffer = [];
+  }
+
+  const emitWithTimeoutToSocket = (_socket, ioRoute, req, timeout) => {
+    return new Promise( (resolve, reject) => {
+      // check connection
+      if (!_socket || !_socket.connected) {
+        reject(new Error("no connection to server"));
+      }
+      // set timeout
+      const timer = setTimeout(() => {
+        clearTimeout(timer);
+        this.clearSendBuffer(); // clear buffer to disable re-emit after reconnect
+        reject(new Error("timeout for server call"));
+      }, timeout || 5000);
+      // call server
+      try {
+        _socket.emit(ioRoute, req, (err, res) => {
+          clearTimeout(timer);
+          if (err) reject(err);
+          resolve(res);
+        }); // of emit
+      } catch (error) {
+        reject(error);
+      }
+    }); // of promise
+  }
+
+
+  // ===============================================
+  // SERVER2SERVER SOCKET: error events
+  // ===============================================
+  gameServerSocket.on("error", (error) => { // triggered from next(new Error(xxx)) in socket.use-middleware of node
+    global.log("gameServerSocket:: error:: ", error.description, gameServerSocket.id);
+  });
+
+  gameServerSocket.on("connect_error", (error) => { // triggered from next(new Error(xxx)) in socket.use-middleware of node
+    global.log("gameServerSocket:: connect_error:: ", error.description, gameServerSocket.id);
+  });
+
+  gameServerSocket.on("reconnect_error", (error) => { // triggered from next(new Error(xxx)) in socket.use-middleware of node
+    global.log("gameServerSocket:: reconnect_error:: ", error.description, gameServerSocket.id);
+  });
+
+  gameServerSocket.on("reconnect_failed", (error) => { // triggered from next(new Error(xxx)) in socket.use-middleware of node
+    global.log("gameServerSocket:: reconnect_failed:: ", error.description, gameServerSocket.id );
+  });
+
+
+  // ===============================================
+  // SERVER2SERVER SOCKET: connection events
+  // ===============================================
+  gameServerSocket.on("connect", () => {
+    global.log("gameServerSocket:: connect:: ", gameServerSocket.id, gameServerSocket.connected, );
+    //this.clearSendBuffer(); // clear previously buffered data when reconnecting
+  });
+
+  gameServerSocket.on("disconnect", () => {
+    global.log("gameServerSocket:: disconnect:: ",gameServerSocket.id, gameServerSocket.connected, );
+  });
+
+  gameServerSocket.on("reconnect_attempt", () => {
+    global.log("gameServerSocket:: reconnect_attempt:: ",gameServerSocket.id, gameServerSocket.connected, );
+  });
+
+  gameServerSocket.on("reconnecting", () => {
+    global.log("gameServerSocket:: reconnecting:: ",gameServerSocket.id, gameServerSocket.connected, );
+  });
+
+  gameServerSocket.on("reconnect", () => {
+    global.log("gameServerSocket:: reconnect:: ",gameServerSocket.id, gameServerSocket.connected, );
+  });
+
+  gameServerSocket.on("connect_timeout", () => {
+    global.log("gameServerSocket:: connect_timeout:: ",gameServerSocket.id, gameServerSocket.connected, );
+  });
+
+  // ===============================================
+  // SERVER2SERVER SOCKET: ping events
+  // ===============================================
+  gameServerSocket.on("ping", () => { // when a ping is fired to the server
+    global.log("gameServerSocket:: ping:: ", gameServerSocket.id, gameServerSocket.connected, );
+  });
+
+  gameServerSocket.on("pong", (ms) => { // responsetime
+    global.log("gameServerSocket:: pong:: ", ms, gameServerSocket.id, gameServerSocket.connected, );
+  });
+
+  // ===============================================
+  // SERVER2SERVER SOCKET: api events == gameserver send commands to mainserver
+  // ===============================================
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
 
 
   // pm2 Graceful Stop
@@ -843,8 +1004,18 @@ module.exports = async (config) => {
 		}
 	});
 
+  /*
+  // performance logger
+  scribbles.config({
+   dataOut:global.log
+  });
+  setInterval(() => {
+    scribbles.status();
+  }, 5000);
+  */
 
-  global.log(`app:: *** modtime idx:: ${fse.statSync(global.base_dir + "/index.js").mtime}`);
-  global.log(`app:: *** modtime app:: ${fse.statSync(global.base_dir + "/app.js").mtime}`);
   global.log(`app:: *** server time:: ${new Date()}`);
+  global.log(`app:: *** modtime loginserver app.js:: ${fse.statSync(global.abs_path("mainserver/mainApp.js")).mtime}`);
+
+  global.log("app:: EOF");
 } // of module.exports (main)
