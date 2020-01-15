@@ -3,8 +3,12 @@ import {clog, } from "./tools/consoleLog.mjs";
 import {basepath, } from "./basepath.mjs";
 import {datetime, datetimeUTC, unixtime,} from "./tools/datetime.mjs";
 
-import gameServer from "./gameServer.mjs";
-//import mainServer from "./mainServer.mjs";
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+require("nodejs-dashboard");
+
+import gameServer from "./gameServer/index.mjs";
+import mainServer from "./mainServer/index.mjs";
 
 //import * as geohash from "./tools/geohash.mjs";
 import GeoHash from "./tools/GeoHash.mjs";
@@ -17,6 +21,8 @@ if (!process.env.SERVERTARGET) process.env.SERVERTARGET = "vps"; // default to s
 if (!process.env.HTTPS) process.env.HTTPS = "true";
 
 // server-port
+if (!process.env.MAINSERVER_PORT_HTTP) 	process.env.GAMESERVER_PORT_HTTP = 8080;
+if (!process.env.MAINSERVER_PORT_HTTPS) process.env.GAMESERVER_PORT_HTTPS= 8443;
 if (!process.env.GAMESERVER_PORT_HTTP) 	process.env.GAMESERVER_PORT_HTTP = 2052;
 if (!process.env.GAMESERVER_PORT_HTTPS) process.env.GAMESERVER_PORT_HTTPS= 2053;
 
@@ -37,10 +43,12 @@ if (!process.env.ASSETS_SUBFOLDER_IMAGES) process.env.ASSETS_SUBFOLDER_IMAGES = 
 if (!process.env.ASSETS_SUBFOLDER_GALLERY) process.env.ASSETS_SUBFOLDER_GALLERY = "assets/imagegallery/"; // basepath: ./src/
 
 // ===============================================
-// eval .env
+// autogenerate .env
 // ===============================================
 //process.env.HOST = "0.0.0.0"; // port and ip-address to listen to
-process.env.PORT = process.env.HTTPS === "true" ? process.env.GAMESERVER_PORT_HTTPS : process.env.GAMESERVER_PORT_HTTP; // port and ip-address to listen to
+process.env.MAINSERVER_PORT = process.env.HTTPS === "true" ? process.env.MAINSERVER_PORT_HTTPS : process.env.MAINSERVER_PORT_HTTP; // port and ip-address to listen to
+process.env.GAMESERVER_PORT = process.env.GAMESERVER_PORT_HTTP; //process.env.HTTPS === "true" ? process.env.GAMESERVER_PORT_HTTPS : process.env.GAMESERVER_PORT_HTTP; // port and ip-address to listen to
+
 process.env.GOOGLE_CALLBACK  = process.env.SERVERTARGET === "localhost" ? process.env.GOOGLE_CALLBACK_LOCALHOST  : process.env.GOOGLE_CALLBACK_VPSSERVER;
 process.env.FACEBOOK_CALLBACK= process.env.SERVERTARGET === "localhost" ? process.env.FACEBOOK_CALLBACK_LOCALHOST: process.env.FACEBOOK_CALLBACK_VPSSERVER;
 
@@ -64,6 +72,7 @@ clog("app:: process.env.FACEBOOK_CALLBACK:: ", process.env.FACEBOOK_CALLBACK);
 clog("app:: process.env.GOOGLE_CALLBACK:: ", process.env.GOOGLE_CALLBACK);
 clog("app:: ----------------------------------------");
 clog("app:: basepath:: ", basepath);
+clog("app:: import.meta.url:: ", import.meta.url);
 clog("app:: ----------------------------------------");
 
 // ===============================================
@@ -83,23 +92,28 @@ mainServer()
 const awaitServers = async () => {
   let res = [];
 
-  clog("index:: STARTING GAMESERVER!", );
-  const portGameServer = await gameServer();
-  res.push(portGameServer);
-  clog(`index:: GAMESERVER RUNNING ON PORT ${portGameServer}`);
-  /*
-  clog("index:: STARTING MAINSERVER!", );
-  const portMainServer = await mainServer();
+  clog("@@@ index:: STARTING MAINSERVER!", );
+  const portMainServer = await mainServer(process.env.MAINSERVER_PORT_HTTP);
   res.push(portMainServer);
-  clog(`index:: MAINSERVER RUNNING ON PORT ${portMainServer}`);
-  */
+  clog(`@@@ index:: MAINSERVER RUNNING ON PORT ${portMainServer}`);
+
+  clog("@@@ index:: STARTING GAMESERVER!", );
+  const portGameServer = await gameServer(process.env.GAMESERVER_PORT_HTTP);
+  res.push(portGameServer);
+  clog(`@@@ index:: GAMESERVER RUNNING ON PORT ${portGameServer}`);
+
+
   return res;
 }
 
 
+awaitServers()
+.then(result => { clog("@@@ index:: SERVERS RUNNING:: ", result); })
+.catch(error => { clog("@@@ index:: ERROR:: ", error); process.exit(1); });
 
-clog("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
 
+/*
+clog("@@@ geoHash @@@")
 const mapwidth = 30; // needs to be an integer factor of divider
 const mapheight= 10; // needs to be an integer factor of divider
 const divider = undefined; // hash-base = sqr(divider); 3: 3 x 3 = 9 tiles; divider = undefined -> autodetect
@@ -109,15 +123,7 @@ const deviderUsed = geohash.divider;
 const hash = geohash.getHashFromPoint(7,8)
 const rect = geohash.getRectFromHash(hash);
 clog("HASH:: ", deviderUsed, hash, rect, Math.round(rect.x), Math.round(rect.y));
-//clog("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-//const gHash = geohash.getHashFromXY(0,0, 0,0, 100,100, 3) // (x, y, minX, minY, maxX, maxY, divider)
-//clog("GHASH:: ", gHash);
-/*
-awaitServers()
-.then(result => { clog("index:: SERVERS RUNNING:: ", result); })
-.catch(error => { clog("index:: ERROR:: ", error); });
 */
-
 
 
 

@@ -1,4 +1,7 @@
 //import { createRequire } from 'module';
+//import fse from 'fs-extra';
+import path from 'path';
+
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
@@ -9,25 +12,26 @@ import session from 'express-session';
 import nedbStore from 'nedb-session-store';
 import http from 'http';
 
-//import fse from 'fs-extra';
-//import path from 'path';
+import crypto from 'crypto';
 
-import {clog, } from "./tools/consoleLog.mjs";
+import {clog, } from "../tools/consoleLog.mjs";
+import {unixtime,} from "../tools/datetime.mjs";
+import {abs_path, } from "../basepath.mjs";
 
-import DBUsers from './nedb/DBUsers.mjs';
-import DBSockets from './nedb/DBSockets.mjs';
-import DBUsercards from './nedb/DBUsercards.mjs';
+import DBUsers from '../nedb/DBUsers.mjs';
+import DBSockets from '../nedb/DBSockets.mjs';
+import DBUsercards from '../nedb/DBUsercards.mjs';
 
-import expressAuthMiddleware from "./gameServer/expressAuthMiddleware.mjs";
-import expressRoute_CatchAll from "./gameServer/expressRoute_CatchAll.mjs";
+import express_CtoS_AuthMiddleware from "./express_CtoS_AuthMiddleware.mjs";
+import express_CtoS_Route_CatchAll from "./express_CtoS_Route_CatchAll.mjs";
 
-import socketioAuthMiddleware from "./gameServer/socketioAuthMiddleware.mjs";
-import socketioRoutes from "./gameServer/socketioRoutes.mjs";
+import socketio_CtoS_AuthMiddleware from "./socketio_CtoS_AuthMiddleware.mjs";
+import socketio_CtoS_ClientRoutes from "./socketio_CtoS_ClientRoutes.mjs";
 
-import Game from "./gameServer/Game.mjs";
+import Game from "./Game.mjs";
 
 
-export default async function gameApp() {
+export default async function gameApp(tryPort) {
   // ===============================================
   // DATABASE: load
   // ===============================================
@@ -72,6 +76,17 @@ export default async function gameApp() {
   // ===============================================
   const NedbStore = nedbStore(session);
 
+  app.use(session({ // nedb-session-store
+ 		secret: process.env.SESSION_SECRET || "somethingtohide" + unixtime(),
+    resave: false,
+    saveUninitialized: false,
+    cookie: { path: '/', httpOnly: true, maxAge: 24 * 3600 * 1000 }, // 24 hours
+    store: new NedbStore({
+    	filename: abs_path(path.join("../" + process.env.DATABASE_NEDB, "session.txt")),
+    }),
+    autoCompactInterval: 1 * 3600 * 1000, // 1 hour
+	}));
+
 
   // ===============================================
   // EXPRESS: middleware
@@ -91,13 +106,13 @@ export default async function gameApp() {
   // ===============================================
   // EXPRESS: middleware for every new socket-connect
   // ===============================================
-  app.use(expressAuthMiddleware);
+  app.use(express_CtoS_AuthMiddleware);
 
 
   // ===============================================
   // EXPRESS: route catch-all:: redirect everthing else (except the things before this command like /images /gallery /api ..)
   // ===============================================
-  app.get('/*', expressRoute_CatchAll);
+  app.get('/*', express_CtoS_Route_CatchAll);
   app.get('/socket.io', (req, res, next) => { res.status(200).end(); });
 
 
@@ -116,13 +131,13 @@ export default async function gameApp() {
   // ===============================================
   // SCOKETIO: middleware for every new socket-connect
   // ===============================================
-  io.use(socketioAuthMiddleware);
+  io.use(socketio_CtoS_AuthMiddleware);
 
 
   // ===============================================
   // WEBSERVER: start the server by listening to port
   // ===============================================
-  const startServerPromise = (port, host) => {
+  const promiseToListen = (port, host) => {
     return new Promise( (resolve, reject) => {
       try {
         server.listen(port, /*host,*/ () => { // port and ip-address to listen to
@@ -131,7 +146,7 @@ export default async function gameApp() {
           // ===============================================
           // SOCKETIO: new socket connect -> routes
           // ===============================================
-          io.on('connection', socketioRoutes);
+          io.on('connection', socketio_CtoS_ClientRoutes);
 
           // ===============================================
           // GAME: endless loop
@@ -160,7 +175,7 @@ export default async function gameApp() {
     });
   }
 
-  const port = await startServerPromise(process.env.PORT || 8080, );
+  const port = await promiseToListen(tryPort || 8080, );
 
   //clog(`app:: *** modtime loginserver app.js:: ${fse.statSync(global.abs_path("gameserver/gameApp.js")).mtime}`);
 

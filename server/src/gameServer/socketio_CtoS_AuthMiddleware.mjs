@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 import {clog, } from "../tools/consoleLog.mjs";
 import {isERROR, isSUCCESS, } from "../tools/isErrorIsSuccess.mjs";
 
@@ -14,14 +16,14 @@ export default function socketioAuthMiddleware(socket, next) {
     let {
       serverid,
     	servertype,
-    	mainserveridentkey,
+    	mainserveridentkeyhashed, // send hashed version of env privatekey
     } = socket.handshake.query; // const token = socket.handshake.query.token;
 
-    const mainserveridentkey_original = process.env.MAINSERVER_PRIVATE_IDENTKEY || null;
+		const mainserveridentkeyHash_ORIGINAL = crypto.createHash('sha1').update(JSON.stringify(process.env.MAINSERVER_PRIVATE_IDENTKEY || "xyz")).digest('hex');
 
-    clog("io.use:: checking communication protocol version:: ", serverid, servertype, mainserveridentkey, mainserveridentkey_original, mainserveridentkey !== mainserveridentkey_original);
+    clog("io.use:: checking communication protocol version:: ", serverid, servertype, mainserveridentkeyhashed, mainserveridentkeyHash_ORIGINAL, mainserveridentkeyhashed === mainserveridentkeyHash_ORIGINAL);
 
-    if (!mainserveridentkey || mainserveridentkey !== mainserveridentkey_original)
+    if (!mainserveridentkeyhashed || mainserveridentkeyhashed !== mainserveridentkeyHash_ORIGINAL)
   	throw isERROR(901, "app.js: io.use", "socket protocol validation", "invalid server to server communication key");
 
 		next();

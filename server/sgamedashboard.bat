@@ -1,1 +1,0 @@
-nodejs-dashboard sgame.bat
