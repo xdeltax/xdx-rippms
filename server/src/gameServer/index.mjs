@@ -163,7 +163,7 @@ export default async function gameApp(tryPort) {
           }
 
           // start game after asnyc init and preload finished
-          game.init().then(game.preload).then(game.start);
+          //game.init().then(game.preload).then(game.start);
 
           // Here we send the ready signal to PM2
           //process.send('ready');
@@ -177,7 +177,7 @@ export default async function gameApp(tryPort) {
 
   const port = await promiseToListen(tryPort || 8080, );
 
-  //clog(`app:: *** modtime loginserver app.js:: ${fse.statSync(global.abs_path("gameserver/gameApp.js")).mtime}`);
+  //clog(`app:: *** modtime loginserver app.js:: ${fse.statSync(abs_path("gameserver/gameApp.js")).mtime}`);
 
   return port;
 };

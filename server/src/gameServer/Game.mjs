@@ -36,8 +36,8 @@ export default class Game {
     const { WorldMap } = require('./game/WorldMap.js');
     const worldMap = new WorldMap(5000);
     worldMap.display();
-    global.log("mapinit:: timeInMS:: ", new Date - t1);
-    global.log("mapinit:: mapsize:: ", worldMap.map.data2D.length, worldMap.map.data2D.length * worldMap.map.data2D[0].length);
+    clog("mapinit:: timeInMS:: ", new Date - t1);
+    clog("mapinit:: mapsize:: ", worldMap.map.data2D.length, worldMap.map.data2D.length * worldMap.map.data2D[0].length);
     */
 
     this.onInitDone && this.onInitDone();

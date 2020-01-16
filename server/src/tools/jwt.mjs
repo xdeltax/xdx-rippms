@@ -20,7 +20,7 @@ export const sign = (userid, provider, providerid, hash) => {
 }
 
 export const verify = (jwtServertoken) => {
-  //global.log("decodedecode:", jwt.decode(jwtServertoken))
+  //clog("decodedecode:", jwt.decode(jwtServertoken))
   const jwtVerifyOptions = {
     jwtid: 'id1',
     issuer: 'xdx',
@@ -34,10 +34,10 @@ export const verify = (jwtServertoken) => {
   const jwtSecret = process.env.JWT_SECRET_PASSWORD;
   try {
     const jwtPayloadDecoded =  jwt.verify(jwtServertoken, jwtSecret, jwtVerifyOptions);
-    //global.log("jwt.verify jwtPayloadDecoded::", jwtPayloadDecoded)
+    //clog("jwt.verify jwtPayloadDecoded::", jwtPayloadDecoded)
     return true;
   } catch (error) {
-    //global.log("jwt.verify ERROR ", error)
+    //clog("jwt.verify ERROR ", error)
     //throw Error("Invalid Servertoken:: " + error);
     return false;
   }
@@ -47,7 +47,7 @@ export const decode = (jwtServertoken) => {
   try {
     return jwt.decode(jwtServertoken);
   } catch (error) {
-    //global.log("jwt.decode ERROR ", error)
+    //clog("jwt.decode ERROR ", error)
     //throw Error("Invalid Servertoken:: " + error);
     return null;
   }

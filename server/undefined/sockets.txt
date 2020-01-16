@@ -1,2 +1,0 @@
-{"$$indexCreated":{"fieldName":"socketid","unique":true,"sparse":false}}
-{"$$indexCreated":{"fieldName":"userid","unique":false,"sparse":false}}

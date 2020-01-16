@@ -97,16 +97,19 @@ class Store extends ProtoStore {
 
 
   doAuthLogout = async () => {
-		global.log("USER:: doAuthLogout:: ", this.userid,)
-    // send logout signal to server
-    this.logoutUserFromServer(this.userid);
+    try {
+		    global.log("USER:: doAuthLogout:: ", this.userid,)
+        // send logout signal to server
+        this.logoutUserFromServer(this.userid);
 
-    // clear local persistent store
-		await deletePersistentDatabase();
-
-    // clear store
-	  this.clear_all();
-	  store.usercard.clear_all();
+      // clear local persistent store
+  		await deletePersistentDatabase();
+    } catch (error) {      
+    } finally {
+      // clear store
+  	  this.clear_all();
+  	  store.usercard.clear_all();
+    }
   };
 
 

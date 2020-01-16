@@ -86,7 +86,7 @@ export default class ServerToServerSocketIOClient {
     // SERVER2SERVER SOCKET: ping events
     // ===============================================
     this.gameServerSocket.on("ping", () => { // when a ping is fired to the server
-      clog("gameServerSocket:: ping:: ", this.gameServerSocket.id, this.gameServerSocket.connected, );
+      clog("****** gameServerSocket:: ping:: ", this.gameServerSocket, );
     });
 
     this.gameServerSocket.on("pong", (ms) => { // responsetime

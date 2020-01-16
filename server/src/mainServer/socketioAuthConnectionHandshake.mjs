@@ -4,7 +4,7 @@ import {isERROR, isSUCCESS, } from "../tools/isErrorIsSuccess.mjs";
 // ===============================================
 // route: middleware for every new socket-connect
 // ===============================================
-export default function socketioAuthMiddleware(socket, next) {
+export default function socketioAuthConnectionHandshake(socket, next) {
 	try {
 		clog("io.use:: socket connect middleware:: ", socket.id)
 

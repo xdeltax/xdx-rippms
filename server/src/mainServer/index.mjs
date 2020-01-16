@@ -15,13 +15,10 @@ import http from 'http';
 import https from 'https';
 
 import passport from 'passport';
+import passportFacebook from 'passport-facebook'
+import passportGoogle from 'passport-google-oauth20';
 
 import crypto from 'crypto';
-import Joi from '@hapi/joi';
-
-
-import * as jwt from '../tools/jwt.mjs';
-import joiValidateFallback from '../tools/joiValidateFallback.mjs';
 
 import {clog, } from "../tools/consoleLog.mjs";
 import {unixtime,} from "../tools/datetime.mjs";
@@ -33,19 +30,13 @@ import DBUsers from '../nedb/DBUsers.mjs';
 import DBSockets from '../nedb/DBSockets.mjs';
 import DBUsercards from '../nedb/DBUsercards.mjs';
 
-import {passportFacebookStrategy, passportGoogleStrategy, passportFacebookAuth, passportGoogleAuth, passportInjectSession, passportAuthCallback, } from "./passport_CtoS_ProviderAuth.mjs";
-
 import ServerToServerSocketIOClient from "./ServerToServerSocketIOClient.mjs";
 
 import express_CtoS_AuthMiddleware from "./express_CtoS_AuthMiddleware.mjs";
 import express_CtoS_Route_CatchAll from "./express_CtoS_Route_CatchAll.mjs";
 
-import socketio_CtoS_AuthMiddleware from "./socketio_CtoS_AuthMiddleware.mjs";
-import socketio_CtoS_ClientRoutes from "./socketio_CtoS_ClientRoutes.mjs";
-
-
-const joi_userid = 			Joi.string().alphanum().min(30).max(50).normalize();
-const joi_servertoken =	Joi.string().regex(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]*$/).min(30).max(499).normalize();
+import socketioAuthConnectionHandshake from "./socketioAuthConnectionHandshake.mjs";
+import socketioHandleConnectionRoutes from "./socketioHandleConnectionRoutes.mjs";
 
 
 export default async function gameApp(tryPort) {
@@ -153,35 +144,116 @@ export default async function gameApp(tryPort) {
   app.use(express_CtoS_AuthMiddleware);
 
 
-  //https://developerhandbook.com/passport.js/how-to-add-passportjs-facebook-strategy/
-  //https://github.com/scopsy/await-to-js#readme
-
   // ===============================================
   // PASSPORT:: init
   // ===============================================
-	// Initialize Passport and restore authentication state, if any, from the session.
 	app.use(passport.initialize());
 
-  // *** Configure Passport authenticated session persistence
-  // In order to restore authentication state across HTTP requests, Passport needs
-  // to serialize users into and deserialize users out of the session.  In a
-  // production-quality application, this would typically be as simple as
-  // supplying the user ID when serializing, and querying the user record by ID
-  // from the database when deserializing.  However, due to the fact that this
-  // example does not have a database, the complete Facebook profile is serialized
-  // and deserialized.
-  /*
-  app.use(passport.session());
-  passport.serializeUser((user, cb) => { return cb(null, user) });
-  passport.deserializeUser((obj, cb) => { cb(null, obj) });
-  */
+  // ===============================================
+  // passport:: send auth-success to client
+  // ===============================================
+  const passportAuthCallback = async (req, res) => {
+    // req.user from passport.use() -> cb(null, user)
+    // req.session from passportInjectSession()
+    // req.testing from app.use()
+    const {
+      user, 		// injected from passport.authenticate()
+      session, 	// injected from passport / passportInjectSession
+    } = req;
+
+    const {
+      socketid, // socketid from client-call
+      fingerprinthash, // from client
+      uid, // from client
+    } = session || { };
+
+    const {
+      provider, // "facebook", "google", "local"
+      accessToken,
+      refreshToken,
+      id,
+      name,
+      photos,
+      emails,
+      username,
+    } = user || { };
+
+    if (socketid && provider) { // valid: (provider === "google" || provider === "facebook" || provider === "local")) {
+      const _providerid = id ? id : null;
+      const _providertoken =	refreshToken ? refreshToken : accessToken ? accessToken : null;
+      const	_uid = uid ? uid : null; // client-data
+      const _fingerprinthash = fingerprinthash ? fingerprinthash : null; // client-data
+
+      let res = null;
+      // query db -> update or create db
+      const {err, res: res_user} = await DBUsers.loginWithProvider(provider, _providerid, _providertoken, _uid, _fingerprinthash);
+      if (!err && res_user) {
+        res = {
+          user: res_user,
+          usercard: null,
+        };
+
+        // query usercard
+        const {err: err_usercard, res: res_usercard} = await DBUsercards.getUsercard(res_user.userid, res_user.userid, res_user.servertoken);
+        if (!err_usercard) {
+          res.usercard = res_usercard;
+        }
+        //clog(`***(X) passportAuthCallback:: /${provider}.io.callback:: STEP2:: `, err_usercard, res_usercard);
+      }
+
+      // send error or (full) user-object to client -> OAuth.js -> RouteLogin.js -> onAuthSuccess / onAuthFailed -> store.user.doAuthLogin(user)
+      const ioRoute = `client.oauth.${provider}.io`;
+      io.in(socketid).emit(ioRoute, err, res); // emit to client:: userobject OR null
+
+      clog(`*** passportAuthCallback:: /${provider}.io.callback:: `, ioRoute, socketid, err, res.user.userid );
+    }
+    res.status(200).end();
+  };
+
+  const passportStrategyFacebookConfig = {
+    clientID			: process.env.FACEBOOK_KEY,
+    clientSecret	: process.env.FACEBOOK_SECRET,
+    profileFields	: ['id', 'emails', 'name', 'picture.width(250)'],
+    callbackURL		: process.env.FACEBOOK_CALLBACK,
+    enableProof		: true, // enable app secret proof
+  };
+
+  const passportStrategyGoogleConfig = {
+    clientID			: process.env.GOOGLE_CLIENT_ID,
+    clientSecret	: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL		: process.env.GOOGLE_CALLBACK,
+    enableProof		: true, // enable app secret proof
+  };
+
+  // custom middleware allows us to attach the socket id to the session. with the socket id attached we can send back the right user info to the right socket
+  const passportInjectSession = (req, res, next) => {
+    // parse req.query and store in session for use in passportAuthCallback
+    // from client http://serverurl:serverport/facebook.io?sid={socket.id}&fp={fphash}&un={username}
+    const socketid = (req && req.query) ? req.query.sid : null;
+    const fingerprinthash = (req && req.query) ? req.query.fp : null;
+    const uid = (req && req.query) ? req.query.uid : null;
+    req.session.socketid = socketid;
+    req.session.fingerprinthash = fingerprinthash;
+    req.session.uid = uid;
+    clog("***(1) passportInjectSession:: ", socketid, req.query, req.session,)
+    next();
+  };
+
+  const verifyCallback = async (accessToken, refreshToken, profile, cb) => {
+    profile.accessToken = accessToken;
+    profile.refreshToken = refreshToken;
+    cb(null, profile);
+  }
+
+  const passportFacebookAuth = passport.authenticate('facebook', { session: false, }); // disable req.session.passport
+  const passportGoogleAuth   = passport.authenticate('google'  , { scope: ['profile'], session: false, }); // disable req.session.passport
+  //const passportLocalAuth    = passport.authenticate('local'   , { session: false, successRedirect: '/local.io.callback', failureRedirect: '/', }); // disable req.session.passport
 
   // ===============================================
-  // PASSPORT: use stagegies
+  // PASSPORT: strategy middleware
   // ===============================================
-  passport.use(passportFacebookStrategy);
-  passport.use(passportGoogleStrategy);
-
+  passport.use(new passportFacebook.Strategy(passportStrategyFacebookConfig, verifyCallback));
+  passport.use(new passportGoogle.Strategy  (passportStrategyGoogleConfig, verifyCallback));
 
   // ===============================================
   // PASSPORT: REST-API triggerd by client-call
@@ -189,7 +261,6 @@ export default async function gameApp(tryPort) {
 	app.get('/facebook.io', passportInjectSession, passportFacebookAuth); // call from client: http://localhost/facebook.io?socketid=
 	app.get('/google.io'	, passportInjectSession, passportGoogleAuth); // call from client: http://localhost/google.io?socketid=
 	//app.get('/local.io'	, passportInjectSession, passportLocalAuth, (req, res) => { res.redirect("/local.io.callback") }); // call from client: http://localhost/fingerprint.io?socketid=xxx&fp=xxx
-
 
   // ===============================================
   // PASSPORT: REST-API:: callback triggerd by oauth-provider
@@ -208,10 +279,10 @@ export default async function gameApp(tryPort) {
   // route: static images:: serve images in assets-directory at asset-path ("https://node-server.path/assets/") of this node-server
   // ===============================================
   /*
-  const path2uploads= global.abs_path("../" + process.env.FOLDER_UPLOADS); //path.join(__dirname, '..', 'uploads');
-  const path2assets = global.abs_path("../" + process.env.FOLDER_ASSETS); //path.join(__dirname, process.env.ASSETS_SUBFOLDER_GALLERY);
-  global.log("app:: static serving:: /uploads:: ", path2uploads);
-  global.log("app:: static serving:: /assets:: ", path2assets);
+  const path2uploads= abs_path("../" + process.env.FOLDER_UPLOADS); //path.join(__dirname, '..', 'uploads');
+  const path2assets = abs_path("../" + process.env.FOLDER_ASSETS); //path.join(__dirname, process.env.ASSETS_SUBFOLDER_GALLERY);
+  clog("app:: static serving:: /uploads:: ", path2uploads);
+  clog("app:: static serving:: /assets:: ", path2assets);
 
 	fse.ensureDirSync(path2uploads, { mode: 0o0600, });
 	fse.ensureDirSync(path2assets, { mode: 0o0600, });
@@ -225,8 +296,8 @@ export default async function gameApp(tryPort) {
   // route: client-build:: serve client's build-directory at route-path ("https://node-server.path/") of this node-server
   // ===============================================
   //const path2build = path.join(__dirname, '..', '..', 'client', 'build')
-  //global.log("app:: static serving:: local path to build folder:: ", path2build);
-  //app.use(express.static(path2build));  //global.log("__dirname::", __dirname) -> g:\autogit\xdx1\server\src -> target: g:\autogit\xdx1\client\build
+  //clog("app:: static serving:: local path to build folder:: ", path2build);
+  //app.use(express.static(path2build));  //clog("__dirname::", __dirname) -> g:\autogit\xdx1\server\src -> target: g:\autogit\xdx1\client\build
 
 
   // ===============================================
@@ -250,7 +321,13 @@ export default async function gameApp(tryPort) {
   // ===============================================
   // SCOKETIO: middleware for every new socket-connect
   // ===============================================
-  io.use(socketio_CtoS_AuthMiddleware);
+  io.use(socketioAuthConnectionHandshake);
+
+
+  // ===============================================
+  // SOCKETIO: new socket connect -> routes
+  // ===============================================
+  io.on('connection', socketioHandleConnectionRoutes);
 
 
   // ===============================================
@@ -258,9 +335,9 @@ export default async function gameApp(tryPort) {
   // ===============================================
   /*
   server.listen(tryPort, process.env.HOST, () => { // port and ip-address to listen to
-    global.log('app:: server running on port ', tryPort);
+    clog('app:: server running on port ', tryPort);
   });
-  global.log("app: await server listening or error");
+  clog("app: await server listening or error");
   await { then(resolve, fail) { server.on('listening', resolve); server.on('error', fail); } };
   */
 
@@ -269,11 +346,6 @@ export default async function gameApp(tryPort) {
       try {
         server.listen(port, () => { // port and ip-address to listen to
           clog('app:: main-server running on port ',port);
-
-          // ===============================================
-          // SOCKETIO: new socket connect -> routes
-          // ===============================================
-          io.on('connection', socketio_CtoS_ClientRoutes);
 
           // Here we send the ready signal to PM2
           //process.send('ready');
@@ -288,7 +360,7 @@ export default async function gameApp(tryPort) {
 
   const port = await promiseToListen(tryPort || 8080, );
 
-  //clog(`app:: *** modtime loginserver app.js:: ${fse.statSync(global.abs_path("gameserver/gameApp.js")).mtime}`);
+  //clog(`app:: *** modtime loginserver app.js:: ${fse.statSync(abs_path("gameserver/gameApp.js")).mtime}`);
 
 
   //////////////////////////////////////////////////////////////////////////////
@@ -297,6 +369,7 @@ export default async function gameApp(tryPort) {
   //////////////////////////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////
 
+  /*
   // ===============================================
   // SERVER2SERVER SOCKET: connect main-server as a client to gameserver
   // ===============================================
@@ -310,7 +383,7 @@ export default async function gameApp(tryPort) {
   // SERVER2SERVER SOCKET: connect main-server as a client to gameserver
   // ===============================================
   clientsocketGameServer1.connect(gameserverAddr, gameserverPort, mainserveridentkeyHash_ORIGINAL);
-
+  */
 
 
 

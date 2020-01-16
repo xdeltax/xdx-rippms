@@ -1,3 +1,6 @@
+//https://developerhandbook.com/passport.js/how-to-add-passportjs-facebook-strategy/
+//https://github.com/scopsy/await-to-js#readme
+
 import {} from './env.mjs';
 import {clog, } from "./tools/consoleLog.mjs";
 import {basepath, } from "./basepath.mjs";
@@ -97,11 +100,12 @@ const awaitServers = async () => {
   res.push(portMainServer);
   clog(`@@@ index:: MAINSERVER RUNNING ON PORT ${portMainServer}`);
 
+/*
   clog("@@@ index:: STARTING GAMESERVER!", );
   const portGameServer = await gameServer(process.env.GAMESERVER_PORT_HTTP);
   res.push(portGameServer);
   clog(`@@@ index:: GAMESERVER RUNNING ON PORT ${portGameServer}`);
-
+*/
 
   return res;
 }

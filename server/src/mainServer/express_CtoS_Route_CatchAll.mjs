@@ -17,7 +17,7 @@ export default function expressRoute_CatchAll(req, res) {
     upgrade: req.upgrade,
   };
 
-  //global.log("route access:: ", obj)
+  //clog("route access:: ", obj)
   res.status(200).type('json').send(JSON.stringify(obj, null, 4));
   //res.status(200).json(obj);
   //res.status(404).end();

@@ -19,8 +19,8 @@ const memberstatusREADONLY  = ["default", "vip", "vip+", "idle", ];
 
 const joi_databaseid = 	Joi.string().alphanum().allow(null).allow("").max(200).normalize();
 
-const joi_userid = 			Joi.string().alphanum().min(30).max(50).normalize();
-const joi_servertoken =	Joi.string().regex(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]*$/).min(30).max(499).normalize();
+export const joi_userid = 			Joi.string().alphanum().min(30).max(50).normalize();
+export const joi_servertoken =	Joi.string().regex(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]*$/).min(30).max(499).normalize();
 
 const joi_memberstatus =Joi.array().items( Joi.number().integer().min(0).max(99).optional() );
 const joi_accountstatus=Joi.array().items( Joi.number().integer().min(0).max(99).optional() );
