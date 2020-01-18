@@ -1,3 +1,5 @@
+import debuglog from "../debug/consolelog.mjs"; const clog = debuglog(import.meta.url);
+
 import fse from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
@@ -6,24 +8,14 @@ import Datastore from 'nedb-promises';
 import Joi from '@hapi/joi';
 
 import {abs_path, } from "../basepath.mjs";
-import {clog, } from "../tools/consoleLog.mjs";
 import {unixtime,} from "../tools/datetime.mjs";
 import {isERROR, isSUCCESS, } from "../tools/isErrorIsSuccess.mjs";
 import joiValidateFallback from '../tools/joiValidateFallback.mjs';
 
-import {joi_userid, joi_servertoken, } from './DBUsers.mjs';
-
-const joi_databaseid = 	Joi.string().alphanum().allow(null).allow("").max(200).normalize();
-
-//const joi_userid = 			Joi.string().alphanum().min(30).max(50).normalize();
-//const joi_servertoken =	Joi.string().regex(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]*$/).min(30).max(499).normalize();
-
-const joi_createdAt = 	Joi.date();
-const joi_updatedAt = 	Joi.date();
-
-const joi_name = 				Joi.string().alphanum().allow("").max(50).normalize();
-const joi_email = 			Joi.string().max(256).email().allow("").allow(null).normalize().default("");
-const joi_phonenumber = Joi.string().max(64).allow("").allow(null).normalize().default("");
+import {joi_databaseid, joi_userid, joi_servertoken,
+        joi_createdAt, joi_updatedAt,
+        joi_name, joi_email, joi_phonenumber,
+       } from "./joiValidators.mjs";
 
 const joi_schemaObject = Joi.object().keys({
   _id: 					joi_databaseid.optional(),
@@ -53,7 +45,15 @@ export default class DBUsercards {
 
   static databasePath()   { return process.env.DATABASE_NEDB ? abs_path("../" + process.env.DATABASE_NEDB) : null; }
 
-  static stop() { return ; }
+  static async connect(url) { // static method (not affected by instance) -> called with classname: DBGeoData.load
+		fse.ensureDirSync(this.databasePath(), { mode: 0o0600, });
+    this.db = Datastore.create(path.join(this.databasePath(), this.collectionName() + ".txt"));
+		this.db.persistence.setAutocompactionInterval(5);
+
+    await this.db.ensureIndex({ fieldName: 'userid',  unique: true, }); // index for quick searching the userid
+  }; // of load
+
+  static close() { return ; }
 
   static async _getINTERNAL(valid_userid, isOWN) {
     const dbResultLimited = (item) => { // keep or drop props
@@ -87,15 +87,6 @@ export default class DBUsercards {
       return null;
     }
   }
-
-
-  static async loadDatabase() { // static method (not affected by instance) -> called with classname: DBGeoData.load
-		fse.ensureDirSync(this.databasePath(), { mode: 0o0600, });
-    this.db = Datastore.create(path.join(this.databasePath(), this.collectionName() + ".txt"));
-		this.db.persistence.setAutocompactionInterval(5);
-
-    await this.db.ensureIndex({ fieldName: 'userid',  unique: true, }); // index for quick searching the userid
-  }; // of load
 
 
 	static async getUsercard(unsafe_targetuserid, unsafe_userid, unsafe_servertoken) {

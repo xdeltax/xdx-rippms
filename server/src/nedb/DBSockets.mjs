@@ -1,3 +1,5 @@
+import debuglog from "../debug/consolelog.mjs"; const clog = debuglog(import.meta.url);
+
 import fse from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
@@ -6,22 +8,13 @@ import Datastore from 'nedb-promises';
 import Joi from '@hapi/joi';
 
 import {abs_path, } from "../basepath.mjs";
-import {clog, } from "../tools/consoleLog.mjs";
 import {unixtime,} from "../tools/datetime.mjs";
 import {isERROR, isSUCCESS, } from "../tools/isErrorIsSuccess.mjs";
 import joiValidateFallback from '../tools/joiValidateFallback.mjs';
 
-import {joi_userid, } from './DBUsers.mjs';
-
-const joi_databaseid= Joi.string().alphanum().allow(null).allow("").max(200).normalize();
-
-//const joi_socketid 	=	Joi.string().alphanum().allow("-").min(10).max(50).normalize();
-const joi_socketid  =	Joi.string().regex(/^[A-Za-z0-9-_.+/=]*$/).min(10).max(50).normalize();
-//const joi_userid 		=	Joi.string().alphanum().min(30).max(50).normalize();
-
-const joi_count 		=	Joi.number().min(0);
-
-const joi_date = Joi.date();
+import {joi_databaseid, joi_userid,
+        joi_socketid, joi_count, joi_date,
+       } from './joiValidators.mjs';
 
 
 const joi_schemaObject = Joi.object().keys({
@@ -51,7 +44,16 @@ export default class DBSockets {
 
   static databasePath()   { return process.env.DATABASE_NEDB ? abs_path("../" + process.env.DATABASE_NEDB) : null; }
 
-  static stop() { return ; }
+  static async connect(url) { // static method (not affected by instance) -> called with classname: DBGeoData.load
+		fse.ensureDirSync(this.databasePath(), { mode: 0o0600, });
+    this.db = Datastore.create(path.join(this.databasePath(), this.collectionName() + ".txt"));
+		this.db.persistence.setAutocompactionInterval(5);
+
+    await this.db.ensureIndex({ fieldName: 'socketid', unique: true, }); // index for quick searching the socketid
+    await this.db.ensureIndex({ fieldName: 'userid', unique: false, }); // false because "null" is allowed
+  }; // of load
+
+  static close() { return ; }
 
   static async _getINTERNAL(valid_socketid, isOWN) {
     const dbResultLimited = (item) => { // keep or drop props
@@ -87,16 +89,6 @@ export default class DBSockets {
       return null;
     }
   }
-
-
-  static async loadDatabase() { // static method (not affected by instance) -> called with classname: DBGeoData.load
-		fse.ensureDirSync(this.databasePath(), { mode: 0o0600, });
-    this.db = Datastore.create(path.join(this.databasePath(), this.collectionName() + ".txt"));
-		this.db.persistence.setAutocompactionInterval(5);
-
-    await this.db.ensureIndex({ fieldName: 'socketid', unique: true, }); // index for quick searching the socketid
-    await this.db.ensureIndex({ fieldName: 'userid', unique: false, }); // false because "null" is allowed
-  }; // of load
 
 
 	static async remove(unsafe_socketid) { // create or update database

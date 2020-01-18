@@ -1,6 +1,7 @@
+import debuglog from "../debug/consolelog.mjs"; const clog = debuglog(import.meta.url);
+
 import Joi from '@hapi/joi';
 
-import {clog, } from "../tools/consoleLog.mjs";
 import {isERROR, isSUCCESS, } from "../tools/isErrorIsSuccess.mjs";
 
 import DBUsers from '../nedb/DBUsers.mjs';

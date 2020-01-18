@@ -1,4 +1,4 @@
-import {clog, } from "../tools/consoleLog.mjs";
+import debuglog from "../debug/consolelog.mjs"; const clog = debuglog("");
 
 const joiValidateFallback = (value, fallback, schema, options, dontLogError ) => {
   try {

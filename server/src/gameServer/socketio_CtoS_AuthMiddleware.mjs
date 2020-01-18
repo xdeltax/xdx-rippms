@@ -1,6 +1,5 @@
+import debuglog from "../debug/consolelog.mjs"; const clog = debuglog(import.meta.url);
 import crypto from 'crypto';
-
-import {clog, } from "../tools/consoleLog.mjs";
 import {isERROR, isSUCCESS, } from "../tools/isErrorIsSuccess.mjs";
 
 // ===============================================

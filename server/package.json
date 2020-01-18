@@ -5,11 +5,11 @@
     "url": "https://github.com/xdeltax"
   },
   "name": "server",
+  "main": "./src/index.mjs",
+  "type": "module",
   "description": " ",
   "version": "0.01.001",
   "private": true,
-  "main": "index.mjs",
-  "type": "module",
   "keywords": [],
   "license": "MIT",
   "repository": {

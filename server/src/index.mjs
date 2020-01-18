@@ -1,14 +1,27 @@
 //https://developerhandbook.com/passport.js/how-to-add-passportjs-facebook-strategy/
-//https://github.com/scopsy/await-to-js#readme
-
 import {} from './env.mjs';
-import {clog, } from "./tools/consoleLog.mjs";
-import {basepath, } from "./basepath.mjs";
-import {datetime, datetimeUTC, unixtime,} from "./tools/datetime.mjs";
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
+
+/*
+import path from 'path';
+import { fileURLToPath } from 'url';
+export const __filename = fileURLToPath(import.meta.url);
+export const baseDir = path.dirname(__filename);
+require('app-module-path').addPath(baseDir);
+*/
+//import "app-module-path/register"; // import { addPath } from 'app-module-path'; addPath(__dirname);
+//import "app-module-path/cwd"; //import { addPath } from 'app-module-path'; addPath(process.cwd());
+
+import debuglog from "./debug/consolelog.mjs"; const clog = debuglog(import.meta.url);
+import {datetime, datetimeUTC, unixtime,} from "./tools/datetime.mjs";
+import {basepath, } from "./basepath.mjs";
+
 require("nodejs-dashboard");
+
+//import debug from "./tools/debug/node.js";
+//var clog = require('debug')('xdxApp');
 
 import gameServer from "./gameServer/index.mjs";
 import mainServer from "./mainServer/index.mjs";

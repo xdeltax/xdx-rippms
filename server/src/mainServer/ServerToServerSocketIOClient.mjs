@@ -1,6 +1,5 @@
+import debuglog from "../debug/consolelog.mjs"; const clog = debuglog(import.meta.url);
 import socketioclient from "socket.io-client";
-
-import {clog, } from "../tools/consoleLog.mjs";
 import {emitWithTimeoutToSocket, clearSendBufferSocket, disconnectSocket, } from "../tools/socketioClientHelper.mjs";
 
 export default class ServerToServerSocketIOClient {

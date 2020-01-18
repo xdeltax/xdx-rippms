@@ -1,4 +1,4 @@
-import {clog, } from "../tools/consoleLog.mjs";
+import debuglog from "../debug/consolelog.mjs"; const clog = debuglog(import.meta.url);
 import {isERROR, isSUCCESS, } from "../tools/isErrorIsSuccess.mjs";
 
 // ===============================================

@@ -1,11 +1,11 @@
-import {clog, } from "../tools/consoleLog.mjs";
+import debuglog from "../debug/consolelog.mjs"; const clog = debuglog(import.meta.url);
 import {isERROR, isSUCCESS, } from "../tools/isErrorIsSuccess.mjs";
 
 import * as jwt from '../tools/jwt.mjs';
 import joiValidateFallback from '../tools/joiValidateFallback.mjs';
 
 import DBSockets from '../nedb/DBSockets.mjs';
-import {joi_userid, joi_servertoken, } from '../nedb/DBUsers.mjs';
+import {joi_userid, joi_servertoken, } from '../nedb/joiValidators.mjs';
 
 
 // ===============================================

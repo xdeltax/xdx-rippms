@@ -1,4 +1,5 @@
-//import { createRequire } from 'module';
+//import { createRequire } from 'module'; const require = createRequire(import.meta.url);
+import debuglog from "../debug/consolelog.mjs"; const clog = debuglog(import.meta.url);
 import fse from 'fs-extra';
 import path from 'path';
 
@@ -20,7 +21,6 @@ import passportGoogle from 'passport-google-oauth20';
 
 import crypto from 'crypto';
 
-import {clog, } from "../tools/consoleLog.mjs";
 import {unixtime,} from "../tools/datetime.mjs";
 import {abs_path, } from "../basepath.mjs";
 
@@ -48,17 +48,20 @@ export default async function gameApp(tryPort) {
   const dbUsercards = new DBUsercards();
 
   clog("app:: nedb:: loading Sockets... ", );
-  await DBSockets.loadDatabase();
+  const dbSocketsConnected = await DBSockets.connect();
+  //if (!dbSocketsConnected) throw new Error("failed to connect to database *sockets*");
+  clog("app:: nedb:: DBSockets count:", await DBSockets.count());
 
   clog("app:: nedb:: loading DBUsers... ", );
-  await DBUsers.loadDatabase();
+  const dbUsersConnected = await DBUsers.connect();
+  if (!dbUsersConnected) throw new Error("failed to connect to database *users*");
+  clog("app:: nedb:: DBUsers count:", await DBUsers.count());
 
   clog("app:: nedb:: loading DBUsercards... ", );
-  await DBUsercards.loadDatabase();
-
-  clog("app:: nedb:: DBSockets count:", await DBSockets.count());
-  clog("app:: nedb:: DBUsers count:", await DBUsers.count());
+  const dbUsercardsConnected = await DBUsercards.connect();
+  //if (!dbUsercardsConnected) throw new Error("failed to connect to database *usercards*");
   clog("app:: nedb:: DBUsercards count:", await DBUsercards.count());
+
 
 
   // ===============================================
@@ -385,20 +388,30 @@ export default async function gameApp(tryPort) {
   clientsocketGameServer1.connect(gameserverAddr, gameserverPort, mainserveridentkeyHash_ORIGINAL);
   */
 
-
-
   // pm2 Graceful Stop
 	process.on('SIGINT', async () => {
-		try {
-      await DBSockets.stop();
-	  	await DBUsers.stop();
-			await DBUsercards.stop();
+    process.exit(0);
+	});
+
+  process.on('beforeExit', (code) => {
+    console.log('Process beforeExit event with code: ', code);
+  });
+
+  process.on('exit', (code) => {
+    console.log('Process exit event with code: ', code);
+    try {
+      DBSockets.close();
+	  	DBUsers.close();
+			DBUsercards.close();
+      dbSockets = null;
+      dbUsers = null;
+      dbUsercards = null;
       clientsocketGameServer1.destroy();
-	    //process.exit(0);
 		} catch (err) {
 	    process.exit(1);
 		}
-	});
+  });
+
 
   clog("app:: EOF");
 

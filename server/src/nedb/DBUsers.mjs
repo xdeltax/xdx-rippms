@@ -1,43 +1,29 @@
+import debuglog from "../debug/consolelog.mjs"; const clog = debuglog(import.meta.url);
+
 import fse from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
 
 import Datastore from 'nedb-promises';
+//import mongo from 'mongodb';
+
 import Joi from '@hapi/joi';
 
 import {abs_path, } from "../basepath.mjs";
-import {clog, } from "../tools/consoleLog.mjs";
 import {unixtime,} from "../tools/datetime.mjs";
 import {isERROR, isSUCCESS, } from "../tools/isErrorIsSuccess.mjs";
 import * as jwt from '../tools/jwt.mjs';
 import joiValidateFallback from '../tools/joiValidateFallback.mjs';
 
+import {joi_databaseid, joi_userid, joi_servertoken,
+        joi_memberstatus, joi_accountstatus, joi_createdAt, joi_updatedAt,
+        joi_uid, joi_fingerprint, joi_provider, joi_providerid, joi_providertoken, joi_forcenew,
+        joi_name, joi_email, joi_phonenumber,
+       } from "./joiValidators.mjs";
 
 const accountstatusREADONLY = ["default", "owner", "admin", "moderator", "reviewer", "hidden", "locked", "blocked", "banned", "removed", "disbanded" ];
 const memberstatusREADONLY  = ["default", "vip", "vip+", "idle", ];
 
-
-const joi_databaseid = 	Joi.string().alphanum().allow(null).allow("").max(200).normalize();
-
-export const joi_userid = 			Joi.string().alphanum().min(30).max(50).normalize();
-export const joi_servertoken =	Joi.string().regex(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]*$/).min(30).max(499).normalize();
-
-const joi_memberstatus =Joi.array().items( Joi.number().integer().min(0).max(99).optional() );
-const joi_accountstatus=Joi.array().items( Joi.number().integer().min(0).max(99).optional() );
-const joi_createdAt = 	Joi.date();
-const joi_updatedAt = 	Joi.date();
-
-// private
-const joi_uid = 				Joi.string().allow('').min(0).max(99).alphanum().normalize();
-const joi_fingerprint = Joi.string().min(10).max(40).alphanum().normalize();
-const joi_provider =    Joi.string().trim().min(1).max(50).alphanum().normalize();
-const joi_providerid =  Joi.string().trim().min(1).max(50).alphanum().normalize();
-const joi_providertoken=Joi.string().min(30).max(499).normalize();
-const joi_forcenew = 		Joi.string().trim().min(1).max(99);
-
-const joi_name = 				Joi.string().alphanum().allow("").max(50).normalize();
-const joi_email = 			Joi.string().max(256).email().allow("").allow(null).normalize().default("");
-const joi_phonenumber = Joi.string().max(64).allow("").allow(null).normalize().default("");
 
 const joi_schemaObject = Joi.object().keys({
   _id: 					joi_databaseid.optional(),
@@ -68,18 +54,67 @@ const joi_schemaObject = Joi.object().keys({
 
 
 export default class DBUsers {
+  client = null;
   db = null;
+  collection = null;
 
   constructor(...props) {
-    clog("DBUsers:: constructor:: ", ...props);
+    this.client = null;
     this.db = null;
+    this.collection = null;
   }
 
+  static isMongoDB() { return process.env.DATABASE_TYPE === "mongodb"; }
+  static databaseURL() { return this.isMongoDB() ? process.env.DATABASE_MOBGO_URL : process.env.DATABASE_NEDB_URL || ""; }
+  static databaseName() { return this.isMongoDB() ? process.env.DATABASE_MONGO_DATABASENAME : process.env.DATABASE_NEDB_DATABASENAME || ""; }
   static collectionName() { return 'users'; }
 
-  static databasePath()   { return process.env.DATABASE_NEDB ? abs_path("../" + process.env.DATABASE_NEDB) : null; }
+  static async connect() { // static method (not affected by instance) -> called with classname: DBGeoData.load
+    if (this.isMongoDB()) { // use mongodb //var url = 'mongodb://localhost:27017/test';
+      // mongodb://[username:password@]host1[:port1][,...hostN[:portN]][/[database][?options]]
+      const mongodbURL = path.join(this.databaseURL(), this.databaseName());
+      const MongoClient = mongo.MongoClient;
+      this.client = await MongoClient.connect(mongodbURL, { useNewUrlParser: true }).catch(err => {
+        clog("mongodb:: connect:: ERROR:: ", err);
+        this.client = null;
+      });
+      if (!this.client) { this.db = null; return false; }
 
-  static stop() { return ; }
+      try {
+        this.db = client.db(this.databaseName());
+        this.collection = await db.collection(this.collectionName());
+        await this.collection.createIndex({ fieldName: 'userid',  unique: true, }); // index for quick searching the userid
+        return true;
+      } catch (err) {
+        clog("mongodb:: ERROR:: ", res);
+        this.close();
+        return false;
+      }
+
+    } else { // use nedb
+      const nedbDatabasePath = this.databaseURL() ? abs_path(path.join("..", this.databaseURL(), this.databaseName())) : null;
+      if (!nedbDatabasePath) { this.collection = null; return false; }
+	    fse.ensureDirSync(nedbDatabasePath, { mode: 0o0600, });
+
+      this.client = nedbDatabasePath;
+      this.db = path.join(nedbDatabasePath, this.collectionName() + ".txt");
+      this.collection = Datastore.create(this.db); // datastore == collection
+	    this.collection.persistence.setAutocompactionInterval(5);
+      await this.collection.ensureIndex({ fieldName: 'userid',  unique: true, }); // index for quick searching the userid
+
+      clog("XXXXXXXXXXXX", this.isMongoDB(), this.client, this.db);
+
+      return true;
+    }
+  }; // of load
+
+  static close() {
+    if (this.client) this.client.close();
+    this.client = null;
+    this.db = null;
+    this.collection = null;
+  }
+
 
   static async _getINTERNAL(valid_userid, isOWN) {
     const dbResultLimited = (item) => { // keep or drop props
@@ -115,15 +150,6 @@ export default class DBUsers {
       return null;
     }
   }
-
-
-  static async loadDatabase() { // static method (not affected by instance) -> called with classname: DBGeoData.load
-		fse.ensureDirSync(this.databasePath(), { mode: 0o0600, });
-    this.db = Datastore.create(path.join(this.databasePath(), this.collectionName() + ".txt"));
-		this.db.persistence.setAutocompactionInterval(5);
-
-    await this.db.ensureIndex({ fieldName: 'userid',  unique: true, }); // index for quick searching the userid
-  }; // of load
 
 
 	static async loginWithProvider(unsafe_provider, unsafe_providerid, unsafe_providertoken, unsafe_uid, unsafe_fingerprinthash) { // create or update database
@@ -352,26 +378,26 @@ export default class DBUsers {
 
 
   //////////
-  // default database operations
+  // database
   ///////////////////////////////////////////////////////////////////////////////////////////////////////
-  static count(query)                           { return this.db.count(query) }
-  static countAll()                             { return this.count( {} ) }
+  static async count(query)                           { return await this.collection.count(query) }
+  static async countAll()                             { return await this.count( {} ) }
 
-  static find(query, projection)                { return this.db.find(query, projection || {} ) }   // return cursor
-  static findOne(query, options)                { return this.db.findOne(query, options) }          // return element
-  static findAll()                              { return this.find( {} , {} ) }
+  static async find(query, projection)                { return await this.collection.find(query, projection || {} ) }   // return cursor
+  static async findOne(query, options)                { return await this.collection.findOne(query, options) }          // return element
+  static async findAll()                              { return await this.find( {} , {} ) }
 
   // https://github.com/louischatriot/nedb/wiki/Updating-documents
   // update:: A new document will replace the matched docs
   // options:: multi (defaults to false) which allows the modification of several documents if set to true
   //        :: upsert (defaults to false) if you want to insert a new document corresponding to the update rules if your query doesnt match anything
-  static updateFull(query, obj)                 { return this.db.update(query, obj, { upsert: true }) }  // numreplaced
+  static async updateFull(query, obj)                 { return await this.collection.update(query, obj, { upsert: true }) }  // numreplaced
 
   // modifiers: The modifiers create the fields they need to modify if they don't exist, and you can apply them to subdocs. Available field modifiers are $set to change a field's value and $inc to increment a field's value. To work on arrays, you have $push, $pop, $addToSet, and the special $each. See examples below for the syntax.
-  static updateMod(query, modifiers )           { return this.db.update(query, modifiers, { upsert: true }) } // numreplaced
+  static async updateMod(query, modifiers )           { return await this.collection.update(query, modifiers, { upsert: true }) } // numreplaced
 
-  static insertNew(obj)                         { return this.db.insert(obj) }                 // return element with its new _id
+  static async insertNew(obj)                         { return await this.collection.insert(obj) }                 // return element with its new _id
 
-  static deleteMany(query)                      { return this.db.remove(query, { multi: true } ) }  // return how many where deleted
-  static deleteOne(query)                       { return this.db.remove(query, {} ) }               // return how many where deleted
+  static async deleteMany(query)                      { return await this.collection.remove(query, { multi: true } ) }  // return how many where deleted
+  static async deleteOne(query)                       { return await this.collection.remove(query, {} ) }               // return how many where deleted
 }

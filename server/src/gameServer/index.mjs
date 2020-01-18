@@ -1,3 +1,4 @@
+import debuglog from "../debug/consolelog.mjs"; const clog = debuglog(import.meta.url);
 //import { createRequire } from 'module';
 //import fse from 'fs-extra';
 import path from 'path';
@@ -14,7 +15,6 @@ import http from 'http';
 
 import crypto from 'crypto';
 
-import {clog, } from "../tools/consoleLog.mjs";
 import {unixtime,} from "../tools/datetime.mjs";
 import {abs_path, } from "../basepath.mjs";
 

@@ -1,4 +1,4 @@
-import {clog, } from "./consoleLog.mjs";
+import debuglog from "../debug/consolelog.mjs"; const clog = debuglog(import.meta.url);
 
 /*
 const mapwidth = 30; // needs to be an integer factor of divider
