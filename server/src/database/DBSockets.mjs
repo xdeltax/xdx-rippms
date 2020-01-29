@@ -3,9 +3,11 @@ import debuglog from "../debug/consolelog.mjs"; const clog = debuglog(import.met
 import fse from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
-
-import Datastore from 'nedb-promises';
 import Joi from '@hapi/joi';
+
+import DBPrototype from "./DBPrototype.mjs";
+import Datastore from 'nedb-promises';
+import {mongoConnect, mongoCollection} from './adapter/mongodb.mjs';
 
 import {abs_path, } from "../basepath.mjs";
 import {unixtime,} from "../tools/datetime.mjs";
@@ -32,30 +34,12 @@ const joi_schemaObject = Joi.object().keys({
 });
 
 
-export default class DBSockets {
-  db = null;
-
-  constructor(...props) {
-    clog("DBSockets:: constructor:: ", ...props);
-    this.db = null;
+export default class DBSockets extends DBPrototype {
+  constructor(name) {
+    super(name || "sockets");
   }
 
-  static collectionName() { return 'sockets'; }
-
-  static databasePath()   { return process.env.DATABASE_NEDB ? abs_path("../" + process.env.DATABASE_NEDB) : null; }
-
-  static async connect(url) { // static method (not affected by instance) -> called with classname: DBGeoData.load
-		fse.ensureDirSync(this.databasePath(), { mode: 0o0600, });
-    this.db = Datastore.create(path.join(this.databasePath(), this.collectionName() + ".txt"));
-		this.db.persistence.setAutocompactionInterval(5);
-
-    await this.db.ensureIndex({ fieldName: 'socketid', unique: true, }); // index for quick searching the socketid
-    await this.db.ensureIndex({ fieldName: 'userid', unique: false, }); // false because "null" is allowed
-  }; // of load
-
-  static close() { return ; }
-
-  static async _getINTERNAL(valid_socketid, isOWN) {
+  _getINTERNAL = async (valid_socketid, isOWN) => {
     const dbResultLimited = (item) => { // keep or drop props
       // const dbGallery = array.map(( {propsToDrop1, propsToDrop2, ...keepAttrs}) => keepAttrs)
       // const dbGallery = array.map(( {propsToKeep1, propsToKeep2, } ) => ( {propsToKeep1, propsToKeep2, } ))
@@ -80,7 +64,7 @@ export default class DBSockets {
       }
     };
     try {
-      const dbResultFull = await this.findOne({ "socketid": valid_socketid, },); // not found -> null
+      const dbResultFull = await super.findOne({ "socketid": valid_socketid, },); // not found -> null
       // if isOwn -> return full database entry; if !isOwn -> return limited dataset only
       if (dbResultFull && dbResultFull.hasOwnProperty("socketid"))
       return (isOWN) ? dbResultFull : dbResultLimited(dbResultFull);
@@ -91,7 +75,7 @@ export default class DBSockets {
   }
 
 
-	static async remove(unsafe_socketid) { // create or update database
+	remove = async (unsafe_socketid) => { // create or update database
     const now = unixtime();
 		try {
 		  // ===============================================
@@ -100,7 +84,7 @@ export default class DBSockets {
 	    const safe_socketid = joiValidateFallback(unsafe_socketid, null, joi_socketid);
 			if (!safe_socketid) throw isERROR(1, "DBSockets: remove", "remove socket failed", "invalid socket id");
 
-	    const numRemoved = await this.deleteOne({ socketid: safe_socketid });
+	    const numRemoved = await super.deleteOne({ socketid: safe_socketid });
 			//if (!numRemoved !== 1) throw ERROR(2, "remove socket failed", "invalid count: " + numRemoved);
 
 	  	return isSUCCESS(numRemoved);
@@ -110,7 +94,7 @@ export default class DBSockets {
 	};
 
 
-	static async createOrUpdate(unsafe_socketid, unsafe_userid, ) { // create or update database
+	createOrUpdate = async (unsafe_socketid, unsafe_userid, ) => { // create or update database
     const now = unixtime();
 		try {
 		  // ===============================================
@@ -125,7 +109,7 @@ export default class DBSockets {
 		  // search db
 		  // ===============================================
 	    // check if user already exists (and get user data for login-count then)
-	    //let thisUser = await this.findOne( { "userid": userid_created, }, ); // not found -> null
+	    //let thisUser = await super.findOne( { "userid": userid_created, }, ); // not found -> null
       let thisObject = await this._getINTERNAL(valid_socketid, /*isOwn:*/ true); // result will be different (reduced) for isOWN = false
 
 	    const isNewObject = Boolean(!thisObject);
@@ -164,8 +148,8 @@ export default class DBSockets {
 		  // ===============================================
 	    // update user in database
 		  // ===============================================
-	    const numReplace = await this.updateFull( {socketid: valid_object.socketid}, valid_object);
-	    if (numReplace !== 1) throw isERROR(3, "DBSockets: createOrUpdate", "update socket failed", "invalid update count");
+	    const numReplace = await super.updateFull( {socketid: valid_object.socketid}, valid_object);
+	    //if (numReplace !== 1) throw isERROR(3, "DBSockets: createOrUpdate", "update socket failed", "invalid update count");
 
 		  // ===============================================
 	    // get user from database (own -> true)
@@ -180,7 +164,7 @@ export default class DBSockets {
 	}
 
 
-	static async updateCount(unsafe_socketid) {
+	updateCount = async (unsafe_socketid) => {
     const now = unixtime();
 		try {
 		  // ===============================================
@@ -197,7 +181,7 @@ export default class DBSockets {
 
       thisObject.count++;
 
-	    const numReplace = await this.updateFull( {socketid: thisObject.socketid}, thisObject);
+	    const numReplace = await super.updateFull( {socketid: thisObject.socketid}, thisObject);
 	    if (numReplace !== 1) throw isERROR(3, "DBSockets: updateCount", "update api-count failed", "invalid update count");
 
 	  	return isSUCCESS(thisObject.count);
@@ -206,28 +190,4 @@ export default class DBSockets {
 	  }
 	}
 
-
-  //////////
-  // default database operations
-  ///////////////////////////////////////////////////////////////////////////////////////////////////////
-  static count(query)                           { return this.db.count(query) }
-  static countAll()                             { return this.count( {} ) }
-
-  static find(query, projection)                { return this.db.find(query, projection || {} ) }   // return cursor
-  static findOne(query, options)                { return this.db.findOne(query, options) }          // return element
-  static findAll()                              { return this.find( {} , {} ) }
-
-  // https://github.com/louischatriot/nedb/wiki/Updating-documents
-  // update:: A new document will replace the matched docs
-  // options:: multi (defaults to false) which allows the modification of several documents if set to true
-  //        :: upsert (defaults to false) if you want to insert a new document corresponding to the update rules if your query doesnt match anything
-  static updateFull(query, obj)                 { return this.db.update(query, obj, { upsert: true }) }  // numreplaced
-
-  // modifiers: The modifiers create the fields they need to modify if they don't exist, and you can apply them to subdocs. Available field modifiers are $set to change a field's value and $inc to increment a field's value. To work on arrays, you have $push, $pop, $addToSet, and the special $each. See examples below for the syntax.
-  static updateMod(query, modifiers )           { return this.db.update(query, modifiers, { upsert: true }) } // numreplaced
-
-  static insertNew(obj)                         { return this.db.insert(obj) }                 // return element with its new _id
-
-  static deleteMany(query)                      { return this.db.remove(query, { multi: true } ) }  // return how many where deleted
-  static deleteOne(query)                       { return this.db.remove(query, {} ) }               // return how many where deleted
 }

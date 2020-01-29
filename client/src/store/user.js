@@ -104,7 +104,7 @@ class Store extends ProtoStore {
 
       // clear local persistent store
   		await deletePersistentDatabase();
-    } catch (error) {      
+    } catch (error) {
     } finally {
       // clear store
   	  this.clear_all();
@@ -181,7 +181,7 @@ class Store extends ProtoStore {
   };
 
 
-  getUserStoreFromServer = async (targetuserid) => {
+  _getUserStoreFromServer = async (targetuserid) => {
   	if (!this.userid || !this.servertoken) return;
 
 		let res = null;
@@ -193,8 +193,11 @@ class Store extends ProtoStore {
 				userid: this.userid,
 				servertoken: this.servertoken,
 			}
-	  	global.log("*** getUserStoreFromServer:: ", req, store.socketio.socketID)
+	  	//global.log("*** getUserStoreFromServer:: ", req, store.socketio.socketID)
     	res = await store.socketio.emitWithTimeout(ioRoute, req,);
+      //global.log("***!!!!!!!!!!!!!! getUserStoreFromServer:: ", res, )
+
+
 		} catch (error) {
     	err = error;
 		} finally {
@@ -277,22 +280,27 @@ class Store extends ProtoStore {
   	if (!this.userid || !this.servertoken) return;
 
   	//global.log("+++++++1 getUserStoreFromServerANDMergeWithStore:: ", this.userid)
-	  const {err, res} = await this.getUserStoreFromServer(this.userid);
-  	//global.log("+++++++2 getUserStoreFromServerANDMergeWithStore:: ", err, res)
+	  const {err, res} = await this._getUserStoreFromServer(this.userid);
+    // res = {userid: "xxx", user: {}, usercard: {}, }
+
+    //global.log("+++++++2 getUserStoreFromServerANDMergeWithStore:: ", err, res)
 	  if (!err) {
 	  	const {
+        userid,
 	  		user,
 	  		usercard,
 	  	} = res || {};
 
-	  	//this.user = runInAction(() => Object.assign(this.user || {}, user));
-      store.user.clear();
-      store.user.merge_all( {user: user} );
+      //global.log("+++++++++++++++++++X1:: ", store.usercard.get_all())
 
-      store.usercard.clear();
-      store.usercard.merge_all( {usercard: usercard} );
+      runInAction(() => {
+        user && store.user.merge_all( {user: user} );
+        usercard && store.usercard.merge_all( {usercard: usercard} );
+      });
 
-	    await saveToPersistentDatabase();
+      //global.log("+++++++++++++++++++X4:: ", store.usercard.get_all())
+
+      await saveToPersistentDatabase();
 	  };
   	//global.log("+++++++3 getUserStoreFromServerANDMergeWithStore:: ", err, res)
   	return { err: err, res: res };

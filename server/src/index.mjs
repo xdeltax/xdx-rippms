@@ -23,8 +23,8 @@ require("nodejs-dashboard");
 //import debug from "./tools/debug/node.js";
 //var clog = require('debug')('xdxApp');
 
-import gameServer from "./gameServer/index.mjs";
-import mainServer from "./mainServer/index.mjs";
+import gameServer from "./gameServer/gameServer.mjs";
+import mainServer from "./mainServer/mainServer.mjs";
 
 //import * as geohash from "./tools/geohash.mjs";
 import GeoHash from "./tools/GeoHash.mjs";

@@ -1,4 +1,4 @@
-import debuglog from "../debug/consolelog.mjs"; const clog = debuglog("");
+import debuglog from "../debug/consolelog.mjs"; const clog = debuglog(import.meta.url);
 
 const joiValidateFallback = (value, fallback, schema, options, dontLogError ) => {
   try {

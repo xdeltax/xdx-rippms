@@ -1,19 +1,23 @@
-import debuglog from "../debug/consolelog.mjs"; const clog = debuglog(import.meta.url);
-import {isERROR, isSUCCESS, } from "../tools/isErrorIsSuccess.mjs";
+import debuglog from "../../debug/consolelog.mjs"; const clog = debuglog(import.meta.url);
+import {isERROR, isSUCCESS, } from "../../tools/isErrorIsSuccess.mjs";
 
-import * as jwt from '../tools/jwt.mjs';
-import joiValidateFallback from '../tools/joiValidateFallback.mjs';
+import * as jwt from '../../tools/jwt.mjs';
+import joiValidateFallback from '../../tools/joiValidateFallback.mjs';
 
-import DBSockets from '../nedb/DBSockets.mjs';
-import {joi_userid, joi_servertoken, } from '../nedb/joiValidators.mjs';
+import {joi_userid, joi_servertoken, } from '../../database/joiValidators.mjs';
 
 
 // ===============================================
 // route: middleware for every ws-call from client
 // ===============================================
-export default async function socketioAuthClientSocketUser(socket, packet, next) {
+export default async function authSocket(socket, packet, next) {
+	// injected in socket::
+	// 		socket.server = ""
+	// 		socket.database = { dbSockets, dbUsers, dbUsercards, ...}
 	// packet is array of [route(String), req(Object), callback(function)]
 	const [route, req, clientEmitCallback] = packet || {};
+	const {server, database, } = req || {};
+	const {dbSockets, } = database || {};
 	try {
 		// ===============================================
 		// auth-routes: routes starting with "auth" needs a valid servertoken
@@ -47,7 +51,7 @@ export default async function socketioAuthClientSocketUser(socket, packet, next)
 			if (!usid || !pvd || !pid || !hash) throw isERROR(4, "app.js: socket.use", "validation", "invalid token structure");
 			if (usid !== valid_userid) throw isERROR(5, "app.js: socket.use", "validation", "token / user mismatch");
 
-			const {err: updateError, res: loadedObject} = await DBSockets.createOrUpdate(socket.id, /*userid*/ valid_userid );
+			const {err: updateError, res: loadedObject} = await dbSockets.createOrUpdate(socket.id, /*userid*/ valid_userid );
 			if (updateError) clog('app:: io.on:: new client validated:: updated userid to database:: ERROR:: ', updateError, loadedObject.userid);
 
 				req.authMiddleware_routeType = "auth";
@@ -94,7 +98,7 @@ export default async function socketioAuthClientSocketUser(socket, packet, next)
 	} finally {
 		if (socket) {
 			//db-call to update onlineStatus -> add socket to onlinelist
-			const {err: updateCountError, res: count} = await DBSockets.updateCount(socket.id);
+			const {err: updateCountError, res: count} = await dbSockets.updateCount(socket.id);
 			clog('app:: io.on:: new client connected:: updateCount:: ', route, socket.id, updateCountError, count);
 		}
 	}

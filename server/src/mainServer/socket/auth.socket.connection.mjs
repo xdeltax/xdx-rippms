@@ -1,12 +1,12 @@
-import debuglog from "../debug/consolelog.mjs"; const clog = debuglog(import.meta.url);
-import {isERROR, isSUCCESS, } from "../tools/isErrorIsSuccess.mjs";
+import debuglog from "../../debug/consolelog.mjs"; const clog = debuglog(import.meta.url);
+import {isERROR, isSUCCESS, } from "../../tools/isErrorIsSuccess.mjs";
 
 // ===============================================
 // route: middleware for every new socket-connect
 // ===============================================
-export default function socketioAuthConnectionHandshake(socket, next) {
+export default function authSocketConnection(socket, next) {
 	try {
-		clog("io.use:: socket connect middleware:: ", socket.id)
+		clog("io.use:: socket connect middleware:: ", socket.id, )
 
 		// ===============================================
 		// check handshake-version of client and server

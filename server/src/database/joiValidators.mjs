@@ -11,6 +11,11 @@ export const joi_accountstatus= Joi.array().items( Joi.number().integer().min(0)
 export const joi_createdAt = 	  Joi.date();
 export const joi_updatedAt = 	  Joi.date();
 
+// game
+export const joi_mapid = 			  Joi.number().allow(null).min(0);
+export const joi_objectid =     Joi.number().allow(null).min(0);
+export const joi_number =       Joi.number().allow(null).min(0);
+
 // private
 export const joi_uid = 				  Joi.string().allow('').min(0).max(99).alphanum().normalize();
 export const joi_fingerprint =  Joi.string().min(10).max(40).alphanum().normalize();

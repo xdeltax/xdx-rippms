@@ -134,6 +134,7 @@ socket.io
 
 database
   npm i -s nedb
+  npm i -s mongodb
 
 portals
 	npm i -s react-new-window
@@ -184,6 +185,7 @@ session
 socket.io
   npm i -s socket.io
   npm i -s socket.io-client
+  //npm i -s passport.socketio
 
 auth
 	npm i -s passport

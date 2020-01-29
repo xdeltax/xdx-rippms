@@ -16,53 +16,64 @@ import http from 'http';
 import https from 'https';
 
 import passport from 'passport';
+//import passportSocketIo from 'passport.socketio';
 import passportFacebook from 'passport-facebook'
 import passportGoogle from 'passport-google-oauth20';
 
 import crypto from 'crypto';
 
-import {unixtime,} from "../tools/datetime.mjs";
+import {datetime, datetimeUTC, unixtime,} from "../tools/datetime.mjs";
 import {abs_path, } from "../basepath.mjs";
 
 import {isERROR, isSUCCESS, } from "../tools/isErrorIsSuccess.mjs";
 
-import DBUsers from '../nedb/DBUsers.mjs';
-import DBSockets from '../nedb/DBSockets.mjs';
-import DBUsercards from '../nedb/DBUsercards.mjs';
+import DBUsers from '../database/DBUsers.mjs';
+import DBSockets from '../database/DBSockets.mjs';
+import DBUsercards from '../database/DBUsercards.mjs';
+import DBUserobjects from '../database/DBUserobjects.mjs';
+import DBGamemaps from '../database/DBGamemaps.mjs';
 
-import ServerToServerSocketIOClient from "./ServerToServerSocketIOClient.mjs";
+import ServerToServerSocketIOClient from "./server2server/socketIOClient.mjs";
 
-import express_CtoS_AuthMiddleware from "./express_CtoS_AuthMiddleware.mjs";
-import express_CtoS_Route_CatchAll from "./express_CtoS_Route_CatchAll.mjs";
+import express_AuthMiddleware from "./express/auth.middleware.mjs";
+import express_Route_CatchAll from "./express/route.catchAll.mjs";
 
-import socketioAuthConnectionHandshake from "./socketioAuthConnectionHandshake.mjs";
-import socketioHandleConnectionRoutes from "./socketioHandleConnectionRoutes.mjs";
+import authSocketConnection from "./socket/auth.socket.connection.mjs";
+import authSocket from "./socket/auth.socket.mjs";
+import {routeAuth_userLogout,
+        routeAuth_userstoreGet,
+        routeAuth_userGet,
+        routeAuth_userUpdateProps,
+        routeAuth_usercardGet,
+        routeAuth_usercardUpdateProps,
+        routeFree_testThis,
+      } from "./socket/routes.auth.free.mjs";
 
 
-export default async function gameApp(tryPort) {
+export default async function mainServer(tryPort) {
   // ===============================================
   // DATABASE: load
   // ===============================================
-  const dbSockets = new DBSockets();
-  const dbUsers = new DBUsers();
-  const dbUsercards = new DBUsercards();
+  const database = {
+    dbSockets: new DBSockets(),
+    dbUsers: new DBUsers(),
+    dbUsercards: new DBUsercards(),
+  }
 
   clog("app:: nedb:: loading Sockets... ", );
-  const dbSocketsConnected = await DBSockets.connect();
-  //if (!dbSocketsConnected) throw new Error("failed to connect to database *sockets*");
-  clog("app:: nedb:: DBSockets count:", await DBSockets.count());
+  const dbSocketsCount = await database.dbSockets.connect(); clog("app:: nedb:: DBSockets count:", dbSocketsCount);
+  //if (!Number.isInteger(dbSocketsConnected)) throw new Error("failed to connect to database *sockets*");
 
   clog("app:: nedb:: loading DBUsers... ", );
-  const dbUsersConnected = await DBUsers.connect();
-  if (!dbUsersConnected) throw new Error("failed to connect to database *users*");
-  clog("app:: nedb:: DBUsers count:", await DBUsers.count());
+  const dbUsersCount = await database.dbUsers.connect(); clog("app:: nedb:: DBUsers count:", dbUsersCount);
+  if (!Number.isInteger(dbUsersCount)) throw new Error("failed to connect to database *users*");
+
+  //const x = await dbUsers.findAll();
+  //clog("ZZZZZZZZZZZZZ", x);
 
   clog("app:: nedb:: loading DBUsercards... ", );
-  const dbUsercardsConnected = await DBUsercards.connect();
-  //if (!dbUsercardsConnected) throw new Error("failed to connect to database *usercards*");
-  clog("app:: nedb:: DBUsercards count:", await DBUsercards.count());
-
-
+  const dbUsercardsCount = await database.dbUsercards.connect(); clog("app:: nedb:: DBUsercards count:", dbUsercardsCount);
+  //if (!Number.isInteger(dbUsercardsConnected)) throw new Error("failed to connect to database *usercards*");
 
   // ===============================================
   // EXPRESS: init
@@ -96,15 +107,16 @@ export default async function gameApp(tryPort) {
   // SESSIONSTORE: init
   // ===============================================
   const NedbStore = nedbStore(session);
+  const sessionStore = new NedbStore({ filename: abs_path(path.join("../" + process.env.DATABASE_NEDB, "session.txt")), });
+  const sessionSecret = process.env.SESSION_SECRET || "somethingtohide" + unixtime();
 
   app.use(session({ // nedb-session-store
- 		secret: process.env.SESSION_SECRET || "somethingtohide" + unixtime(),
+    //key: "xdx.sid",
+ 		secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
     cookie: { path: '/', httpOnly: true, maxAge: 24 * 3600 * 1000 }, // 24 hours
-    store: new NedbStore({
-    	filename: abs_path(path.join("../" + process.env.DATABASE_NEDB, "session.txt")),
-    }),
+    store: sessionStore,
     autoCompactInterval: 1 * 3600 * 1000, // 1 hour
 	}));
 
@@ -137,14 +149,15 @@ export default async function gameApp(tryPort) {
   app.use((req, res, next) => {
     //console.log('inject to res');
     req.server = 'mainServerWasHere';
-    return next();
+    req.database = database;
+    next();
   });
 
 
   // ===============================================
   // EXPRESS: middleware for every new socket-connect
   // ===============================================
-  app.use(express_CtoS_AuthMiddleware);
+  app.use(express_AuthMiddleware);
 
 
   // ===============================================
@@ -156,19 +169,23 @@ export default async function gameApp(tryPort) {
   // passport:: send auth-success to client
   // ===============================================
   const passportAuthCallback = async (req, res) => {
+    // const url = `${server}/${provider}.io?sid=${socketid}&fp=${fphash}&uid=${_uid}&username=1&password=1`;
     // req.user from passport.use() -> cb(null, user)
     // req.session from passportInjectSession()
-    // req.testing from app.use()
+    // req.clientip from middleware-inject
+    // req.servername from middleware-inject
+    // req.database = { dbSockets, dbUsers, dbUsercards, ... } from middleware-inject
     const {
       user, 		// injected from passport.authenticate()
       session, 	// injected from passport / passportInjectSession
+      database, // injected form express-middleware
     } = req;
 
     const {
-      socketid, // socketid from client-call
-      fingerprinthash, // from client
-      uid, // from client
-    } = session || { };
+      socketid,         // from client-call:: socketid of client/server-connection
+      fingerprinthash,  // from client-call:: fingerprint of client
+      uid,              // from client-call:: debug-mode to generate fake-users -> uid = extension to providerid === uid + providerid;
+    } = session || { }; // const url = `${server}/${provider}.io?sid=${socketid}&fp=${fphash}&uid=${_uid}&username=1&password=1`;
 
     const {
       provider, // "facebook", "google", "local"
@@ -181,6 +198,11 @@ export default async function gameApp(tryPort) {
       username,
     } = user || { };
 
+    const {
+      dbUsers,
+      dbUsercards,
+    } = database || { };
+
     if (socketid && provider) { // valid: (provider === "google" || provider === "facebook" || provider === "local")) {
       const _providerid = id ? id : null;
       const _providertoken =	refreshToken ? refreshToken : accessToken ? accessToken : null;
@@ -189,7 +211,11 @@ export default async function gameApp(tryPort) {
 
       let res = null;
       // query db -> update or create db
-      const {err, res: res_user} = await DBUsers.loginWithProvider(provider, _providerid, _providertoken, _uid, _fingerprinthash);
+
+      //create 1000 fake users based on login-provider and fakename (uid)
+      //if (_uid) for (let i=0; i < 1000; i++) await dbUsers.loginWithProvider(provider, _providerid, _providertoken, _uid + i, _fingerprinthash);
+
+      const {err, res: res_user} = await dbUsers.loginWithProvider(provider, _providerid, _providertoken, _uid, _fingerprinthash);
       if (!err && res_user) {
         res = {
           user: res_user,
@@ -197,7 +223,7 @@ export default async function gameApp(tryPort) {
         };
 
         // query usercard
-        const {err: err_usercard, res: res_usercard} = await DBUsercards.getUsercard(res_user.userid, res_user.userid, res_user.servertoken);
+        const {err: err_usercard, res: res_usercard} = await dbUsercards.getUsercard(res_user.userid, res_user.userid, res_user.servertoken);
         if (!err_usercard) {
           res.usercard = res_usercard;
         }
@@ -208,7 +234,7 @@ export default async function gameApp(tryPort) {
       const ioRoute = `client.oauth.${provider}.io`;
       io.in(socketid).emit(ioRoute, err, res); // emit to client:: userobject OR null
 
-      clog(`*** passportAuthCallback:: /${provider}.io.callback:: `, ioRoute, socketid, err, res.user.userid );
+      clog(`passportAuthCallback:: /${provider}.io.callback:: `, ioRoute, socketid, err, res && res.user.userid );
     }
     res.status(200).end();
   };
@@ -238,7 +264,7 @@ export default async function gameApp(tryPort) {
     req.session.socketid = socketid;
     req.session.fingerprinthash = fingerprinthash;
     req.session.uid = uid;
-    clog("***(1) passportInjectSession:: ", socketid, req.query, req.session,)
+    clog("passportInjectSession:: ", socketid, req.query, req.session,)
     next();
   };
 
@@ -274,9 +300,47 @@ export default async function gameApp(tryPort) {
 
 
   // ===============================================
-  // EXPRESS: route socket.io (reserved for handshake)
+  // SOCKETIO: REST-API: route socket.io (reserved for handshake)
   // ===============================================
-  app.get('/socket.io', (req, res, next) => { res.status(200).end(); });
+  app.get('/socket.io', (req, res, next) => { res.status(404).end(); });
+  // client will be exposed under https://myhost.com/socket.io/socket.io.js
+  // 1.step polling transport: GET https://myhost.com/socket.io/?EIO=3&transport=polling&t=ML4jUwU&b64=1
+
+
+  // ===============================================
+  // TEST: REST-API:
+  // ===============================================
+  app.get('/time.io', (req, res, next) => {
+    clog("CALL ", req.route.path);
+    res.status(200).type('json').send(JSON.stringify({time: new Date(),}, null, 4));
+  });
+
+  app.get('/debug/db.io', async (req, res, next) => {
+    clog("CALL ", req.route.path);
+    const { database } = req || {};
+    const { dbSockets, dbUsers, dbUsercards, dbXXX, } = database || {};
+    const obj = {
+      text: "/debug/db.io",
+      unixtime: unixtime(),
+      servertimeLOC: datetime(),
+      servertimeUTC: datetimeUTC(),
+      route: req.route,
+      dbSockets: {
+        count: dbSockets && await dbSockets.count(),
+        findAll: dbSockets && await dbSockets.findAll(),
+      },
+      dbUsers: {
+        count: dbUsers && await dbUsers.count(),
+      },
+      dbUsercards: {
+        count:dbUsercards && await dbUsercards.count(),
+      },
+      dbXXX: {
+        count: dbXXX && await dbXXX.count(),
+      },
+    };
+    res.status(200).type('json').send(JSON.stringify(obj, null, 4));
+  });
 
   // ===============================================
   // route: static images:: serve images in assets-directory at asset-path ("https://node-server.path/assets/") of this node-server
@@ -306,7 +370,7 @@ export default async function gameApp(tryPort) {
   // ===============================================
   // route: catch-all:: redirect everthing else (except the things before this command like /images /gallery /api ..)
   // ===============================================
-  app.get('/*', express_CtoS_Route_CatchAll);
+  app.get('/*', express_Route_CatchAll);
 
 
   // ===============================================
@@ -322,15 +386,74 @@ export default async function gameApp(tryPort) {
 
 
   // ===============================================
-  // SCOKETIO: middleware for every new socket-connect
+  // SCOKETIO: inject something to req
   // ===============================================
-  io.use(socketioAuthConnectionHandshake);
+  io.use((socket, next) => {
+    //socket.server = 'mainServerWasHere';
+    //socket.database = database;
+    next();
+  });
+
+
+  io.use(authSocketConnection);
 
 
   // ===============================================
   // SOCKETIO: new socket connect -> routes
   // ===============================================
-  io.on('connection', socketioHandleConnectionRoutes);
+  io.on('connection', async (socket) => {
+    // ===============================================
+    // new connection established
+    // ===============================================
+    clog('app:: io.on:: new client connected:: ', socket.id);
+
+    socket.use((packet, next) => {
+      const [route, req, clientEmitCallback] = packet || {};
+      req.server = 'mainServerWasHere';
+      req.database = database;
+      next();
+    });
+
+
+    // ===============================================
+    // handle disconnect-event
+    // ===============================================
+    socket.on('disconnect', async (operation) => {
+      // db-call to update onlineStatus -> remove socket
+      const {err: removeError, res: numRemoved} = await database.dbSockets.remove(socket.id);
+      clog('socket.on:: client disconnect:: ', socket.id, operation, removeError, numRemoved);
+    }); // of socket.on(disconnect)
+
+
+    // ===============================================
+    // update database -> add socket to onlinelist
+    // ===============================================
+    const {err: updateError, res: loadedObject} = await database.dbSockets.createOrUpdate(socket.id, null /*userid*/);
+    if (updateError) clog('app:: io.on:: new client connected:: added to database:: ERROR:: ', updateError, );
+
+
+    // ===============================================
+    // middleware: check routes of api-calles:: all routes after  middleware are valid
+    // ===============================================
+    // routes with "auth/..." are valid if req contains "userid" and (a valid) "servertoken"
+    // routes with "free/..." are always valid
+    // all other routes are invalid
+    // ===============================================
+    socket.use((packet, next) => authSocket(socket, packet, next));
+
+    socket.on('auth/store/user/logout', routeAuth_userLogout);
+
+    // route:: auth/store/userstore/get -> res = {userid: "xxx", user: {}, usercard: {}, }
+    socket.on('auth/store/userstore/get', routeAuth_userstoreGet); // userstore = user + usercard
+
+    socket.on('auth/store/user/get', routeAuth_userGet);
+    socket.on('auth/store/user/update', routeAuth_userUpdateProps);
+
+    socket.on('auth/store/usercard/get', routeAuth_usercardGet);
+    socket.on('auth/store/usercard/update', routeAuth_usercardUpdateProps);
+
+    socket.on('free/test/this', routeFree_testThis);
+  }); // of "connection"
 
 
   // ===============================================
@@ -400,13 +523,16 @@ export default async function gameApp(tryPort) {
   process.on('exit', (code) => {
     console.log('Process exit event with code: ', code);
     try {
-      DBSockets.close();
-	  	DBUsers.close();
-			DBUsercards.close();
-      dbSockets = null;
-      dbUsers = null;
-      dbUsercards = null;
-      clientsocketGameServer1.destroy();
+      database && database.dbSockets && database.dbSockets.close();
+	  	database && database.dbUsers && database.dbUsers.close();
+			database && database.dbUsercards && database.dbUsercards.close();
+
+      database.dbSockets = null;
+      database.dbUsers = null;
+      database.dbUsercards = null;
+      database = null;
+
+      clientsocketGameServer1 && clientsocketGameServer1.destroy();
 		} catch (err) {
 	    process.exit(1);
 		}

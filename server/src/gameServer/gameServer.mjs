@@ -18,9 +18,9 @@ import crypto from 'crypto';
 import {unixtime,} from "../tools/datetime.mjs";
 import {abs_path, } from "../basepath.mjs";
 
-import DBUsers from '../nedb/DBUsers.mjs';
-import DBSockets from '../nedb/DBSockets.mjs';
-import DBUsercards from '../nedb/DBUsercards.mjs';
+import DBUsers from '../database/DBUsers.mjs';
+import DBSockets from '../database/DBSockets.mjs';
+import DBUsercards from '../database/DBUsercards.mjs';
 
 import express_CtoS_AuthMiddleware from "./express_CtoS_AuthMiddleware.mjs";
 import express_CtoS_Route_CatchAll from "./express_CtoS_Route_CatchAll.mjs";
@@ -31,7 +31,7 @@ import socketio_CtoS_ClientRoutes from "./socketio_CtoS_ClientRoutes.mjs";
 import Game from "./Game.mjs";
 
 
-export default async function gameApp(tryPort) {
+export default async function gameServer(tryPort) {
   // ===============================================
   // DATABASE: load
   // ===============================================
