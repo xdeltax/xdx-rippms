@@ -1,16 +1,8 @@
-import {decorate, observable, action, runInAction, toJS, } from 'mobx';
-import ProtoStore from "./protoStore";
-import deepCopy from 'tools/deepCopyObject';
-import deepMerge from 'tools/deepMergeObject';
+import {decorate, observable, runInAction, /*toJS,*/} from 'mobx';
+import MobxPrototype from "./MobxPrototype";
 
-class Store extends ProtoStore {
-  #__privateObervablesInit;
-  #__privateHelpersInit;
-  constructor() { super(); /*store init-state of all vars*/ this.#__privateObervablesInit = deepCopy(this._obervables); this.#__privateHelpersInit = deepCopy(this._helpers); };
-  reset     = action(() 	 => { /*recover init-state*/ this.obervables = deepCopy(this.#__privateObervablesInit); this.helpers = deepCopy(this.#__privateHelpersInit); this.constants = deepCopy(this.#__privateHelpersInit); });
-  clear 		= action(() 	 => this.clear_all() );
-  clear_all = action(() 	 => Object.keys(this.obervables).forEach( (prop) => this.obervables[prop] = deepCopy(this.#__privateObervablesInit[prop]) ) );
-  clear_obj = action((obj) => this[obj] = deepCopy(this.#__privateObervablesInit[obj]) );
+class MobxAppState extends MobxPrototype {
+  constructor(store) { super(store); /*store init-state of all vars::*/ this.saveInitialState(this._obervables, this._helpers); };
 
   // init of all observables
   _obervables = {
@@ -53,6 +45,20 @@ class Store extends ProtoStore {
           isOnline: false, // navigator.onLine;
           wentOffline: 0,
           wentOnline: 0,
+        },
+        socket: {
+          isConnected: false,
+          callstats: { // updated at every socket-call-response
+            timeclientout: 0, // unixtime from client right before sending request to server
+            timeserverin: 0,  // unixtime from server right after incoming request
+            timeserverout: 0, // unixtime from server right before sending result to client
+            timeclientin: 0,  // unixtime from client right after incoming result
+            client2client: 0, // transport-time from client request emit until back to client-event
+            client2server: 0, // transport-time from client request emit to server-event
+            server2server: 0, // processing time for database-query on server
+            server2client: 0, // transport-time from server result emit to client-event
+          },
+          pongMS: 0, // updated at every socket ping-response
         },
         route: {
           pathname: "", // AppRouter:: componentDidUpdate
@@ -135,9 +141,9 @@ class Store extends ProtoStore {
 	set state(o) { runInAction(() => { this.obervables.state = o; }) }
 };
 
-decorate(Store, {
+decorate(MobxAppState, {
   _obervables: observable,
   _helpers: observable,
 });
 
-export default Store;
+export default MobxAppState;

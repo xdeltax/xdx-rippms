@@ -12,7 +12,9 @@ import {joi_userid, joi_servertoken, } from '../../database/joiValidators.mjs';
 // ===============================================
 export default async function authSocket(socket, packet, next) {
 	// injected in socket::
-	// 		socket.server = ""
+	// 		socket.clienttimeout
+	// 		socket.timeserverin
+	// 		socket.servername = ""
 	// 		socket.database = { dbSockets, dbUsers, dbUsercards, ...}
 	// packet is array of [route(String), req(Object), callback(function)]
 	const [route, req, clientEmitCallback] = packet || {};
@@ -54,8 +56,10 @@ export default async function authSocket(socket, packet, next) {
 			const {err: updateError, res: loadedObject} = await dbSockets.createOrUpdate(socket.id, /*userid*/ valid_userid );
 			if (updateError) clog('app:: io.on:: new client validated:: updated userid to database:: ERROR:: ', updateError, loadedObject.userid);
 
-				req.authMiddleware_routeType = "auth";
-				req.authMiddleware_userid = valid_userid;
+			req.authSocket = {
+				routeType: "auth",
+				userid: valid_userid,
+			}
 
 			return next();
 		};
@@ -68,8 +72,10 @@ export default async function authSocket(socket, packet, next) {
 
 			if (!req) throw isERROR(7, "app.js: socket.use", "validation", "no id or token found");
 
-				req.authMiddleware_routeType = "free";
-				req.authMiddleware_userid = null;
+			req.authSocket = {
+				routeType: "free",
+				userid: null,
+			}
 
 			return next();
 		};
@@ -82,8 +88,10 @@ export default async function authSocket(socket, packet, next) {
 		const {err, res} = isERROR(99, "app.js: socket.use", "validation", error);
 		clog("app:: socket.use:: ERROR:: ", error, err, socket.id);
 
-			req.authMiddleware_routeType = null;
-			req.authMiddleware_userid = null;
+		req.authSocket = {
+			routeType: null,
+			userid: null,
+		}
 
 		// callback:: send the error to client-emit-function
 		clientEmitCallback && clientEmitCallback(err, res); // callback to clients emit-function

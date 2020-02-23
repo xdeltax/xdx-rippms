@@ -2,17 +2,31 @@ import {decorate, action, runInAction, observable, toJS, } from 'mobx';
 import deepCopy from 'tools/deepCopyObject';
 import deepMerge from 'tools/deepMergeObject';
 
-
 class Store {
-	_obervables = { }
-	_helpers = { }
-	_constants = { }
+	#__privateObervablesInit;
+  #__privateHelpersInit;
 
-	constructor() {
+	_obervables = { };
+	_helpers = { };
+	_constants = { };
+
+	store = null;
+
+	constructor(_store) {
+		this.store = _store || null;
 	}
+
+
+	saveInitialState = (_obervables, _helpers) => {
+		if (_obervables) this.#__privateObervablesInit = deepCopy(_obervables);
+    if (_helpers) this.#__privateHelpersInit = deepCopy(_helpers);
+	}
+
 
 	deepCopyArrayOrObject = (a) => JSON.parse(JSON.stringify(a));
 	shallowCopyArray = (a) => Array.from(a);
+	deepCopy = (a) => deepCopy(a);
+	deepMerge = (a) => deepMerge(a);
 
 	get constants() { return this._constants; }
 	set constants(v) { runInAction(() => { this._constants = v; }) }
@@ -22,6 +36,12 @@ class Store {
 
 	get helpers() { return this._helpers; }
   set helpers(v) { runInAction(() => { this._helpers = v; }) }
+
+
+	reset     = action(() 	 => { /*recover init-state*/ this.obervables = deepCopy(this.#__privateObervablesInit); this.helpers = deepCopy(this.#__privateHelpersInit); this.constants = deepCopy(this.#__privateHelpersInit); });
+  clear 		= action(() 	 => this.clear_all() );
+  clear_all = action(() 	 => Object.keys(this.obervables).forEach( (prop) => this.obervables[prop] = deepCopy(this.#__privateObervablesInit[prop]) ) );
+  clear_obj = action((obj) => this[obj] = deepCopy(this.#__privateObervablesInit[obj]) );
 
   get_all() { return toJS(this.obervables) };
 	get_obj(obj) { return this.obervables.hasOwnProperty(obj) ? toJS(this.obervables[obj]) : null };

@@ -1,41 +1,37 @@
 import {decorate, observable, action, runInAction, /*toJS,*/ } from 'mobx';
-import ProtoStore from "./protoStore";
+import MobxPrototype from "./MobxPrototype";
 import deepCopy from 'tools/deepCopyObject';
 
-import UserStore from 'store/user';
-import UsercardStore from 'store/usercard';
+// appstate
+import MobxAppState from './MobxAppState.js';
 
-import PhaserStore from 'store/phaser';
-import PixiStore from 'store/pixi';
+// user-data
+import MobxUser from './MobxUser.js';
+import MobxUsercard from './MobxUsercard.js';
 
-import SystemStore from 'store/system';
-import SocketIOStore from 'store/socketio';
+// game-data
+import MobxGame from './MobxGame';
 
+//import SocketIOStore from 'store/socketio';
+
+// debug
 import sleep from "tools/debug/sleeper";
 
-class Store extends ProtoStore {
-	#__privateObervablesInit;
-  #__privateHelpersInit;
+class Store extends MobxPrototype {
 	#__initDone = false;
-
+	constructor(store) { super(store); this.#__initDone = false; /*store init-state of all vars::*/ this.saveInitialState(this._obervables, this._helpers); };
 	// this.init(); -> store.init() needs to be called in constructor of App.js
-	constructor() { super(); this.#__initDone = false; /*store init-state of all vars*/ this.#__privateObervablesInit = deepCopy(this._obervables); this.#__privateHelpersInit = deepCopy(this._helpers); };
-	reset     = action(() 	=> { /*recover init-state*/ this.obervables = deepCopy(this.#__privateObervablesInit); this.helpers = deepCopy(this.#__privateHelpersInit); this.constants = deepCopy(this.#__privateHelpersInit); });
-	clear 		= action(() 	=> this.clear_all() );
-	clear_all = action(() 	=> Object.keys(this.obervables).forEach( (prop) => this.obervables[prop] = deepCopy(this.#__privateObervablesInit[prop]) ) );
-	clear_obj = action((obj)=> this[obj] = deepCopy(this.#__privateObervablesInit[obj]) );
 
 	// init of all observables
 	_obervables = {
-		system: null,
+		appstate: null,
 
 		user: null,
 		usercard: null,
 
-		phaser: null,
-		pixi: null,
+		game: null,
 
-		socketio: null,
+		//socketio: null,
 	};
 
 	_helpers = {
@@ -53,16 +49,17 @@ class Store extends ProtoStore {
 		if (this.#__initDone) return;
 		this.reset();
 
-		global.log("store:: init:: create sub-stores. ");
-		this._obervables.system = new SystemStore();
+		// stores all states of the app (width, height, position, tab, colors, ...)
+		this._obervables.appstate = new MobxAppState(this);
 
-		this._obervables.user = new UserStore();
-		this._obervables.usercard = new UsercardStore();
+		// stores data of active user
+		this._obervables.user = new MobxUser(this);
+		this._obervables.usercard = new MobxUsercard(this);
 
-		this._obervables.phaser = new PhaserStore();
-		this._obervables.pixi = new PixiStore();
-		
-		this.socketio = new SocketIOStore();
+		// stores data of running game
+		this._obervables.game = new MobxGame();
+
+		//this.socketio = new SocketIOStore();
 
 		this.#__initDone = true;
 		resolve();
@@ -120,8 +117,8 @@ class Store extends ProtoStore {
 	};
 
 	// getters and setters
-	get system() { return this._obervables.system }
-	set system(o) { runInAction(() => { this._obervables.system = o; }) }
+	get appstate() { return this._obervables.appstate }
+	set appstate(o) { runInAction(() => { this._obervables.appstate = o; }) }
 
 	get user() { return this._obervables.user }
 	set user(o) { runInAction(() => { this._obervables.user = o; }) }
@@ -129,14 +126,11 @@ class Store extends ProtoStore {
 	get usercard() { return this._obervables.usercard }
 	set usercard(o) { runInAction(() => { this._obervables.usercard = o; }) }
 
-	get phaser() { return this._obervables.phaser }
-	set phaser(o) { runInAction(() => { this._obervables.phaser = o; }) }
+	get game() { return this._obervables.game }
+	set game(o) { runInAction(() => { this._obervables.game = o; }) }
 
-	get pixi() { return this._obervables.pixi }
-	set pixi(o) { runInAction(() => { this._obervables.pixi = o; }) }
-
-	get socketio() { return this._obervables.socketio }
-	set socketio(o) { runInAction(() => { this._obervables.socketio = o; }) }
+	//get socketio() { return this._obervables.socketio }
+	//set socketio(o) { runInAction(() => { this._obervables.socketio = o; }) }
 
 
   get isAuthenticated() {
@@ -150,4 +144,6 @@ decorate(Store, {
   _helpers: observable,
 });
 
-export default new Store();
+const store = new Store();
+
+export default store;

@@ -1,16 +1,9 @@
-import {decorate, observable, runInAction, action, toJS, } from 'mobx';
-import ProtoStore from "./protoStore";
-import deepCopy from 'tools/deepCopyObject';
+import {decorate, observable, runInAction, /*toJS,*/} from 'mobx';
+import MobxPrototype from "./MobxPrototype";
 
-class Store extends ProtoStore {
-  #__privateObervablesInit;
-  #__privateHelpersInit;
-  constructor() { super(); /*store init-state of all vars*/ this.#__privateObervablesInit = deepCopy(this._obervables); this.#__privateHelpersInit = deepCopy(this._helpers); };
-  reset     = action(() 	 => { /*recover init-state*/ this.obervables = deepCopy(this.#__privateObervablesInit); this.helpers = deepCopy(this.#__privateHelpersInit); this.constants = deepCopy(this.#__privateHelpersInit); });
-  clear 		= action(() 	 => this.clear_all() );
-  clear_all = action(() 	 => Object.keys(this.obervables).forEach( (prop) => this.obervables[prop] = deepCopy(this.#__privateObervablesInit[prop]) ) );
-  clear_obj = action((obj) => this[obj] = deepCopy(this.#__privateObervablesInit[obj]) );
-  
+class MobxGame extends MobxPrototype {
+  constructor(store) { super(store); /*store init-state of all vars::*/ this.saveInitialState(this._obervables, this._helpers); };
+
   _constants = {
   }
 
@@ -60,9 +53,9 @@ class Store extends ProtoStore {
       set counter(v) { runInAction(() => { this.test.counter = v; }) }
 };
 
-decorate(Store, {
+decorate(MobxGame, {
 	_obervables: observable,
   _helpers: observable,
 });
 
-export default Store;
+export default MobxGame;

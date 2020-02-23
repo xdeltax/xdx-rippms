@@ -27,7 +27,7 @@ import gameServer from "./gameServer/gameServer.mjs";
 import mainServer from "./mainServer/mainServer.mjs";
 
 //import * as geohash from "./tools/geohash.mjs";
-import GeoHash from "./tools/GeoHash.mjs";
+import {calcExponent, point2hash, hash2rect} from "./tools/geoHashIntegerV2.mjs";
 
 // ===============================================
 // fallback if .env is missing :-)
@@ -124,22 +124,60 @@ const awaitServers = async () => {
 }
 
 
+/*
 awaitServers()
 .then(result => { clog("@@@ index:: SERVERS RUNNING:: ", result); })
 .catch(error => { clog("@@@ index:: ERROR:: ", error); process.exit(1); });
+*/
 
+const mapXwidth = 1600000;
+const mapYwidth = 200000;
+
+const hashDivider = 4; // 2 to 8
+const hashExponent = calcExponent(hashDivider, mapXwidth, mapYwidth); // dimXY needs to be fit power(divider, x) with x is an integer
+
+const x = Math.floor(mapXwidth / 2);
+const y = Math.floor(mapYwidth / 2);
+
+let hash = point2hash(x, y, hashDivider, hashExponent); // '2AAAAAAAAADAAD' => divider 2; exponent = length(hash) = 13 -> maxDimXY = power(divider, exponent) = 2^13 = 8192 => ALLOWED MAP = 8192 x 8192
+let rect = hash2rect(hash);
+
+clog("mapXwidth::    ", mapXwidth);
+clog("mapYwidth::    ", mapYwidth);
+clog("hashDivider::  ", hashDivider, "2..8");
+clog("hashExponent:: ", hashExponent, "(length of hash)");
+clog("maxValidDimXY::", Math.pow(hashDivider, hashExponent), `(${hashDivider}^${hashExponent})`);
+clog("x/y ::", x, y);
+clog("hash::", hash.padEnd(hashExponent));
+clog("rect::", rect);
+
+rect = hash2rect(hash, 1); //clog("hash::", hash.slice(0,-1).padEnd(hashExponent+1), rect);
+clog("rect::", rect);
+rect = hash2rect(hash, 2); //clog("hash::", hash.slice(0,-2).padEnd(hashExponent+1), rect);
+clog("rect::", rect);
+rect = hash2rect(hash, 3); //clog("hash::", hash.slice(0,-3).padEnd(hashExponent+1), rect);
+clog("rect::", rect);
 
 /*
-clog("@@@ geoHash @@@")
-const mapwidth = 30; // needs to be an integer factor of divider
-const mapheight= 10; // needs to be an integer factor of divider
-const divider = undefined; // hash-base = sqr(divider); 3: 3 x 3 = 9 tiles; divider = undefined -> autodetect
-const digits = 1; // 0: integer only; 3: target resolution x.xxx; digits = undefined -> 0
-const geohash = new GeoHash(mapwidth, mapheight, digits, divider);
-const deviderUsed = geohash.divider;
-const hash = geohash.getHashFromPoint(7,8)
-const rect = geohash.getRectFromHash(hash);
-clog("HASH:: ", deviderUsed, hash, rect, Math.round(rect.x), Math.round(rect.y));
+let hashArray = [];
+for (let y = 0; y < 1; y++) {
+  for (let x = 0; x < 1; x++) {
+    const hash = point2hash(x, y, hashDivider, hashExponent); // '2AAAAAAAAADAAD' => divider 2; exponent = length(hash) = 13 -> maxDimXY = power(divider, exponent) = 2^13 = 8192 => ALLOWED MAP = 8192 x 8192
+    hashArray.push({x: x, y: y, hash: hash});
+    clog("point2hash:: ", x, y, hash);
+  }
+}
+
+for (let i = 0; i < hashArray.length; i++) {
+  const hashObj = hashArray[i];
+  //const hash = hashObj.hash;
+  const hash = hashObj.hash.slice(0, -2); // strip last char
+  const rect = hash2rect(hash);
+  if (!rect) clog("ERROR:: ", hashObj)
+  clog("hash2rect:: ", hashObj, rect);
+  //if (hashObj.x !== rect.top || hashObj.y !== rect.left) clog("++++++");
+  //clog("HASH:: ", deviderUsed, hash, rect, Math.round(rect.x), Math.round(rect.y));
+}
 */
 
 

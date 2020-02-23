@@ -136,6 +136,9 @@ database
   npm i -s nedb
   npm i -s mongodb
 
+data-handling
+  npm i -s structurae
+
 portals
 	npm i -s react-new-window
 	//npm i -s react-portal

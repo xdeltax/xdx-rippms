@@ -3,14 +3,14 @@ import store from 'store'; // mobx-store
 const updateStatus = (event) => {
   global.log("watcher/online::", event.type);
   if (event.type === "offline"){
-    store.set("system.app.watchers.connection.isOnline", false);
-    store.set("system.app.watchers.connection.wentOffline", global.now());
+    store.appstate.set("app.watchers.connection.isOnline", false);
+    store.appstate.set("app.watchers.connection.wentOffline", global.now());
 
     //this.props.onWentOffline && this.props.onWentOffline(store.navigator.wasSince);
   } else
   if (event.type === "online"){
-    store.set("system.app.watchers.connection.isOnline", true);
-    store.set("system.app.watchers.connection.wentOnline", global.now());
+    store.appstate.set("app.watchers.connection.isOnline", true);
+    store.appstate.set("app.watchers.connection.wentOnline", global.now());
 
     //this.props.onWentOnline && this.props.onWentOnline(store.navigator.wasSince);
   }

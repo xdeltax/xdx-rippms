@@ -35,12 +35,12 @@ const styles = theme => ({
 
     left:0,
     width: '100%',
-    //height: store.system.app.header.height,
-    minWidth: store.system.app.size.minWidth || null,
-    maxWidth: store.system.app.size.maxWidth || null,
+    //height: store.appstate.app.header.height,
+    minWidth: store.appstate.app.size.minWidth || null,
+    maxWidth: store.appstate.app.size.maxWidth || null,
 
-    color: store.system.colors.navigation.text,
-    background: store.system.colors.header.background,
+    color: store.appstate.colors.navigation.text,
+    background: store.appstate.colors.header.background,
 
     //alignItems: 'center',
     //justifyContent: 'space-between',
@@ -74,8 +74,8 @@ export default withStyles(styles)( observer( class extends React.Component {
       {!noRespawnButton && hide && // HIDE-BUTTON:: display a button to click -> unhide top-toolbar (and navigation if auth-path)
         <div style={{ position: "fixed", right: 0, top: 0, }}>
           <IconButton color="inherit" style={{ flexGrow: 0, }}  onClick={(event) => {
-            store.set("system.app.header.visible", true);
-            store.set("system.app.bottomNavigation.visible", true);
+            store.appstate.set("app.header.visible", true);
+            store.appstate.set("app.bottomNavigation.visible", true);
           }}>
             <KeyboardArrowDownICON />
           </IconButton>
@@ -98,7 +98,7 @@ export default withStyles(styles)( observer( class extends React.Component {
             </Typography>
 
             <IconButtonHelptext
-              color="inherit" textColorWindow={store.system.colors.menu.text} backgroundColorWindow={store.system.colors.menu.background}
+              color="inherit" textColorWindow={store.appstate.colors.menu.text} backgroundColorWindow={store.appstate.colors.menu.background}
               icon={(1===0) ? <WifiOnICON /> : <WifiOffICON />}
               noTypography
             >
@@ -108,7 +108,7 @@ export default withStyles(styles)( observer( class extends React.Component {
             </IconButtonHelptext>
 
             <IconButtonWithMenu // button to navigate to user-profile orientate stuff and logout
-              color="inherit" textColorWindow={store.system.colors.menu.text} backgroundColorWindow={store.system.colors.menu.background}
+              color="inherit" textColorWindow={store.appstate.colors.menu.text} backgroundColorWindow={store.appstate.colors.menu.background}
               icon={<AccountCircleICON />}
               headerLabel="Account Management"
               menuItems={["Account", "Logout", ]}
@@ -118,7 +118,7 @@ export default withStyles(styles)( observer( class extends React.Component {
             }} />
 
             <IconButtonHelptext // button to show help-text
-              color="inherit" textColorWindow={store.system.colors.menu.text} backgroundColorWindow={store.system.colors.menu.background}
+              color="inherit" textColorWindow={store.appstate.colors.menu.text} backgroundColorWindow={store.appstate.colors.menu.background}
               noTypography
             >
               <Typography className={classes.typography}>
@@ -127,8 +127,8 @@ export default withStyles(styles)( observer( class extends React.Component {
             </IconButtonHelptext>
 
             <IconButton color="inherit" onClick={(event) => { // buttom to hide this toolbar and bottomNavigation
-              store.set("system.app.header.visible", false);
-              store.set("system.app.bottomNavigation.visible", false);
+              store.appstate.set("app.header.visible", false);
+              store.appstate.set("app.bottomNavigation.visible", false);
             }}>
               <KeyboardArrowUpICON />
             </IconButton>

@@ -76,7 +76,7 @@ _getINTERNAL = async (valid_userid, isOWN) => {
   }
 
 
-	getUsercard => (unsafe_targetuserid, unsafe_userid, unsafe_servertoken) => {
+	getUsercard = async (unsafe_targetuserid, unsafe_userid, unsafe_servertoken) => {
     try {
 			const valid_targetuserid= joiValidateFallback(unsafe_targetuserid, null, joi_userid);
 			const valid_userid      = joiValidateFallback(unsafe_userid      , null, joi_userid);

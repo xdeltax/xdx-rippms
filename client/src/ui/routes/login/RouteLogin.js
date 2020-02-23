@@ -10,6 +10,7 @@ import OAuth from 'ui/components/auth/OAuth'
 //import tryFallback from "tools/tryFallback";
 
 import store from 'store';
+import socketio from 'socket'; // socket
 
 // assets
 import AppLogo from 'assets/applogo.svg';
@@ -70,8 +71,8 @@ export default ( withStyles(styles)( observer( class extends React.Component {
         overflow: "auto",
         height: "100%",
         width: "100%",
-        color: store.system.colors.login.text,
-        background: store.system.colors.login.background,
+        color: store.appstate.colors.login.text,
+        background: store.appstate.colors.login.background,
       }}>
         <div style={{ position: "relative", top: 0, height: "30vh", minHeight: "150px", backgroundColor:"transparent" }}>
           <Typography className={classes.fontIndieItalic} align="center" noWrap style={{fontSize: 72, }}>xdx</Typography>
@@ -79,10 +80,10 @@ export default ( withStyles(styles)( observer( class extends React.Component {
         </div>
 
         <div>
-					<OAuth buttonText="bind with facebook" uid="" provider="facebook" providerLogo={FacebookLogo} server={global.serverURL} socket={store.socketio.socket} fingerprint={global.fingerprint} onAuthSuccess={this.onAuthSuccess} onAuthFailed={this.onAuthFailed} />
-					<OAuth buttonText="bind with google" uid="" provider="google" providerLogo={GoogleLogo} server={global.serverURL} socket={store.socketio.socket} fingerprint={global.fingerprint} onAuthSuccess={this.onAuthSuccess} onAuthFailed={this.onAuthFailed} />
-					<OAuth buttonText="fake1 with fb" uid="fake1" provider="facebook" providerLogo={FacebookLogo} server={global.serverURL} socket={store.socketio.socket} fingerprint={global.fingerprint} onAuthSuccess={this.onAuthSuccess} onAuthFailed={this.onAuthFailed} />
-          <OAuth buttonText="fake1999 with fb" uid="fake1999" provider="facebook" providerLogo={FacebookLogo} server={global.serverURL} socket={store.socketio.socket} fingerprint={global.fingerprint} onAuthSuccess={this.onAuthSuccess} onAuthFailed={this.onAuthFailed} />
+					<OAuth buttonText="bind with facebook" uid="" provider="facebook" providerLogo={FacebookLogo} server={global.serverURL} socket={socketio.socket} fingerprint={global.fingerprint} onAuthSuccess={this.onAuthSuccess} onAuthFailed={this.onAuthFailed} />
+					<OAuth buttonText="bind with google" uid="" provider="google" providerLogo={GoogleLogo} server={global.serverURL} socket={socketio.socket} fingerprint={global.fingerprint} onAuthSuccess={this.onAuthSuccess} onAuthFailed={this.onAuthFailed} />
+					<OAuth buttonText="fake1 with fb" uid="fake1" provider="facebook" providerLogo={FacebookLogo} server={global.serverURL} socket={socketio.socket} fingerprint={global.fingerprint} onAuthSuccess={this.onAuthSuccess} onAuthFailed={this.onAuthFailed} />
+          <OAuth buttonText="fake1999 with fb" uid="fake1999" provider="facebook" providerLogo={FacebookLogo} server={global.serverURL} socket={socketio.socket} fingerprint={global.fingerprint} onAuthSuccess={this.onAuthSuccess} onAuthFailed={this.onAuthFailed} />
 				</div>
 
 

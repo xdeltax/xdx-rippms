@@ -47,7 +47,7 @@ import {routeAuth_userLogout,
         routeAuth_usercardGet,
         routeAuth_usercardUpdateProps,
         routeFree_testThis,
-      } from "./socket/routes.auth.free.mjs";
+      } from "./socket/routes.socket.mjs";
 
 
 export default async function mainServer(tryPort) {
@@ -315,6 +315,14 @@ export default async function mainServer(tryPort) {
     res.status(200).type('json').send(JSON.stringify({time: new Date(),}, null, 4));
   });
 
+  app.get('/test', async (req, res, next) => {
+    clog("CALL ", req.route.path);
+    const { database } = req || {};
+    const { dbSockets, dbUsers, dbUsercards, dbXXX, } = database || {};
+    clog("/test:: ", await dbSockets.count(), dbSockets.client)
+    res.status(200).type('json').send(JSON.stringify({time: new Date(),}, null, 4));
+  });
+
   app.get('/debug/db.io', async (req, res, next) => {
     clog("CALL ", req.route.path);
     const { database } = req || {};
@@ -370,7 +378,7 @@ export default async function mainServer(tryPort) {
   // ===============================================
   // route: catch-all:: redirect everthing else (except the things before this command like /images /gallery /api ..)
   // ===============================================
-  app.get('/*', express_Route_CatchAll);
+  //app.get('/*', express_Route_CatchAll);
 
 
   // ===============================================
@@ -384,17 +392,28 @@ export default async function mainServer(tryPort) {
     }
   });
 
-
+  /*
   // ===============================================
-  // SCOKETIO: inject something to req
+  // SOCKETIO: inject something to ?
   // ===============================================
   io.use((socket, next) => {
+    // socket.handshake.query = {handshakeversion, appversion, EIO, transport, t }
+    let {
+      handshakeversion,
+      appversion,
+      transport,
+    } = socket.handshake.query; // const token = socket.handshake.query.token;
+
+    clog("+++++++++++++++++++++++ socketio:: transport:: ", transport, socket)
     //socket.server = 'mainServerWasHere';
     //socket.database = database;
     next();
   });
+  */
 
-
+  // ===============================================
+  // SOCKETIO: check if client is a valid connection
+  // ===============================================
   io.use(authSocketConnection);
 
 
@@ -407,10 +426,14 @@ export default async function mainServer(tryPort) {
     // ===============================================
     clog('app:: io.on:: new client connected:: ', socket.id);
 
+    // ===============================================
+    // SOCKETIO: inject something to req
+    // ===============================================
     socket.use((packet, next) => {
       const [route, req, clientEmitCallback] = packet || {};
-      req.server = 'mainServerWasHere';
+      req.servername = 'mainServerWasHere';
       req.database = database;
+      req.timeserverin = unixtime(); // inject time to req
       next();
     });
 

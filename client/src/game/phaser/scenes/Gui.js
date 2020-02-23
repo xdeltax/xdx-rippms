@@ -19,7 +19,7 @@ const SceneClass = class Gui extends Phaser.Scene { // https://github.com/photon
 
   // scene step 1 (once)
   init = (data) => { // data passed from scene.add(key, sceneConfig, autoStart, data);
-	  this.cameras.main 
+	  this.cameras.main
 	    .setName('maincam')
 	    .setRotation(0)
 	    .setOrigin(0.5) // origin for camera-rotation
@@ -68,7 +68,7 @@ const SceneClass = class Gui extends Phaser.Scene { // https://github.com/photon
       //.setInteractive()
       //.on('pointerdown', (pointer, localX, localY, event) => { global.log("pointerdown", pointer, localX, localY, event); })
       //.on('pointerup', (pointer, localX, localY, event) => { global.log("pointerup", pointer, localX, localY, event); })
-      //.on('pointermove', (pointer, localX, localY, event) => { 
+      //.on('pointermove', (pointer, localX, localY, event) => {
           // Position in screen : pointer.x , pointer.y
           // Position of previous moving : pointer.prevPosition.x , pointer.prevPosition.y
           // Position in camera : pointer.worldX , pointer.worldY
@@ -78,7 +78,7 @@ const SceneClass = class Gui extends Phaser.Scene { // https://github.com/photon
           // Distance: pointer.distance
           // Velocity: pointer.velocity.x, pointer.velocity.y
           // Geo worldposition for camera: var out = camera.getWorldPoint(pointer.x, pointer.y);
-      //    global.log("pointermove", pointer, localX, localY, event); 
+      //    global.log("pointermove", pointer, localX, localY, event);
       // })
       //.setData("testkey", { test: "testValue"} ) // https://photonstorm.github.io/phaser3-docs/Phaser.Data.DataManager.html:: store.data in gameobject:: img.setData("testkey, {test: "1",}); let obj = img.getData("testkey") or img.data.count / img.data.list.testkey.test
       //.setData("testkey2", { test2: "testValue2"} )
@@ -100,7 +100,7 @@ const SceneClass = class Gui extends Phaser.Scene { // https://github.com/photon
 
   ///////////////////////////////////////////////////////////////////////////
 
-  timedUpdate = (...params) => { 
+  timedUpdate = (...params) => {
     if (!this.updateRunning) return;
     if (this.load.isLoading()) return;
 
@@ -122,7 +122,7 @@ const SceneClass = class Gui extends Phaser.Scene { // https://github.com/photon
 
       if (iso1)
       this.xdx.textDebug2.setText([
-      	`tilemap ${iso1.map.width} x ${iso1.map.height} = ${iso1.map.height*iso1.map.width}; w / h = ${iso1.width} x ${iso1.height}`,
+      	`tilemap ${iso1.tilemapConfig.width} x ${iso1.tilemapConfig.height} = ${iso1.tilemapConfig.height*iso1.tilemapConfig.width}; w / h = ${iso1.width} x ${iso1.height}`,
       	`childs: ${iso1.children.length}; cullList: ${iso1.cullList.length}; renderList: ${iso1.renderList.length}; animList: ${iso1.animList.length}`,
       	`cull time: ${iso1.timeInMS_cullViewport.toFixed(0)} ms; sort time: ${iso1.sortChildrenFlag ? iso1.timeInMS_sortList.toFixed(0) :"no sort"}; load time: ${iso1.timeInMS_setMap.toFixed(0)} ms`,
       ]);

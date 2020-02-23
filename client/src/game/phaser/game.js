@@ -16,8 +16,8 @@ let phaserConfig = {
   parent: "phaserGameInjectID", // The DOM element-id into which this game canvas will be injected (in PhaserGameContainer)
 
   //url: ""
-  title: store.phaser.config.gameTitle || "",
-  version: store.phaser.config.gameVersion || "0.0.1",
+  title: store.game.config.gameTitle || "",
+  version: store.game.config.gameVersion || "0.0.1",
 
   autoFocus: true, // Automatically call window.focus() when the game boots. Usually necessary to capture input events if the game is in a separate frame.
   disableContextMenu: true, // Disable the browser's default 'contextmenu' event (usually triggered by a right-button mouse click).
@@ -31,13 +31,13 @@ let phaserConfig = {
   //canvas: customCanvas.canvas,
   //context: customCanvas.context,
 
-  antialias: store.phaser.config.antialias || false, // default: true; Draw all image textures ani-aliased. The default is for smooth textures, but disable if your game features pixel art
+  antialias: store.game.config.antialias || false, // default: true; Draw all image textures ani-aliased. The default is for smooth textures, but disable if your game features pixel art
   multiTexture: true,
 
   //pixelArt: true,
 
-  backgroundColor: store.phaser.config.colors.background || '#000000',
-  transparent: store.phaser.config.colors.transparent || false, // Use a transparent canvas background or not.
+  backgroundColor: store.game.config.colors.background || '#000000',
+  transparent: store.game.config.colors.transparent || false, // Use a transparent canvas background or not.
 
   scale: {
     mode: Phaser.Scale.RESIZE, //Phaser.Scale.FIT, // ENVELOP, // FIT, //HEIGHT_CONTROLS_WIDTH ,// https://photonstorm.github.io/phaser3-docs/Phaser.Scale.ScaleModes.html
@@ -50,7 +50,7 @@ let phaserConfig = {
     default: "arcade", // default: false  // no physics system enabled
     arcade: {
       gravity: { y: 200 },
-      //debug: store.phaser.debug || false,
+      //debug: store.game.debug || false,
     },
   },
   */

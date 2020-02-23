@@ -1,20 +1,12 @@
-import {decorate, observable, action, runInAction, toJS,} from 'mobx';
-import ProtoStore from "./protoStore";
-import deepCopy from 'tools/deepCopyObject';
-import deepMerge from 'tools/deepMergeObject';
-
-import { saveToPersistentDatabase, deletePersistentDatabase, } from "persistentdb";
+import {decorate, observable, runInAction, /*toJS,*/} from 'mobx';
+import MobxPrototype from "./MobxPrototype";
+import { saveToPersistentDatabase, deletePersistentDatabase, } from "database/persistentDB.js";
 
 import store from "store";
+import socketio from 'socket'; // socket
 
-class Store extends ProtoStore {
-  #__privateObervablesInit;
-  #__privateHelpersInit;
-  constructor() { super(); /*store init-state of all vars*/ this.#__privateObervablesInit = deepCopy(this._obervables); this.#__privateHelpersInit = deepCopy(this._helpers); };
-  reset     = action(() 	 => { /*recover init-state*/ this.obervables = deepCopy(this.#__privateObervablesInit); this.helpers = deepCopy(this.#__privateHelpersInit); this.constants = deepCopy(this.#__privateHelpersInit); });
-  clear 		= action(() 	 => this.clear_all() );
-  clear_all = action(() 	 => Object.keys(this.obervables).forEach( (prop) => this.obervables[prop] = deepCopy(this.#__privateObervablesInit[prop]) ) );
-  clear_obj = action((obj) => this[obj] = deepCopy(this.#__privateObervablesInit[obj]) );
+class MobxUser extends MobxPrototype {
+  constructor(store) { super(store); /*store init-state of all vars::*/ this.saveInitialState(this._obervables, this._helpers); };
 
   _constants = {
   }
@@ -170,8 +162,9 @@ class Store extends ProtoStore {
 				userid: this.userid,
 				servertoken: this.servertoken,
 			}
-	  	global.log("*** logoutUserFromServer:: ", req, store.socketio.socketID)
-    	res = await store.socketio.emitWithTimeout(ioRoute, req,);
+	  	global.log("*** logoutUserFromServer:: ", req, socketio.socket.id)
+    	res = await socketio.emitWithTimeout(ioRoute, req,);
+      // res = { result: true / false, callstats: {xxx}, }
 		} catch (error) {
     	err = error;
 		} finally {
@@ -193,11 +186,10 @@ class Store extends ProtoStore {
 				userid: this.userid,
 				servertoken: this.servertoken,
 			}
-	  	//global.log("*** getUserStoreFromServer:: ", req, store.socketio.socketID)
-    	res = await store.socketio.emitWithTimeout(ioRoute, req,);
+	  	//global.log("*** getUserStoreFromServer:: ", req, socketio.socketID)
+    	res = await socketio.emitWithTimeout(ioRoute, req,);
+      // res = { user: {xxx}, usercard: {xxx}, callstats: {xxx}, }
       //global.log("***!!!!!!!!!!!!!! getUserStoreFromServer:: ", res, )
-
-
 		} catch (error) {
     	err = error;
 		} finally {
@@ -219,7 +211,8 @@ class Store extends ProtoStore {
 				userid: this.userid,
 				servertoken: this.servertoken,
 			}
-    	res = await store.socketio.emitWithTimeout(ioRoute, req,);
+    	res = await socketio.emitWithTimeout(ioRoute, req,);
+      // res = { user: {xxx}, callstats: {xxx}, }
 		} catch (error) {
     	err = error;
 		} finally {
@@ -242,7 +235,8 @@ class Store extends ProtoStore {
 				servertoken: this.servertoken,
 				props: newProps,
 			};
-    	res = await store.socketio.emitWithTimeout(ioRoute, req,);
+    	res = await socketio.emitWithTimeout(ioRoute, req,);
+      // res = { user: {xxx}, callstats: {xxx}, }
 		} catch (error) {
     	err = error;
 		} finally {
@@ -265,7 +259,8 @@ class Store extends ProtoStore {
 				servertoken: this.servertoken,
 				props: newProps,
 			};
-    	res = await store.socketio.emitWithTimeout(ioRoute, req,);
+    	res = await socketio.emitWithTimeout(ioRoute, req,);
+      // res = { user: {xxx}, callstats: {xxx}, }
 		} catch (error) {
     	err = error;
 		} finally {
@@ -332,7 +327,7 @@ class Store extends ProtoStore {
 				servertoken,
 				obj,
 			}
-    	res = await store.socketio.emitWithTimeout(ioRoute, req,);
+    	res = await socketio.emitWithTimeout(ioRoute, req,);
 		} catch (error) {
 			err = error;
 		}
@@ -343,9 +338,9 @@ class Store extends ProtoStore {
   */
 };
 
-decorate(Store, {
+decorate(MobxUser, {
   _obervables: observable,
   _helpers: observable,
 });
 
-export default Store;
+export default MobxUser;

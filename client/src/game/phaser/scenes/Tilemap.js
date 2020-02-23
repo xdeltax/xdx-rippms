@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser'
 
-import IsometricTilemap from "../extends/isometrictilemap/IsometricTilemap";
+import IsometricTilemap from "../extends/isometrictilemap/IsometricTilemapPacked";
 
 // tiles:: 3079 x 3079; 1 px padding; 6 x 6; frame 512 x 512; isotile: 512 x 256, bottomPadding: 140 px;
 import Asset_ISO60_Texturepack__JSON from "../assets/Tilemap/xdx_isocam60_anim_texturepack.json";
@@ -9,7 +9,7 @@ import Asset_ISO60_Texturepack__PNG  from "../assets/Tilemap/xdx_isocam60_anim_t
 // tile:: frame 512 x 512; isotile: 512 x 256, bottomPadding: 140 px;
 import Asset_xdx_isocam60_single_block_1000  from "../assets/Tilemap/xdx_isocam60_single_block_1000.png";
 
-// object:: frame 512 x 512; 
+// object:: frame 512 x 512;
 import Asset_watchtower_lvl2_512x512  from "../assets/Tilemap/objects/watchtower_lvl2_512x512.png";
 import Asset_isometric_house_1024x868  from "../assets/Tilemap/objects/isometric_house_1024x868.png";
 
@@ -31,7 +31,7 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
   ///////////////////////////////////////////////////////////////////////////
 
   // scene step 1 (once)
-  init = (data) => { 
+  init = (data) => {
     this.initCameras();
 
     this.time.advancedTiming = false;
@@ -46,7 +46,7 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
 
   initCameras = () => {
     // full-screen camera
-    this.cameras.main 
+    this.cameras.main
       .setName('maincam')
       .setRotation(0) // do not use roration for isoMap-camera, it will break tilemap-display
       .setOrigin(0.5) // origin for camera-rotation / -zoom:: set this to 0.5 for in-place-zooming
@@ -59,7 +59,7 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       .add(5, this.cameras.main.height - 130 - 15, this.cameras.main.width -5 -5, 130)
       .setName('worldcam')
       .setZoom(0.025)
-      .setOrigin(0.5) 
+      .setOrigin(0.5)
       .setRotation(0)
       .setBackgroundColor("rgba(5, 5, 5, 0.5)")
 
@@ -103,100 +103,32 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       .setScrollFactor(0) // fix to absolute position, dont move with camera
       .setDepth(100)
 
-    
-    const map = {
-      width : 500,
-      height: 500,
-      data2D: null,
-    };
-
-    const mapConfig = {
+    const tilemapConfig = {
+      width : 25000,
+      height: 25000,
       tileWidth : 512, // 256,
       tileHeight: 256, // 128,
-      paddingBottom: 512 - 372, //19, // -1: sprite verticaly centered; 0: sprite bottom-based; >0: 
+      paddingBottom: 512 - 372, //19, // -1: sprite verticaly centered; 0: sprite bottom-based; >0:
+      assetKeys: ["Asset_ISO60_Texturepack", "Asset_isometric_house_1024x868", "Asset_watchtower_lvl2_512x512", ],
       //
-      // assetkey: "Asset_xdx_isocam60_single_block_1000" 
+      // assetkey: "Asset_xdx_isocam60_single_block_1000"
       //        -> tile 512 x 256, paddingBottom: 140, frames: 33,
       //        -> frame 0 to 30: animated boy
       //        -> frame 31: boy with arms outspread
       //        -> frame 32: empty base-tile
       //        -> 33, 34, 35: unused place in textureAtlas
       //
-      // assetkey: "Asset_xdx_isocam60_single_block_1000" 
+      // assetkey: "Asset_xdx_isocam60_single_block_1000"
       //        -> tile 512 x 256, paddingBottom: 140, frames: 1,
       //        -> frame 0: empty base-tile
     };
 
-    map.data2D = new Array(map.height);
-    for (let tileY = 0; tileY < map.height; tileY++) {
-      map.data2D[tileY] = new Array(map.width);
-      for (let tileX = 0; tileX < map.width; tileX++) {
-
-        map.data2D[tileY][tileX] = {
-          visible: true,
-          assetkey: "Asset_ISO60_Texturepack",  // texture to use for frameselection; defaults to assetkeys[0]
-          frameID: 0,                     // framenumber in texture; defaults to random
-          depth: 0,                       // rendering sort-order; defaults to 0 (no sorting === faster)
-          tint: Phaser.Math.Between(0xdddddd, 0xeeeeee),
-          z: 0,                           // z-coordinate of tile (technically its y' = y - z)
-          isAnimatable: false,            // if true: item will be addable to "animList" at setTilemapLayer(); defaults to false
-          isRunning : false,              // if true && item.aniateable -> item will be addaed to "animList"; defaults to false
-        };
-
-        if (tileX === Math.floor(map.width / 2) && tileY === Math.floor(map.height / 2)) {
-          const objectLayerHouse = {
-            visible: true,
-            assetkey: "Asset_isometric_house_1024x868",
-            frameID: 0,
-            alpha: 0.75,
-            originX: 0.5,
-            originY: 1.0, // origin of object:: origin=1 -> y=0 is bottom of tile; origin=0 -> y=0 is top;
-            x: 0, // relative to origin
-            y: 0, // relative to origin
-            z: 0, // relative to origin
-            isAnimatable: false,            
-            isRunning : false,              
-          };
-          map.data2D[tileY][tileX].objectLayer = objectLayerHouse;
-        } else {
-          if (Phaser.Math.Between(0, 50) === 0) {
-            const objectLayerTower = {
-              visible: true,
-              assetkey: "Asset_watchtower_lvl2_512x512",
-              frameID: 0,
-              alpha: 1.0,
-              originX: 0.5,
-              originY: 1.0, // origin of object:: origin=1 -> y=0 is bottom of tile; origin=0 -> y=0 is top;
-              x: -15, // relative to origin
-              y: 0, // relative to origin
-              z: 50, // relative to origin
-              isAnimatable: false,            
-              isRunning : false,              
-            };
-          map.data2D[tileY][tileX].objectLayer = objectLayerTower;
-          }
-        }
-                
-
-        // randomize some layer 1 frames
-        switch (Phaser.Math.Between(0,9)) {
-          case 0: map.data2D[tileY][tileX].frameID = null; break; //Phaser.Math.Between(0, 30); break; // animation state of boy (0 .. 30)
-          case 1: map.data2D[tileY][tileX].frameID = 31; break; // boy, not animatable
-          default:map.data2D[tileY][tileX].frameID = 32; break; // empty block
-        };
-        // animate some layers        
-        if (map.data2D[tileY][tileX].frameID <= 30) { // if animated ...
-          map.data2D[tileY][tileX].animFrameIDStart = 0;
-          map.data2D[tileY][tileX].animFrameIDEnd = 30;
-          map.data2D[tileY][tileX].isAnimatable = true; 
-          map.data2D[tileY][tileX].isRunning = Boolean(Phaser.Math.Between(0,1)); 
-        };
-        
-      } // of for X
-    } // of for Y
+    // mapCompacted = array of 2-chars
+    // [1bit(2) groundlayer / objectlayer] [7bit(128) assetID]
+    // [8bit(256) frameNUM] -> typical 8 x 8 = 64
 
 
-    this.xdx.isoMap = new IsometricTilemap(this, 0, 0, map, mapConfig); // (scene, x, y, mapData, mapConfig)
+    this.xdx.isoMap = new IsometricTilemap(this, 0, 0, tilemapConfig); // (scene, x, y, mapData, mapConfig)
     global.log("isomap::", this.xdx.isoMap)
     this.xdx.isoMap
       .setDebug(true, this.xdx.debugGraphics)
@@ -208,11 +140,13 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       .setExtraTilesToCull(1)             // 1 for ISO60°, 3 for ISO75°
       //.setPosition(this.cameras.main.centerX, this.cameras.main.centerY) // center map-object in viewport
       .setPosition(this.cameras.main.centerX - this.xdx.isoMap.width2, this.cameras.main.centerY - this.xdx.isoMap.height2) // center map-object in viewport
+/*
       .addTimer({ name: "moveZ@10fps", fps: 10 }, (timerTicker, preUpdateTicker, preUpdateTime, childList, renderList, animList) => {  // set a periodic timer
-        //animList && animList.forEach(item => item.z = mapConfig.paddingBottom * Math.sin(2 * Math.PI * ((timerTicker + (item.tileX + item.tileY) * 100) % 500) / 500)); // move z-axis in a sinus-wave by time
-
-        renderList && renderList.forEach(item => { if (item.isAnimatable) item.z = mapConfig.paddingBottom * Math.sin(2 * Math.PI * ((timerTicker + (item.tileX + item.tileY) * 100) % 500) / 500) }); // move z-axis in a sinus-wave by time
+        //animList && animList.forEach(item => item.z = tilemapConfig.paddingBottom * Math.sin(2 * Math.PI * ((timerTicker + (item.tileX + item.tileY) * 100) % 500) / 500)); // move z-axis in a sinus-wave by time
+        renderList && renderList.forEach(item => { item.z = tilemapConfig.paddingBottom * Math.sin(2 * Math.PI * ((timerTicker + (item.tileX + item.tileY) * 100) % 500) / 500) }); // move z-axis in a sinus-wave by time
       })
+*/
+      /*
       .addTimer({ name: "animate", fps: 15 }, (timerTicker, preUpdateTicker, preUpdateTime, childList, renderList, animList) => { // set a periodic timer
         if (animList && animList.length > 0) {
           //slow: always animate visible and invisible tiles
@@ -226,7 +160,37 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
           renderList && renderList.forEach(item => { item.isAnimatable && item.isRunning && this.xdx.isoMap.shrTileFrame(item, item.animFrameIDStart, item.animFrameIDEnd); });
         }
       })
-    
+      */
+
+      const map = this.xdx.isoMap;
+      //map.data2D = new Array(map.tilemapConfig.height);
+      for (let tileY = 0; tileY < map.tilemapConfig.height; tileY++) {
+        //map.data2D[tileY] = new Array(map.tilemapConfig.width);
+        for (let tileX = 0; tileX < map.tilemapConfig.height; tileX++) {
+          map.setDataObject(tileX, tileY, {
+            assetID: map.tilemapConfig.assetKeys.indexOf("Asset_ISO60_Texturepack"),  // texture to use for frameselection; defaults to assetkeys[0]
+            frameID: 0,                       // framenumber in texture; defaults to random
+            //optional:: hidden:0/1
+            //optional:: depth: 0,                       // rendering sort-order; defaults to 0 (no sorting === faster)
+            //optional:: alpha: 0.0 .. 1.0
+            //optional:: tint: Phaser.Math.Between(0xdddddd, 0xeeeeee),
+            //optional:: z: 0,                           // z-coordinate of tile (technically its y' = y - z)
+
+            //computed@runtime:: tileX: tileX,
+            //computed@runtime:: tileY: tileY,
+          });
+
+          // set frameID:: randomize some frames
+          switch (Phaser.Math.Between(0,9)) {
+            case 0: map.setFrameID(tileX,tileY, Phaser.Math.Between(0, 30)); break; // animation state of boy (0 .. 30)
+            case 1: map.setFrameID(tileX,tileY, 31); break; // boy, not animatable
+            default:map.setFrameID(tileX,tileY, 32); break; // empty block
+          };
+
+        } // of for X
+      } // of for Y
+
+      //global.log(">>>>>>>>>>>>>>>>>>>>", map.buffer.byteLength, map.bufferview[0]);
 
     await this.initIteractions();
 
@@ -239,7 +203,7 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
   ///////////////////////////////////////////////////////////////////////////
 
   initIteractions = async () => {
-    this.keys = { 
+    this.keys = {
       CTRL: this.input.keyboard.addKey("CTRL"),
       //SHIFT: this.input.keyboard.addKey("SHIFT"),
       //ALT: ***not working with ALT***
@@ -290,25 +254,25 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
     }
 
 
-    this.input.on('wheel', (pointer, gameObject, dx, dy, dz, event) => { 
+    this.input.on('wheel', (pointer, gameObject, dx, dy, dz, event) => {
       //global.log("wheel:: ", pointer, gameObject, dx, dy, dz, event);
       this.cameras.main.zoom = (dy < 0) ? this.cameras.main.zoom * 1.1 : this.cameras.main.zoom / 1.1;
     });
 
-    this.input.on('pointerdown', (pointer, gameObject) => { 
+    this.input.on('pointerdown', (pointer, gameObject) => {
       // is a pinch-event in action
       if (this.xdx.isPinch) return;
 
       //this.xdx.kineticScrolling.beginMove(pointer);
     });
 
-    this.input.on('pointermove', (pointer, gameObject) => { 
+    this.input.on('pointermove', (pointer, gameObject) => {
       if (this.xdx.isPinch) return;
       if (this.xdx.isLongPress) return;
       //this.xdx.kineticScrolling.move(pointer, pointer.x, pointer.y);
     });
 
-    this.input.on('pointerup', (pointer, gameObject) => { 
+    this.input.on('pointerup', (pointer, gameObject) => {
       //this.xdx.kineticScrolling.endMove();
 
       // was a pinch, longpress or move-action
@@ -316,14 +280,14 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
         return; // *** STOP HERE ***
       }
 
-    
+
       //
       // normal click action
       // ###################
       //
 
       // from a pointer
-      const worldXY = this.cameras.main.getWorldPoint(pointer.x, pointer.y); // new Phaser.Geom.Point(pointer.worldX, pointer.worldY);      
+      const worldXY = this.cameras.main.getWorldPoint(pointer.x, pointer.y); // new Phaser.Geom.Point(pointer.worldX, pointer.worldY);
       const localXY = this.xdx.isoMap.worldCoordsToLocalCoords(worldXY.x, worldXY.y); // convert world-coords to coords relative to top/left of isomap
       const tileXY  = this.xdx.isoMap.localCoordsToTileCoords(localXY.x, localXY.y);  // convert pixel-coords to tile-coords (array data2D[tileY][tileX])
       const tile    = this.xdx.isoMap.getTileByTileCoords(tileXY.x, tileXY.y);        // get tile (item)
@@ -342,13 +306,14 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
         //this.xdx.isoMap.shrTileFrame(tile); // manual animate: cycle to next frame
         //this.xdx.isoMap.shlTileFrame(tile); // manual animate: cycle to prev frame
         //this.xdx.isoMap.setTilesProperty(tile, "zPixel", tile.zPixel + 10);
-        //this.xdx.isoMap.setTilesProperty(tile, "depth", tile.depth > 0 ? 1 : 0); 
+        //this.xdx.isoMap.setTilesProperty(tile, "depth", tile.depth > 0 ? 1 : 0);
         //this.xdx.isoMap.setTileIsRunning(tile, !tile.isRunning);
 
         //this.xdx.isoMap.setTilesAssetkey(tile, "Asset_xdx_isocam60_single_block_1000"); // change texture (not just the frame of a texture) of tile
         //this.xdx.isoMap.setTilesAssetkey(tile, "Asset_watchtower_lvl2_512x512"); // change texture (not just the frame of a texture) of tile
         //this.xdx.isoMap.setTilesProperty(tile, "z", 200)
 
+        /*
         const objectLayer = {
           assetkey: "Asset_watchtower_lvl2_512x512",
           originX: 0.5, // origin of object
@@ -359,13 +324,13 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
           visible: true,
         }
         this.xdx.isoMap.setTilesObjectLayer(tile, (tile.objectLayer) ? null : objectLayer); // change texture (not just the frame of a texture) of tile
-
+        */
       }
 
       //const localXYcenter = this.xdx.isoMap.tileCoordsToLocalCoords(tileXY.tileX, tileXY.tileY);
       //global.log("pointer:: ", tileXY.x, tileXY.y, tileXY.xFloat.toFixed(2), tileXY.yFloat.toFixed(2),);
     })
-    
+
     this.input.keyboard.on("keydown", (event) => {
       //global.log("Tilemap:: this.input.keyboard.on:: keydown:: ", e, e.key, this.cameras.main.worldView);
       const camera = this.cameras.main;
@@ -378,8 +343,8 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
         case "+":           camera.setZoom(2 * camera.zoom); camera.dirty = true; break;
         case "-":           camera.setZoom(0.5 * camera.zoom); camera.dirty = true; break;
         case " ":           global.log("DEBUG:: scene, cameras, cameras.main:: ", this, this.cameras, this.cameras.main); break;
-        case "a":           this.xdx.isoMap.map.data2D.forEach(arr => arr.forEach(item => item.isRunning = !item.isRunning)); break;        
-        case "s":           this.xdx.isoMap.removeTimer(); break;        
+        //case "a":           this.xdx.isoMap.map.data2DFull.forEach(arr => arr.forEach(item => item.isRunning = !item.isRunning)); break;
+        case "s":           this.xdx.isoMap.removeTimer(); break;
         case "q":           global.log("animation::", this.xdx.isoMap.shlTileFrame(this.xdx.isoMap.getTileByTileCoords(0,0)).frameID); break;
         case "w":           global.log("animation::", this.xdx.isoMap.shrTileFrame(this.xdx.isoMap.getTileByTileCoords(0,0)).frameID); break;
       }
@@ -392,7 +357,7 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
     if (pointer1.isDown) {
       if (!this.xdx.isLongPress && !this.xdx.isMove && (pointer2.isDown || this.keys.CTRL.isDown)) { // is a pinch just starting or already in action
         // *** PINCH *** (2 finger down)
-        if (!this.xdx.isPinch) { // the pinch-action is just starting 
+        if (!this.xdx.isPinch) { // the pinch-action is just starting
           this.xdx.isPinch = {
             x1: pointer1.x,
             y1: pointer1.y,
@@ -401,9 +366,9 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
             zoom: this.cameras.main.zoom,
           }
           this.xdx.isPinch.distance = Phaser.Math.Distance.Between(pointer1.x, pointer1.y, this.xdx.isPinch.x2, this.xdx.isPinch.y2);
-          this.xdx.onPinchDown && this.xdx.onPinchStart(time, camera, this.xdx.isPinch, pointer1, pointer2, this.keys.CTRL); 
+          this.xdx.onPinchDown && this.xdx.onPinchStart(time, camera, this.xdx.isPinch, pointer1, pointer2, this.keys.CTRL);
         }
-      } 
+      }
       if (!this.xdx.isLongPress && !this.xdx.isPinch) {
         if (Phaser.Math.Distance.Between(pointer1.downX, pointer1.downY, pointer1.x, pointer1.y) > 1) {
           if (!this.xdx.isMove) {
@@ -424,7 +389,7 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
               y1: pointer1.y,
             }
             this.xdx.onLongPressStart && this.xdx.onLongPressStart(time, camera, this.xdx.isLongPress, pointer1);
-          }          
+          }
         }
       }
       // running actions
@@ -436,18 +401,18 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       if (this.xdx.isLongPress) {
         this.xdx.onLongPressEnd && this.xdx.onLongPressEnd(time, camera, this.xdx.isLongPress, pointer1);
         this.xdx.isLongPress = null;
-      }      
+      }
       // finishing a move
       if (this.xdx.isMove) {
         this.xdx.onMoveEnd && this.xdx.onMoveEnd(time, camera, this.xdx.isMove, pointer1);
         this.xdx.isMove = null;
-      }      
+      }
     } // of !pointer1.isDown
     // finishing a pinch
     if (this.xdx.isPinch && !(pointer1.isDown && (pointer2.isDown || this.keys.CTRL.isDown))) {
       this.xdx.onPinchUp && this.xdx.onPinchEnd(time, camera, this.xdx.isPinch, pointer1, pointer2, this.keys.CTRL);
       this.xdx.isPinch = null;
-    }      
+    }
   }
 
 
@@ -463,7 +428,7 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
 
   ///////////////////////////////////////////////////////////////////////////
 
-  timedUpdate = (...params) => { 
+  timedUpdate = (...params) => {
     //global.log(time, delta)
     if (!this.updateRunning) return;
     if (this.load.isLoading()) return;

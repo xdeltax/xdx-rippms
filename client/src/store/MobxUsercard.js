@@ -1,20 +1,12 @@
-import {decorate, observable, action, runInAction, toJS,} from 'mobx';
-import ProtoStore from "./protoStore";
-import deepCopy from 'tools/deepCopyObject';
-import deepMerge from 'tools/deepMergeObject';
-
-import { saveToPersistentDatabase, deletePersistentDatabase, } from "persistentdb";
+import {decorate, observable, runInAction, /*toJS,*/} from 'mobx';
+import MobxPrototype from "./MobxPrototype";
+import { saveToPersistentDatabase, deletePersistentDatabase, } from "database/persistentDB.js";
 
 import store from "store";
+import socketio from 'socket'; // socket
 
-class Store extends ProtoStore {
-  #__privateObervablesInit;
-  #__privateHelpersInit;
-  constructor() { super(); /*store init-state of all vars*/ this.#__privateObervablesInit = deepCopy(this._obervables); this.#__privateHelpersInit = deepCopy(this._helpers); };
-  reset     = action(() 	 => { /*recover init-state*/ this.obervables = deepCopy(this.#__privateObervablesInit); this.helpers = deepCopy(this.#__privateHelpersInit); this.constants = deepCopy(this.#__privateHelpersInit); });
-  clear 		= action(() 	 => this.clear_all() );
-  clear_all = action(() 	 => Object.keys(this.obervables).forEach( (prop) => this.obervables[prop] = deepCopy(this.#__privateObervablesInit[prop]) ) );
-  clear_obj = action((obj) => this[obj] = deepCopy(this.#__privateObervablesInit[obj]) );
+class MobxUsercard extends MobxPrototype {
+  constructor(store) { super(store); /*store init-state of all vars::*/ this.saveInitialState(this._obervables, this._helpers); };
 
   _constants = {
     genderREADONLY: ["unknown", "male", "female", ],
@@ -65,9 +57,9 @@ class Store extends ProtoStore {
   	if (!this.userid || !this.servertoken) return;
 
 	  const {err, res} = await this.getUser(this.userid, this.userid, this.servertoken);
-	  if (!err) { 
+	  if (!err) {
 	  	this.user = Object.assign(this.user || {}, res);
-	  	
+
 	  	//const {err, res} = await this._getUsercard(this.userid, this.userid, this.servertoken);
 	  	//if (!err) this.usercard = Object.assign(this.usercard || {}, res);
 
@@ -86,7 +78,8 @@ class Store extends ProtoStore {
 				userid,
 				servertoken,
 			}
-    	res = await store.socketio.emitWithTimeout(ioRoute, req,);
+    	res = await socketio.emitWithTimeout(ioRoute, req,);
+      // res = { usercard: {xxx}, callstats: {xxx}, }
 		} catch (error) {
 			err = error;
 		}
@@ -121,7 +114,7 @@ class Store extends ProtoStore {
 				servertoken,
 				obj,
 			}
-    	res = await store.socketio.emitWithTimeout(ioRoute, req,);
+    	res = await socketio.emitWithTimeout(ioRoute, req,);
 		} catch (error) {
 			err = error;
 		}
@@ -132,9 +125,9 @@ class Store extends ProtoStore {
   */
 };
 
-decorate(Store, {
+decorate(MobxUsercard, {
   _obervables: observable,
   _helpers: observable,
 });
 
-export default Store;
+export default MobxUsercard;

@@ -7,7 +7,7 @@ import CssBaseline from '@material-ui/core/CssBaseline';
 
 import Typography from '@material-ui/core/Typography';
 
-import { loadFromPersistentDatabase, saveToPersistentDatabase, } from "persistentdb";
+import { loadFromPersistentDatabase, saveToPersistentDatabase, } from "database/persistentDB.js";
 
 import { watchOnlineOfflineStatus, unwatchOnlineOfflineStatus } from "watchers/onOnlineOfflineChange";
 import { watchConnectionStatus, unwatchConnectionStatus } from "watchers/onConnectionChange";
@@ -20,6 +20,7 @@ import GlobalSpinner from "ui/components/spinner/GlobalSpinner";
 import AppLoadingScreen from "./AppLoadingScreen";
 
 import store from 'store'; // mobx-store
+import socketio from 'socket'; // socket
 
 const AppRouter = React.lazy(() => import('ui/AppRouter'));
 
@@ -62,13 +63,13 @@ export default ( observer( class extends React.Component {
       watchOnlineOfflineStatus();
       watchOrientationStatus();
       watchVisibilityStatus();
-      
+
       window.addEventListener('beforeunload', this.handleLeavePageMessage, {once: true});
 
 		  // ===============================================
 		  // watch socket for first connection to server
 		  // ===============================================
-			store.socketio.onSocketConnect = async (socket, isConnected) => {
+			socketio.onSocketConnect = async (socket, isConnected) => {
 				global.log("AppLandingPage:: onSocketConnect:: ", socket.id)
 			  // ===============================================
 			  // update store-data (from persistent load) with fresh data from server-database (if there is a valid userid and a valid servertoken)
@@ -80,7 +81,7 @@ export default ( observer( class extends React.Component {
 		    }
 			}
 
-			store.socketio.onSocketForceLogout = async () => {
+			socketio.onSocketForceLogout = async () => {
 		    global.log("AppLandingPage:: onAppLoadEvent:: onSocketForceLogout:: trigger logout!", );
 			  // ===============================================
 			  // force logout if a verification of the servertoken failed in a server-request
@@ -88,9 +89,9 @@ export default ( observer( class extends React.Component {
 				store.user.doAuthLogout();
 			}
 
-			store.socketio.onSocketErrorMessageFromServer = async (error) => {
+			socketio.onSocketErrorMessageFromServer = async (error) => {
 			  // ===============================================
-			  // all errormessages from server 
+			  // all errormessages from server
 			  // ===============================================
 		    global.log("AppLandingPage:: onAppLoadEvent:: onSocketErrorMessageFromServer:: error", error);
 			}
@@ -102,9 +103,9 @@ export default ( observer( class extends React.Component {
 				const socketProtokoll = process.env.REACT_APP_SOCKETIO_HANDSHAKEVERSION || 10000;
 				const appVersion = process.env.REACT_APP_APPVERSION || 0;
 				global.log("index:: startApp:: connect socket. ", socketProtokoll, appVersion);
-				store.socketio.connect(global.serverURL, socketProtokoll, appVersion);
+				socketio.connect(global.serverURL, socketProtokoll, appVersion);
 			} else {
-				global.log("index:: startApp:: DEBUG DEBUG DEBUG:: connect to socket is DISABLED!!! ", global);		
+				global.log("index:: startApp:: DEBUG DEBUG DEBUG:: connect to socket is DISABLED!!! ", global);
 			}
 
       //this.setState({ statusText: "sleep 2" })
@@ -138,7 +139,7 @@ export default ( observer( class extends React.Component {
     unwatchOnlineOfflineStatus();
     unwatchOrientationStatus();
     unwatchVisibilityStatus();
-    
+
     global.log("AppLandingPage:: componentWillUnmount:: EXIT!", )
     window.removeEventListener('beforeunload', this.handleLeavePageMessage);
   } // of componentWillUnmount
@@ -188,17 +189,17 @@ export default ( observer( class extends React.Component {
             width: "100%",
             margin: 0,
             padding: 0,
-            //minWidth: store.system.app.size.minWidth,
-            //minHeight: store.system.app.size.minHeight,
-            //maxWidth: store.system.app.size.maxWidth,
-            //maxHeight: store.system.app.size.maxHeight,            
-            color: store.system.colors.app.text,
-            background: store.system.colors.app.background,
+            //minWidth: store.appstate.app.size.minWidth,
+            //minHeight: store.appstate.app.size.minHeight,
+            //maxWidth: store.appstate.app.size.maxWidth,
+            //maxHeight: store.appstate.app.size.maxHeight,
+            color: store.appstate.colors.app.text,
+            background: store.appstate.colors.app.background,
           }}>
             <CssBaseline />
             <ErrorBoundary>
               <React.Suspense fallback={<LoadingScreen />}>
-                <Router><AppRouter startRoute={store.system.app.watchers.route.pathname || null} /></Router>
+                <Router><AppRouter startRoute={store.appstate.app.watchers.route.pathname || null} /></Router>
               </React.Suspense>
               {/*(this.state.isLoading) ? ( <LoadingScreen /> ) : ( <Router><AppRouter /></Router> )*/}
             </ErrorBoundary>
@@ -209,19 +210,19 @@ export default ( observer( class extends React.Component {
             style={{ zIndex: '98765', /*minHeight: 32,*/ maxHeight: "75%", overflow: "auto", textAlign: "left", position: "absolute", top: "auto", bottom: 0, width: "100%", }}
             title={[
               "DEBUG", ` v01 ${process.env.REACT_APP_APPVERSION} ${Math.floor(99*Math.random())}`,
-              " s:", `${store.socketio.isConnected?1:0}`,
+              " s:", `${store.appstate.app.watchers.socket.isConnected?1:0}`,
               " l:", `${store.loadingNowStatus?1:0}`,
 
-              " c:", `${store.system.app.watchers.connection.isOnline?1:0}`,
+              " c:", `${store.appstate.app.watchers.connection.isOnline?1:0}`,
 
               " a", `${store.isAuthenticated?1:0}`,
               "/", `${store.user.isValid?1:0}`,
               "/", `${store.usercard.isValid?1:0}`,
 
               " id:",`${store.user.userid}`,
-              " [o:", `${store.system.app.watchers.orientation.angle}`,
-              " t:", `${store.system.app.watchers.connection.type}`,
-              " l:", `${store.system.app.watchers.route.pathname}`,
+              " [o:", `${store.appstate.app.watchers.orientation.angle}`,
+              " t:", `${store.appstate.app.watchers.connection.type}`,
+              " l:", `${store.appstate.app.watchers.route.pathname}`,
               "]", ``,
             ]}
             titleColors={["white", "cyan", "yellow", "cyan", ]}
@@ -230,7 +231,7 @@ export default ( observer( class extends React.Component {
             	appVersion: process.env.REACT_APP_APPVERSION,
             	fingerprint: global.fingerprint.hash,
               loadingNowStatus: store.loadingNowStatus,
-              isConnected: Boolean(store.socketio.isConnected),
+              isSocketConnected: Boolean(store.appstate.app.watchers.socket.isConnected),
 
               isAuthenticated: store.isAuthenticated,
               isValidUser: store.user.isValid,
@@ -241,10 +242,9 @@ export default ( observer( class extends React.Component {
 
               storeUser: store.user.get_all(),
               storeUsercard: store.usercard.get_all(),
-              storePhaser: store.phaser.get_all(),
-              storePixi: store.pixi.get_all(),
-              //storeSocketIO: store.socketio.get_all(),
-              storeSystem: store.system.get_all(),
+              storeGame: store.game.get_all(),
+
+              storeAppState: store.appstate.get_all(),
             }}
           />
           }

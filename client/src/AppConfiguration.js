@@ -23,6 +23,7 @@ global.consoleInfo  = require('tools/debug/consoleInfo');
 global.consoleError = require('tools/debug/consoleError');
 
 global.debugTime = () => `${global.nowTimePretty()} (${global.now()-global.launchTime} ms)`;
+global.clog  = ( ...restArgs ) => { global.consoleLog  (global.debugTime(), restArgs); };
 global.log   = ( ...restArgs ) => { global.consoleLog  (global.debugTime(), restArgs); };
 global.debug = ( ...restArgs ) => { global.consoleLog  (global.debugTime(), restArgs); };
 global.warn  = ( ...restArgs ) => { global.consoleWarn (global.debugTime(), restArgs); };
@@ -30,7 +31,7 @@ global.info  = ( ...restArgs ) => { global.consoleInfo (global.debugTime(), rest
 global.error = ( ...restArgs ) => { global.consoleError(global.debugTime(), restArgs); };
 
 
-//if (process.env.NODE_ENV === "development") 
+//if (process.env.NODE_ENV === "development")
 {
   global.DEBUG_SHOW_DEBUGOBJECTPRETTY = true;
 

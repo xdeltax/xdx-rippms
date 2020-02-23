@@ -41,7 +41,7 @@ const GameContainer = withRouter( observer( class GameContainer extends React.Co
 
       global.log("ReactContainerPhaserGame:: componentDidMount:: ", this, this._game, this._game.device, size)
     } else { // should not happend
-      //global.log("+++", store.phaser.game)
+      //global.log("+++", store.game.game)
     }
   };
 
@@ -106,20 +106,22 @@ const GameContainer = withRouter( observer( class GameContainer extends React.Co
 
 
   click_clearAll = (e) => {
-    store.phaser.clear();
-    global.log("ReactContainerPhaserGame:: store.phaser.clear:: ", store.phaser);
+    store.game.clear();
+    global.log("ReactContainerPhaserGame:: store.game.clear:: ", store.game);
   };
 
+  /*
   click_addLife = (e) => {
     //this.game && this.game.scene.keys.SceneMap.events.emit('addLife'); // eventhandler in scene "mainScene"
-    store.phaser.lives++;
-    global.log("ReactContainerPhaserGame:: store.phaser.lives:: ", store.phaser.lives, store.phaser);
+    store.game.lives++;
+    global.log("ReactContainerPhaserGame:: store.game.lives:: ", store.game.lives, store.game);
   };
 
   click_addLife2 = (e) => {
     //this.game && this.game.scene.keys.SceneMap.events.emit('addLife'); // eventhandler in scene "mainScene"
-    store.set("phaser.lives", store.phaser.lives + 1);
+    store.game.set("lives", store.game.lives + 1);
   };
+  */
 
   render() {
     const {
@@ -135,15 +137,15 @@ const GameContainer = withRouter( observer( class GameContainer extends React.Co
     } = this.props;
     global.log("ReactContainerPhaserGame:: render:: size:: ", this, size.width, size.height, )
 
-    const livesMobx = tryFallback(()=>store.phaser.lives, -1);
+    const livesMobx = tryFallback(()=>store.game.lives, -1);
 
     return (
       <React.Fragment>
-        <HeaderNavigationToolbar label="Phaser 3" hide={!store.system.app.header.visible}
+        <HeaderNavigationToolbar label="Phaser 3" hide={!store.appstate.app.header.visible}
           onBackButtonClick={ () => { if (history.length > 1) history.goBack(); else history.push("/"); }}
-          //noRespawnButton={!store.system.app.game.visible}
+          //noRespawnButton={!store.appstate.app.game.visible}
         />
-        
+
         <div id="phaserGameInjectID" style={{ height: "100%", }} />
 
         <div id="reactOverlayScreen" style={{ position: "absolute", top: 0, left: 0, }}>
@@ -167,7 +169,7 @@ export default (props) => (
       : (<GameContainer size={size} {...props} />)
     }}
   </SizeMe>
-);	
+);
 
 /*
 const GameContainerWithSize = observer ( class extends React.Component {
@@ -213,8 +215,8 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
         overflow: "auto",
         height: "100%",
         width: "100%",
-        color: store.system.colors.auth.text,
-        background: store.system.colors.auth.background,
+        color: store.appstate.colors.auth.text,
+        background: store.appstate.colors.auth.background,
       }}>
         <GameContainerWithSize gameVisible={gameVisible} />
 

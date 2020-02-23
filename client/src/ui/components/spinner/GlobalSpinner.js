@@ -24,7 +24,7 @@ export default class Spinner extends React.Component {
             top: 0,
             width: "100%",
             height:"100%",
-            background: store.system.colors.overlay.background, //"rgba(255,255,255,0.8)",
+            background: store.appstate.colors.overlay.background, //"rgba(255,255,255,0.8)",
           }} />
         </Fade>
         <div style={{
@@ -34,7 +34,7 @@ export default class Spinner extends React.Component {
           top:"50%",
           left:"50%",
           transform: "translate(-50%, -50%)", // relative to element itself
-          color: store.system.colors.overlay.text, // "rgba(130, 130, 130, 0.5)"
+          color: store.appstate.colors.overlay.text, // "rgba(130, 130, 130, 0.5)"
         }}
         >
           <CircularProgress /*size={20} thickness={5.6}*/ fontSize="large" color="inherit" />
@@ -45,7 +45,7 @@ export default class Spinner extends React.Component {
             top:"75%",
             left:"50%",
             transform: "translateX(-50%)", // relative to element itself
-            color: store.system.colors.overlay.text, // "rgba(130, 130, 130, 0.5)"
+            color: store.appstate.colors.overlay.text, // "rgba(130, 130, 130, 0.5)"
           }}
           >
           <Slide in={show} direction="up">

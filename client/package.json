@@ -18,17 +18,13 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-
-  	"ssl": "set NODE_PATH=&&set HTTPS=true&&npm start",
-
-    "ssldevloc": 	 "set NODE_PATH=&&set HTTPS=true&&set NODE_ENV=development&&set REACT_APP_SERVERTARGET=localhost&&npm start",
-    "ssldevvps": 	 "set NODE_PATH=&&set HTTPS=true&&set NODE_ENV=development&&set REACT_APP_SERVERTARGET=vps&&npm start",
-    "sslprod":   	 "set NODE_PATH=&&set HTTPS=true&&set NODE_ENV=production&&set REACT_APP_SERVERTARGET=vps&&npm start",
-
+    "ssl": "set NODE_PATH=&&set HTTPS=true&&npm start",
+    "ssldevloc": "set NODE_PATH=&&set HTTPS=true&&set NODE_ENV=development&&set REACT_APP_SERVERTARGET=localhost&&npm start",
+    "ssldevvps": "set NODE_PATH=&&set HTTPS=true&&set NODE_ENV=development&&set REACT_APP_SERVERTARGET=vps&&npm start",
+    "sslprod": "set NODE_PATH=&&set HTTPS=true&&set NODE_ENV=production&&set REACT_APP_SERVERTARGET=vps&&npm start",
     "nossldevloc": "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=development&&set REACT_APP_SERVERTARGET=localhost&&npm start",
     "nossldevvps": "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=development&&set REACT_APP_SERVERTARGET=vps&&npm start",
-    "nosslprod":   "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=production&&set REACT_APP_SERVERTARGET=vps&&npm start",
-
+    "nosslprod": "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=production&&set REACT_APP_SERVERTARGET=vps&&npm start",
     "test": "react-scripts test",
     "cordova": "cordova",
     "build:android": "cordova build android",
@@ -64,6 +60,7 @@
     "react-use-gesture": "^6.0.14",
     "socket.io-client": "^2.3.0",
     "source-map-explorer": "^2.1.2",
+    "structurae": "^2.1.0",
     "typeface-indie-flower": "0.0.72",
     "typeface-roboto": "0.0.75",
     "typeface-rock-salt": "0.0.72"

@@ -57,7 +57,7 @@ const startApp = async () => {
   	onUpdate: (registration) => { // At this point, the updated precached content has been fetched, but the previous service worker will still serve the older content until all client tabs are closed
   		console.log("SW onUpdate:: ", registration);
   		alert("New Version Available. Close App To Refresh.");
-		  serviceWorker.unregister(); // unregister to refresh 
+		  serviceWorker.unregister(); // unregister to refresh
   	},
   	onSuccess: (registration) => { // "Content is cached for offline use.
   		console.log("SW onSuccess:: ", registration);

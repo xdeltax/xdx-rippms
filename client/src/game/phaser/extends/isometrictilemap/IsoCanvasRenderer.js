@@ -35,8 +35,8 @@ export default (renderer, src, interpolationPercentage, camera, parentMatrix) =>
 
     ctx.imageSmoothingEnabled = !(!renderer.antialias || src.frame.source.scaleMode);
 
-    var cameraScrollX = src.x - camera.scrollX * src.scrollFactorX;
-    var cameraScrollY = src.y - camera.scrollY * src.scrollFactorY;
+    var cameraScrollX = src.x - camera.scrollX;// * src.scrollFactorX;
+    var cameraScrollY = src.y - camera.scrollY;// * src.scrollFactorY;
 
     ctx.save();
 
@@ -55,7 +55,7 @@ export default (renderer, src, interpolationPercentage, camera, parentMatrix) =>
 
       if (itemAlpha > 0) {
 	      ctx.globalAlpha = itemAlpha;
-  
+
 	      if (!(flipX || flipY)) {
           if (roundPixels) {
             dx = Math.round(dx);
@@ -85,12 +85,12 @@ export default (renderer, src, interpolationPercentage, camera, parentMatrix) =>
       if (item.hasOwnProperty("objectLayer") && item.objectLayer && item.objectLayer.visible === true && item.objectLayer.alpha > 0) {
       	const obj = item.objectLayer;
       	itemAlpha *= obj.alpha;
-      	const objX = item.centerX - obj.originX * obj.frame.width; // center origin of object to tile 
-      	const objY = item.tileBottomY - obj.originY * obj.frame.height; // center origin of object to tile 
+      	const objX = item.centerX - obj.originX * obj.frame.width; // center origin of object to tile
+      	const objY = item.tileBottomY - obj.originY * obj.frame.height; // center origin of object to tile
 
       	if (itemAlpha > 0) _pipe(objX + obj.x, objY + obj.y, item.z + obj.z, obj.frame, itemAlpha, obj.flipX, obj.flipY);
       }
     }
-    
+
     ctx.restore();
 };

@@ -50,12 +50,14 @@ export default (renderer, src, interpolationPercentage, camera, parentMatrix) =>
     var isomapX = src.x - cameraScrollX;
     var isomapY = src.y - cameraScrollY;
     var prevTextureSourceIndex = -1;
-    var prevAssetkey = ""; // XDX-MOD
+    var prevAssetID = null; // XDX-MOD
     var tintEffect = false;
-    var alpha = camera.alpha * src.alpha;
+    var alpha = camera.alpha * (src.alpha || 1);
     var roundPixels = camera.roundPixels;
 
-    const _pipe = (itemAssetkey, itemX, itemY, itemZ, frame, itemAlpha, itemTint, flipX, flipY) => {
+
+
+    const _pipe = (itemAssetID, itemX, itemY, itemZ, frame, itemAlpha, itemTint, flipX, flipY) => {
       let width = frame.width;
       let height= frame.height;
 
@@ -77,11 +79,13 @@ export default (renderer, src, interpolationPercentage, camera, parentMatrix) =>
       const tint = Utils.getTintAppendFloatAlpha(itemTint, itemAlpha);
 
       //  Bind texture only if the Texture Source is different from before
-      if (frame.sourceIndex !== prevTextureSourceIndex || itemAssetkey !== prevAssetkey) { // XDX-MOD 
+      if (frame.sourceIndex !== prevTextureSourceIndex || itemAssetID !== prevAssetID) { // XDX-MOD
         pipeline.setTexture2D(frame.glTexture, 0);
 
+        //global.log("xxx", frame.sourceIndex)
+
         prevTextureSourceIndex = frame.sourceIndex;
-        prevAssetkey = itemAssetkey; // XDX-MOD
+        prevAssetID = itemAssetID; // XDX-MOD
       }
 
       if (roundPixels) {
@@ -94,26 +98,69 @@ export default (renderer, src, interpolationPercentage, camera, parentMatrix) =>
       //  TL x/y, BL x/y, BR x/y, TR x/y
       if (pipeline.batchQuad(tx0, ty0, tx0, ty1, tx1, ty1, tx1, ty0, frame.u0, frame.v0, frame.u1, frame.v1, tint, tint, tint, tint, tintEffect, frame.glTexture, 0)) {
         prevTextureSourceIndex = -1;
-        prevAssetkey = ""; // XDX-MOD
+        prevAssetID = null; // XDX-MOD
       }
     }
 
+
+
     for (let index = 0; index < list.length; index++) {
       const item = list[index];
-      const frame = item.frame;
-      let itemAlpha = item.alpha * alpha;
 
-      if (itemAlpha > 0) _pipe(item.assetkey, item.x, item.y, item.z, item.frame, itemAlpha, item.tint, item.flipX, item.flipY);
+			//const item_assetID = item.assetID;
+			/*
+      const localXY = src.tileCoordsToLocalCoords(item.tileX, item.tileY) || {}; //const localXY = src.getItemXY(item) || {}; // short for: src.tileCoordsToLocalCoords(tileX, tileY); // item.frame must exist before this function is called
+      const item_x = localXY.x || 0; // top/left of the frame-rect
+      const item_y = localXY.y || 0;
+      const item_z = item.z || 0;
+			*/
+      //const item_alpha = item.alpha || 1;
+      //const item_tint  = item.tint  || 0xffffff;
+      //const item_flipX = item.flipX || false;
+      //const item_flipY = item.flipY || false;
 
+      const itemAlpha = (item.alpha || 1) * alpha;
+
+      if (itemAlpha > 0) {
+        const asset = src.assetIDs[item.assetID] || [];
+        const frame = asset[item.frameID || 0] || null; // item.frame;
+				//global.log("+++", item, itemAlpha, asset, item_assetID, item_frameID)
+
+        if (frame) {
+					const localXY = src.tileCoordsToLocalCoords(item.tileX, item.tileY) || {}; //const localXY = src.getItemXY(item) || {}; // short for: src.tileCoordsToLocalCoords(tileX, tileY); // item.frame must exist before this function is called
+          _pipe(item.assetID, localXY.x, localXY.y, item.z || 0, frame, itemAlpha, item.tint || 0xffffff, item.flipX || false, item.flipY || false);
+        }
+      }
+
+      /*
       if (item.hasOwnProperty("objectLayer") && item.objectLayer && item.objectLayer.visible === true && item.objectLayer.alpha > 0) {
       	const obj = item.objectLayer;
-      	itemAlpha *= obj.alpha;
-      	const objX = item.centerX - obj.originX * obj.frame.width; // center origin of object to tile 
-      	const objY = item.tileBottomY - obj.originY * obj.frame.height; // center origin of object to tile 
 
-      	if (itemAlpha > 0) _pipe(obj.assetkey, objX + obj.x, objY + obj.y, item.z + obj.z, obj.frame, itemAlpha, obj.tint, obj.flipX, obj.flipY);
+        const obj_assetID= obj.assetID|| 0;
+        const obj_frameID = obj.frameID || 0;
+        const obj_x = obj.x || 0;
+        const obj_y = obj.y || 0;
+        const obj_z = obj.z || 0;
+        const obj_alpha = obj.alpha || 1;
+        const obj_tint  = obj.tint  || 0xffffff;
+        const obj_flipX = obj.flipX || false;
+        const obj_flipY = obj.flipY || false;
+
+        const objAlpha = itemAlpha * obj_alpha;
+
+      	if (objAlpha > 0) {
+          const objAsset = src.assetIDs[obj_assetID] || [];
+          const objFrame = objAsset[obj_frameID] || null; // item.frame;
+
+          if (objFrame) {
+        	   const objX = item.centerX - obj.originX * objFrame.width; // center origin of object to tile
+        	   const objY = item.tileBottomY - obj.originY * objFrame.height; // center origin of object to tile
+
+             _pipe(obj_assetkey, objX + obj_x, objY + obj_y, item_z + obj_z, objFrame, objAlpha, obj_tint, obj_flipX, obj_flipY);
+          }
+        }
       }
-			
+      */
     }
 
    	//global.log("renderer time (in ms):: ", new Date() - now);

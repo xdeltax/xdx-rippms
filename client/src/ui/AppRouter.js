@@ -91,16 +91,16 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
       // display a button to click -> unhide top-toolbar (and navigation if auth-path)
       <div style={{ position: "fixed", right: 0, top: 0, }}>
         <IconButton color="inherit" style={{ flexGrow: 0, }}  onClick={(event) => {
-          store.set("system.app.header.visible", true);
-          store.set("system.app.bottomNavigation.visible", true);
+          store.appstate.set("app.header.visible", true);
+          store.appstate.set("app.bottomNavigation.visible", true);
         }}>
           <KeyboardArrowDownICON />
         </IconButton>
       </div>
     );
 
-    const phaserGameVisible = Boolean(location.pathname === "/game/phaser") /*store.system.app.game.visible*/
-    //const pixiGameVisible = Boolean(location.pathname === "/game/pixi") /*store.system.app.game.visible*/
+    const phaserGameVisible = Boolean(location.pathname === "/game/phaser") /*store.appstate.app.game.visible*/
+    //const pixiGameVisible = Boolean(location.pathname === "/game/pixi") /*store.appstate.app.game.visible*/
 
     global.log("AppRouter:: render:: location.pathname:: ", location.pathname, );
 
@@ -111,8 +111,8 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
           height: "100%",
           width: "100%",
           textAlign: "center",
-          color: store.system.colors.app.text,
-          background: store.system.colors.app.background,
+          color: store.appstate.colors.app.text,
+          background: store.appstate.colors.app.background,
         }}>
           <ScrollToTop />
 
@@ -132,8 +132,8 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
           </Switch>
         </div>
 
-        {!store.system.app.header.visible && <RenderAGetMyHiddenToolbarBackArrowDownIconButton />}
-        {store.isAuthenticated && <BottomNavigation hide={!store.system.app.bottomNavigation.visible} /> }
+        {!store.appstate.app.header.visible && <RenderAGetMyHiddenToolbarBackArrowDownIconButton />}
+        {store.isAuthenticated && <BottomNavigation hide={!store.appstate.app.bottomNavigation.visible} /> }
 
         <Modal id="phasergame" keepMounted // modal container for the game (stays mounted all the time)
           open={phaserGameVisible} disableEscapeKeyDown={true} disablePortal={true} disableScrollLock={true} hideBackdrop={true}
@@ -142,8 +142,8 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
           <Fade timeout={0} mountOnEnter exit={true} in={phaserGameVisible} direction={phaserGameVisible ? "up" : "right"} >
 					 <React.Fragment>
               <ReactContainerPhaserGame gameVisible={phaserGameVisible} style={{ backgroundColor: "transparent", padding:0, margin:0, height:"100%", }} />
-              {!store.system.app.header.visible && <RenderAGetMyHiddenToolbarBackArrowDownIconButton />}
-              {store.isAuthenticated && <BottomNavigation hide={!store.system.app.bottomNavigation.visible} /> }
+              {!store.appstate.app.header.visible && <RenderAGetMyHiddenToolbarBackArrowDownIconButton />}
+              {store.isAuthenticated && <BottomNavigation hide={!store.appstate.app.bottomNavigation.visible} /> }
  						</React.Fragment>
           </Fade>
         </Modal>
@@ -156,6 +156,6 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
 <Route path="/:tab(sessions)" component={RouteLogin} exact={true} />
 <Route path="/:tab(sessions)/:id" component={RouteLogin} />
 <Route path="/:tab(speakers)" component={RouteRegister} exact={true} />
-<Route path='/facebook' component={() => { window.location.href = `${global.serverURL}/facebook.io?socketid=${store.socketio.socket.id}`; return null; }}/>
+<Route path='/facebook' component={() => { window.location.href = `${global.serverURL}/facebook.io?socketid=${socketio.socket.id}`; return null; }}/>
 
 */

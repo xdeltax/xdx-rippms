@@ -19,11 +19,11 @@ export const loadFromPersistentDatabase = async (force) => {
       && state.hasOwnProperty("createdAt")
       && state.hasOwnProperty("updatedAt")
     ) {
-      global.log("persistent:: loadFromPersistentDatabase:: merge_all:: system.storedata:: ", state.storedata);
-      store.system.clear_obj("state");
-      store.system.merge_obj("state", state.storedata);
+      global.log("persistent:: loadFromPersistentDatabase:: merge_all:: appstate.storedata:: ", state.storedata);
+      store.appstate.clear_obj("state");
+      store.appstate.merge_obj("state", state.storedata);
 
-      store.set("system.state.dataRelevance.localstorage.lastReadCall", global.now());
+      store.appstate.set("state.dataRelevance.localstorage.lastReadCall", global.now());
     }
 
     const user = await dbFindOneASYNC(localDBuser, 'user'); // load persit state
@@ -55,9 +55,9 @@ export const saveToPersistentDatabase = (force) => {
   if (global.DEBUG_DISABLE_PERSISTENSAVEONCLOSEAPP && !force) return;
 
   try {
-    store.set("system.state.dataRelevance.localstorage.lastWriteCall", global.now());
+    store.appstate.set("state.dataRelevance.localstorage.lastWriteCall", global.now());
 
-    const state = store.system.get_obj("state");
+    const state = store.appstate.get_obj("state");
     const user  = store.user.get_all();
 
     try {
