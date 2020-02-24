@@ -143,7 +143,6 @@ class MobxAppState extends MobxPrototype {
 
 decorate(MobxAppState, {
   _obervables: observable,
-  _helpers: observable,
 });
 
 export default MobxAppState;

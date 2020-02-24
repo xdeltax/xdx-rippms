@@ -124,7 +124,6 @@ export default (renderer, src, interpolationPercentage, camera, parentMatrix) =>
       if (itemAlpha > 0) {
         const asset = src.assetIDs[item.assetID] || [];
         const frame = asset[item.frameID || 0] || null; // item.frame;
-				//global.log("+++", item, itemAlpha, asset, item_assetID, item_frameID)
 
         if (frame) {
 					const localXY = src.tileCoordsToLocalCoords(item.tileX, item.tileY) || {}; //const localXY = src.getItemXY(item) || {}; // short for: src.tileCoordsToLocalCoords(tileX, tileY); // item.frame must exist before this function is called

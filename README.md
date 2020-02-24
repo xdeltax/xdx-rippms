@@ -3,7 +3,7 @@
 
 PWA with reactjs and phaser 3
 with a login-screen and server communication with sockets
-with a high performance isometric tilemap implementation
+with a high performance isometric tilemap implementation with low data-footprint for large maps in memory
 
 ° PHASER.JS v3 ° PIXI.JS v5 ° REACT.JS v16 ° MATERIAL-UI v4 ° MOBXJS v5 ° SOCKETIO v2 ° PWA ° TWA °
 
@@ -28,6 +28,7 @@ with a high performance isometric tilemap implementation
 
 - isometric maps
 - fast map creating
+- very large map-size due to byte-packed data-structure
 - efficient (map size independent) camera culling algorithm
 - z-axis implemantation
 - animatable tiles
@@ -135,9 +136,6 @@ socket.io
 database
   npm i -s nedb
   npm i -s mongodb
-
-data-handling
-  npm i -s structurae
 
 portals
 	npm i -s react-new-window

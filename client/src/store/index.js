@@ -5,12 +5,16 @@ import deepCopy from 'tools/deepCopyObject';
 // appstate
 import MobxAppState from './MobxAppState.js';
 
+// spinner / ...
+import MobxAppActions from './MobxAppActions.js';
+
 // user-data
 import MobxUser from './MobxUser.js';
 import MobxUsercard from './MobxUsercard.js';
 
 // game-data
 import MobxGame from './MobxGame';
+import NonOGame from './NonOGame';
 
 //import SocketIOStore from 'store/socketio';
 
@@ -22,44 +26,49 @@ class Store extends MobxPrototype {
 	constructor(store) { super(store); this.#__initDone = false; /*store init-state of all vars::*/ this.saveInitialState(this._obervables, this._helpers); };
 	// this.init(); -> store.init() needs to be called in constructor of App.js
 
-	// init of all observables
 	_obervables = {
 		appstate: null,
+		appactions: null,
 
 		user: null,
 		usercard: null,
 
 		game: null,
+	};
 
-		//socketio: null,
+	_nonobervables = {
+		game: null,
 	};
 
 	_helpers = {
-		isLoadingNow: false,
-		isSavingNow: false,
-		isSpinnerVisible: false,
-		hintText: "",
-		unsavedChangesUser: false, // if userprofile was changed but no api-call to server triggered by user "save-button"
 	};
 
 	_constants = {
 	}
 
+
 	init = action(() => new Promise(resolve => {
 		if (this.#__initDone) return;
 		this.reset();
 
+		// *** observables
 		// stores all states of the app (width, height, position, tab, colors, ...)
 		this._obervables.appstate = new MobxAppState(this);
+
+		// tracks visual actions (spinners, hints, statusmessages)
+		this._obervables.appactions = new MobxAppActions(this);
 
 		// stores data of active user
 		this._obervables.user = new MobxUser(this);
 		this._obervables.usercard = new MobxUsercard(this);
 
 		// stores data of running game
-		this._obervables.game = new MobxGame();
+		this._obervables.game = new MobxGame(this);
 
-		//this.socketio = new SocketIOStore();
+
+		// *** NON-observables
+		this._nonobervables.game = new NonOGame(this);
+
 
 		this.#__initDone = true;
 		resolve();
@@ -68,57 +77,14 @@ class Store extends MobxPrototype {
 	// helpers
 	sleep = async (v) => await sleep(v || 1000);
 
-	get hint() { return this.helpers.hintText }
-	set hint(v) { runInAction(() => { this.helpers.hintText = v; })}
 
-	get isSpinnerVisible() { return this.helpers.isSpinnerVisible }
-	set isSpinnerVisible(v) { runInAction(() => { this.helpers.isSpinnerVisible = v; })}
-
-	get loadingNowStatus() { return this.helpers.isLoadingNow }
-	set loadingNowStatus(v) { runInAction(() => {
-		this.helpers.isLoadingNow = v;
-		if (v === true) {
-			this.isSpinnerVisible = true;
-		} else {
-			this.isSpinnerVisible = false;
-			this.helpers.hint = "";
-		}
-	}) }
-
-	get savingNowStatus() { return this.helpers.isSavingNow }
-	set savingNowStatus(v) { runInAction(() => {
-		this.helpers.isSavingNow = v;
-		if (v === true) {
-			this.isSpinnerVisible = true;
-		} else {
-			this.isSpinnerVisible = false;
-			this.helpers.hint = "";
-		}
-	}) }
-
-	get unsavedChangesUser() { return this.helpers.unsavedChangesUser }
-	set unsavedChangesUser(v) { runInAction(() => { this.helpers.unsavedChangesUser = v; }) }
-
-	showSpinner = (text, timeout) => {
-		this.hint = text || "";
-		this.isSpinnerVisible = true;
-		if (timeout) {
-			this.timer = setTimeout(()=>{
-				this.hideSpinner();
-				clearInterval(this.timer);
-			}, timeout);
-		}
-	};
-
-	hideSpinner = () => {
-		if (this.timer) clearInterval(this.timer);
-		this.isSpinnerVisible = false;
-		this.hint = "";
-	};
 
 	// getters and setters
 	get appstate() { return this._obervables.appstate }
 	set appstate(o) { runInAction(() => { this._obervables.appstate = o; }) }
+
+	get appactions() { return this._obervables.appactions }
+	set appactions(o) { runInAction(() => { this._obervables.appactions = o; }) }
 
 	get user() { return this._obervables.user }
 	set user(o) { runInAction(() => { this._obervables.user = o; }) }
@@ -129,8 +95,8 @@ class Store extends MobxPrototype {
 	get game() { return this._obervables.game }
 	set game(o) { runInAction(() => { this._obervables.game = o; }) }
 
-	//get socketio() { return this._obervables.socketio }
-	//set socketio(o) { runInAction(() => { this._obervables.socketio = o; }) }
+	get gameNonO() { return this._nonobervables.game }
+	set gameNonO(o) { runInAction(() => { this._nonobervables.game = o; }) }
 
 
   get isAuthenticated() {
@@ -141,7 +107,6 @@ class Store extends MobxPrototype {
 
 decorate(Store, {
 	_obervables: observable,
-  _helpers: observable,
 });
 
 const store = new Store();

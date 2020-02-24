@@ -127,7 +127,6 @@ class MobxUsercard extends MobxPrototype {
 
 decorate(MobxUsercard, {
   _obervables: observable,
-  _helpers: observable,
 });
 
 export default MobxUsercard;

@@ -42,7 +42,7 @@ global.error = ( ...restArgs ) => { global.consoleError(global.debugTime(), rest
   global.DEBUG_DISABLE_PERSISTENSAVEONCLOSEAPP = false; // persistent:: saveToPersistentDatabase()
   global.DEBUG_DISABLE_PERSISTENLOADONOPENAPP = false; // persistent:: loadFromPersistentDatabase()
 
-  global.DEBUG_DISABLE_SOCKETCONNECT = false; // store.init() -> this.socketio.connect()
+  global.DEBUG_DISABLE_SOCKETCONNECT = true; // store.init() -> this.socketio.connect()
   //global.DEBUG_AUTH_FAKE_SERVERRESPONSE = false; // store.user.loginWithFacebook(fakeUser, fakeProfile)
   //DEBUG_DISABLE_REQUIREFACEBOOKTOLOGIN = false;
   //DEBUG_DISABLE_REQUIRESERVERTOKEN = false; // used in routes/socketio

@@ -94,7 +94,7 @@ export default ( withStyles(styles)( observer( class extends React.Component {
         </div>
 
         <Button variant="outlined" onClick={()=> saveToPersistentDatabase(true) }>saveToPersistentDatabase</Button>
-        <Button variant="outlined" onClick={()=> { store.showSpinner("test the spinner", 5000) }}>show Spinner</Button>
+        <Button variant="outlined" onClick={()=> { store.appactions.showSpinner("test the spinner", 5000) }}>show Spinner</Button>
 
         <Button variant="outlined" onClick={()=> { history.push("/logout") }}>logout</Button>
 

@@ -11,16 +11,6 @@ class MobxGame extends MobxPrototype {
   _obervables = {
     debug: true,
 
-    player: {
-    },
-
-    world: {
-    	worldID: null,
-    	groundLayer: null, // array[2500] of array[2500] of itemID
-    	objectLayer: null, // array[2500] of array[2500] of objectID
-    },
-
-
     config: {
       gameTitle: "a phaser 3 game",
       gameVersion: "v1.00.00",
@@ -37,6 +27,7 @@ class MobxGame extends MobxPrototype {
     test: {
       counter: 0,
     },
+
   };
 
   _helpers = {
@@ -51,11 +42,12 @@ class MobxGame extends MobxPrototype {
 
       get counter() { return this.test.counter; }
       set counter(v) { runInAction(() => { this.test.counter = v; }) }
+
+
 };
 
 decorate(MobxGame, {
 	_obervables: observable,
-  _helpers: observable,
 });
 
 export default MobxGame;

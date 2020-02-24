@@ -26,7 +26,7 @@ export default (renderer, src, interpolationPercentage, camera, parentMatrix) =>
 
     var ctx = renderer.currentContext;
 
-    var alpha = camera.alpha * src.alpha;
+    var alpha = camera.alpha * (src.alpha || 1);
 
     if (alpha === 0) return;
 
@@ -46,7 +46,7 @@ export default (renderer, src, interpolationPercentage, camera, parentMatrix) =>
 
     var roundPixels = camera.roundPixels;
 
-    const _pipe = (itemX, itemY, itemZ, frame, itemAlpha, flipX, flipY) => {
+    const _pipe = (/*itemAssetID,*/ itemX, itemY, itemZ, frame, itemAlpha, /*itemTint,*/ flipX, flipY) => {
       const cd = frame.canvasData;
       let dx = frame.x;
       let dy = frame.y;
@@ -76,12 +76,20 @@ export default (renderer, src, interpolationPercentage, camera, parentMatrix) =>
 
     for (let i = 0; i < list.length; i++) {
       const item = list[i];
-      const frame = item.frame;
 
-      let itemAlpha = item.alpha * alpha;
+      let itemAlpha = (item.alpha || 1) * alpha;
 
-      if (itemAlpha > 0) _pipe(item.x, item.y, item.z, item.frame, itemAlpha, item.flipX, item.flipY);
+      if (itemAlpha > 0) {
+        const asset = src.assetIDs[item.assetID] || [];
+        const frame = asset[item.frameID || 0] || null; // item.frame;
 
+        if (frame) {
+					const localXY = src.tileCoordsToLocalCoords(item.tileX, item.tileY) || {}; //const localXY = src.getItemXY(item) || {}; // short for: src.tileCoordsToLocalCoords(tileX, tileY); // item.frame must exist before this function is called
+          _pipe(/*item.assetID,*/ localXY.x, localXY.y, item.z || 0, frame, itemAlpha, item.tint || 0xffffff, item.flipX || false, item.flipY || false);
+        }
+      }
+
+      /*
       if (item.hasOwnProperty("objectLayer") && item.objectLayer && item.objectLayer.visible === true && item.objectLayer.alpha > 0) {
       	const obj = item.objectLayer;
       	itemAlpha *= obj.alpha;
@@ -90,6 +98,7 @@ export default (renderer, src, interpolationPercentage, camera, parentMatrix) =>
 
       	if (itemAlpha > 0) _pipe(objX + obj.x, objY + obj.y, item.z + obj.z, obj.frame, itemAlpha, obj.flipX, obj.flipY);
       }
+      */
     }
 
     ctx.restore();

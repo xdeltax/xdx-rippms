@@ -12,6 +12,8 @@ import OAuth from 'ui/components/auth/OAuth'
 import store from 'store';
 import socketio from 'socket'; // socket
 
+import { saveToPersistentDatabase} from "database/persistentDB.js";
+
 // assets
 import AppLogo from 'assets/applogo.svg';
 import FacebookLogo from 'assets/Facebook_Logo_(2019)_144x144.png';
@@ -118,6 +120,9 @@ export default ( withStyles(styles)( observer( class extends React.Component {
           }} >
           	GETUSERSTORE
           </Button>
+
+          <Button variant="outlined" onClick={()=> saveToPersistentDatabase(true) }>saveToPersistentDatabase</Button>
+          <Button variant="outlined" onClick={()=> { store.appactions.showSpinner("test the spinner", 5000) }}>show Spinner</Button>
 
 
       </div>

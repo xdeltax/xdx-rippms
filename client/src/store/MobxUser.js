@@ -278,7 +278,7 @@ class MobxUser extends MobxPrototype {
 	  const {err, res} = await this._getUserStoreFromServer(this.userid);
     // res = {userid: "xxx", user: {}, usercard: {}, }
 
-    //global.log("+++++++2 getUserStoreFromServerANDMergeWithStore:: ", err, res)
+    global.log("+++++++2 getUserStoreFromServerANDMergeWithStore:: ", err, res)
 	  if (!err) {
 	  	const {
         userid,
@@ -289,7 +289,7 @@ class MobxUser extends MobxPrototype {
       //global.log("+++++++++++++++++++X1:: ", store.usercard.get_all())
 
       runInAction(() => {
-        user && store.user.merge_all( {user: user} );
+        user && this.merge_all( {user: user} );
         usercard && store.usercard.merge_all( {usercard: usercard} );
       });
 
@@ -297,6 +297,13 @@ class MobxUser extends MobxPrototype {
 
       await saveToPersistentDatabase();
 	  };
+
+    if (err) {
+      runInAction(() => {
+        this.clear_all();
+        store.usercard.clear_all();
+      });
+    }
   	//global.log("+++++++3 getUserStoreFromServerANDMergeWithStore:: ", err, res)
   	return { err: err, res: res };
   };
@@ -340,7 +347,6 @@ class MobxUser extends MobxPrototype {
 
 decorate(MobxUser, {
   _obervables: observable,
-  _helpers: observable,
 });
 
 export default MobxUser;

@@ -75,14 +75,71 @@ export const point2hash = (x, y, divider, exponent) => {
   if (!exponent) return null;
   //const exponentTag = exponent.toString().padStart(2, "0");
 
-  const validDimXY = fastPow[divider][exponent] || Math.pow(divider, exponent);
-  if (x < 0 || y < 0 || x >= validDimXY || y >= validDimXY) return null;
+  let dimXY = fastPow[divider][exponent] || Math.pow(divider, exponent);
+  if (x < 0 || y < 0 || x >= dimXY || y >= dimXY) return null;
 
-  const hash = _point2hash(x, y, validDimXY, divider, "", 0);
+  let hash = "";
+  let stage = 0;
+  while (stage++ <= 25) {
+    dimXY = dimXY / divider;
+    if (dimXY < 1) break; // ABORT-CRITERIA
+
+    const areaIndexX = Math.floor(x / dimXY);
+    const areaIndexY = Math.floor(y / dimXY);
+
+    const hashChar = (baseArray[divider] || "").charAt(areaIndexX + divider * areaIndexY);
+    if (!hashChar) break; // ABORT-CRITERIA
+
+    //global.log("_point2hash:: ", x.toFixed(2), newDimXY.toFixed(2), areaIndexX.toFixed(2), hash, hashChar, stage);
+    x = x - areaIndexX * dimXY;
+    y = y - areaIndexY * dimXY;
+    hash = hash + hashChar;
+  }
 
   return (hash) ? divider + /*exponentTag +*/ hash : null;
-};
+}
 
+export const hash2rect = (taggedHash, cutoff) => {
+  if (!taggedHash || typeof taggedHash !== 'string' || taggedHash.length < 2) return null; // (divider:1)(exponent:2)(hash:1..x)
+
+  // extract divider from hash
+  const divider = Number(taggedHash.charAt(0)); // extract position 0
+  if (!Number.isInteger(divider)) return null;
+
+  // extract hash
+  let hash = taggedHash.slice(1); // remove first char
+  const exponent = hash.length;  // extract exponent from hash (exponent = length of original hash)
+  if (!exponent) return null;
+
+  if (cutoff) hash = hash.slice(0, -cutoff);
+  if (hash.length <= 0) return null;
+
+  // calc dimensions of hash-map (use from precalculated array or fallback to math)
+  let dimXY = fastPow[divider][exponent] || Math.pow(divider, exponent);
+  let xTL = 0;
+  let yTL = 0;
+  for (let stage = 0; stage < hash.length; stage++) {
+    const hashChar = hash.charAt(stage);
+    const baseIndex= (baseArray[divider] || "").indexOf(hashChar);
+
+    const areaIndexY = Math.floor(baseIndex / divider);
+    const areaIndexX = baseIndex - divider * areaIndexY;
+
+    dimXY = dimXY / divider;
+    xTL = xTL + areaIndexX * dimXY;
+    yTL = yTL + areaIndexY * dimXY;
+  }
+
+  return {
+    x1: xTL,
+    y1: yTL,
+    x2: xTL + dimXY - 1,
+    y2: yTL + dimXY - 1,
+    dim: dimXY,
+  };
+}
+
+/*
 export const hash2rect = (taggedHash, cutoff) => { // return: x/y: top/left corner of rectangle and width/height
   if (!taggedHash || taggedHash.length < 2) return null; // (divider:1)(exponent:2)(hash:1..x)
 
@@ -104,27 +161,10 @@ export const hash2rect = (taggedHash, cutoff) => { // return: x/y: top/left corn
   const validDimXY = fastPow[divider][exponent] || Math.pow(divider, exponent);
 
   //clog("hash2rect:: ", divider, exponent, validDimXY, hash);
-  return _hash2rect(hash, 0, 0, validDimXY, divider, 0);
+  return _hash2rectRecursion(hash, 0, 0, validDimXY, divider, 0);
 }
 
-const _point2hash = (x, y, dimXY, divider, hash, stage) => {
-  const newDimXY = dimXY / divider;
-  if (newDimXY < 1 || stage > 25) return hash; // ABORT-CRITERIA
-
-  const areaIndexX = Math.floor(x / newDimXY);
-  const areaIndexY = Math.floor(y / newDimXY);
-
-  //const baseArr = _getBaseArr(divider);
-  const hashChar = (baseArray[divider] || "").charAt(areaIndexX + divider * areaIndexY);
-  if (!hashChar) return hash; // ABORT-CRITERIA
-
-  //clog("_point2hash:: ", x.toFixed(2), newDimXY.toFixed(2), areaIndexX.toFixed(2), hash, hashChar, stage);
-
-  // return hash with dividertag
-  return _point2hash(x - areaIndexX * newDimXY, y - areaIndexY * newDimXY, newDimXY, divider, hash + hashChar, stage + 1);
-}
-
-const _hash2rect = (hash, xTL, yTL, dimXY, divider, stage) => {
+const _hash2rectRecursion = (hash, xTL, yTL, dimXY, divider, stage) => {
   //clog("_hash2rect:: ", xTL.toFixed(2), yTL.toFixed(2), dimXY.toFixed(2), hash, stage);
   if (stage >= hash.length) return {
     x1: xTL,
@@ -145,5 +185,57 @@ const _hash2rect = (hash, xTL, yTL, dimXY, divider, stage) => {
 
   const newXTopLeft = xTL + areaIndexX * newDimXY;
   const newYTopLeft = yTL + areaIndexY * newDimXY;
-  return _hash2rect(hash, newXTopLeft, newYTopLeft, newDimXY, divider, stage + 1)
+  return _hash2rectRecursion(hash, newXTopLeft, newYTopLeft, newDimXY, divider, stage + 1)
 }
+*/
+
+
+/*
+export const point2hash = (x, y, divider, exponent) => {
+  if (!divider) return null;
+  if (!exponent) return null;
+  //const exponentTag = exponent.toString().padStart(2, "0");
+
+  const validDimXY = fastPow[divider][exponent] || Math.pow(divider, exponent);
+  if (x < 0 || y < 0 || x >= validDimXY || y >= validDimXY) return null;
+
+  global.log("1::", _point2hashLoop(x, y, validDimXY, divider, "", 0));
+  global.log("2::", _point2hashRecursion(x, y, validDimXY, divider, "", 0));
+  const hash = _point2hashLoop(x, y, validDimXY, divider, "", 0);
+
+  return (hash) ? divider + hash : null;
+};
+
+
+export const point2hash = (x, y, divider, exponent) => {
+  if (!divider) return null;
+  if (!exponent) return null;
+  //const exponentTag = exponent.toString().padStart(2, "0");
+
+  const validDimXY = fastPow[divider][exponent] || Math.pow(divider, exponent);
+  if (x < 0 || y < 0 || x >= validDimXY || y >= validDimXY) return null;
+
+  global.log("1::", _point2hashLoop(x, y, validDimXY, divider, "", 0));
+  global.log("2::", _point2hashRecursion(x, y, validDimXY, divider, "", 0));
+  const hash = _point2hashLoop(x, y, validDimXY, divider, "", 0);
+
+  return (hash) ? divider + hash : null;
+};
+
+const _point2hashRecursion = (x, y, dimXY, divider, hash, stage) => {
+  const newDimXY = dimXY / divider;
+  if (newDimXY < 1 || stage > 25) return hash; // ABORT-CRITERIA
+
+  const areaIndexX = Math.floor(x / newDimXY);
+  const areaIndexY = Math.floor(y / newDimXY);
+
+  //const baseArr = _getBaseArr(divider);
+  const hashChar = (baseArray[divider] || "").charAt(areaIndexX + divider * areaIndexY);
+  if (!hashChar) return hash; // ABORT-CRITERIA
+
+  //clog("_point2hash:: ", x.toFixed(2), newDimXY.toFixed(2), areaIndexX.toFixed(2), hash, hashChar, stage);
+
+  // return hash with dividertag
+  return _point2hashRecursion(x - areaIndexX * newDimXY, y - areaIndexY * newDimXY, newDimXY, divider, hash + hashChar, stage + 1);
+}
+*/

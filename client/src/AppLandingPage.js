@@ -36,7 +36,7 @@ export default ( observer( class extends React.Component {
 
     global.log("AppLandingPage:: constructor:: ", global.nowDatePretty(), global.nowTimePretty(), )
 
-    store.showSpinner("loading");
+    store.appactions.showSpinner("loading");
   }
 
   /*
@@ -113,7 +113,7 @@ export default ( observer( class extends React.Component {
     } finally {
       // do not load / init <AppRouter> until loading app-state is finished
       this.setState({ statusText: "", isLoading: false, })
-      store.hideSpinner();
+      store.appactions.hideSpinner();
     }
   } // of componentDidMount
 
@@ -179,7 +179,7 @@ export default ( observer( class extends React.Component {
 
     return (
       <React.Fragment>
-        <GlobalSpinner show={store.isSpinnerVisible} hint={store.hint} />
+        <GlobalSpinner show={store.appactions.spinner.isSpinnerVisible} hint={store.appactions.spinner.hintText} />
         {this.state.isLoading ? <LoadingScreen /> : (
         <React.Fragment>
           <div style={{
@@ -211,7 +211,7 @@ export default ( observer( class extends React.Component {
             title={[
               "DEBUG", ` v01 ${process.env.REACT_APP_APPVERSION} ${Math.floor(99*Math.random())}`,
               " s:", `${store.appstate.app.watchers.socket.isConnected?1:0}`,
-              " l:", `${store.loadingNowStatus?1:0}`,
+              " l:", `${store.appactions.loadingNowStatus?1:0}`,
 
               " c:", `${store.appstate.app.watchers.connection.isOnline?1:0}`,
 
@@ -230,7 +230,7 @@ export default ( observer( class extends React.Component {
             	debugTime: global.debugTime(),
             	appVersion: process.env.REACT_APP_APPVERSION,
             	fingerprint: global.fingerprint.hash,
-              loadingNowStatus: store.loadingNowStatus,
+              loadingNowStatus: store.appactions.loadingNowStatus,
               isSocketConnected: Boolean(store.appstate.app.watchers.socket.isConnected),
 
               isAuthenticated: store.isAuthenticated,
@@ -243,6 +243,7 @@ export default ( observer( class extends React.Component {
               storeUser: store.user.get_all(),
               storeUsercard: store.usercard.get_all(),
               storeGame: store.game.get_all(),
+              storeGameNonO: store.gameNonO.get_all(),
 
               storeAppState: store.appstate.get_all(),
             }}

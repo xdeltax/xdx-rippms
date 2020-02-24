@@ -2,6 +2,8 @@ import * as Phaser from 'phaser'
 
 import IsometricTilemap from "../extends/isometrictilemap/IsometricTilemapPacked";
 
+import * as geohash from "tools/geoHashIntegerV2.js";
+
 // tiles:: 3079 x 3079; 1 px padding; 6 x 6; frame 512 x 512; isotile: 512 x 256, bottomPadding: 140 px;
 import Asset_ISO60_Texturepack__JSON from "../assets/Tilemap/xdx_isocam60_anim_texturepack.json";
 import Asset_ISO60_Texturepack__PNG  from "../assets/Tilemap/xdx_isocam60_anim_texturepack.png";
@@ -103,9 +105,40 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       .setScrollFactor(0) // fix to absolute position, dont move with camera
       .setDepth(100)
 
+
+    /*
+    const mapXwidth = 1600000;
+    const mapYwidth = 200000;
+    const hashDivider = 4; // 2 to 8
+    const hashExponent = geohash.calcExponent(hashDivider, mapXwidth, mapYwidth); // dimXY needs to be fit power(divider, x) with x is an integer
+
+    const x = Math.floor(mapXwidth / 2);
+    const y = Math.floor(mapYwidth / 2);
+
+    let hash = geohash.point2hash(x, y, hashDivider, hashExponent); // '2AAAAAAAAADAAD' => divider 2; exponent = length(hash) = 13 -> maxDimXY = power(divider, exponent) = 2^13 = 8192 => ALLOWED MAP = 8192 x 8192
+    let rect = geohash.hash2rect(hash);
+
+    global.log("mapXwidth::    ", mapXwidth);
+    global.log("mapYwidth::    ", mapYwidth);
+    global.log("hashDivider::  ", hashDivider, "2..8");
+    global.log("hashExponent:: ", hashExponent, "(length of hash)");
+    global.log("maxValidDimXY::", Math.pow(hashDivider, hashExponent), `(${hashDivider}^${hashExponent})`);
+    global.log("x/y ::", x, y);
+    global.log("hash::", hash.padEnd(hashExponent));
+    global.log("rect::", rect);
+
+    rect = geohash.hash2rect(hash, 1); //clog("hash::", hash.slice(0,-1).padEnd(hashExponent+1), rect);
+    global.log("rect::", rect);
+    rect = geohash.hash2rect(hash, 2); //clog("hash::", hash.slice(0,-2).padEnd(hashExponent+1), rect);
+    global.log("rect::", rect);
+    rect = geohash.hash2rect(hash, 3); //clog("hash::", hash.slice(0,-3).padEnd(hashExponent+1), rect);
+    global.log("rect::", rect);
+    */
+
+
     const tilemapConfig = {
-      width : 25000,
-      height: 25000,
+      width : 1000,
+      height: 1000,
       tileWidth : 512, // 256,
       tileHeight: 256, // 128,
       paddingBottom: 512 - 372, //19, // -1: sprite verticaly centered; 0: sprite bottom-based; >0:
@@ -123,10 +156,8 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       //        -> frame 0: empty base-tile
     };
 
-    // mapCompacted = array of 2-chars
-    // [1bit(2) groundlayer / objectlayer] [7bit(128) assetID]
-    // [8bit(256) frameNUM] -> typical 8 x 8 = 64
-
+    const tilemapBytes = 2; // 2 bytes per entry
+    const tilemapBuffer = new ArrayBuffer(tilemapBytes * tilemapConfig.width * tilemapConfig.height);
 
     this.xdx.isoMap = new IsometricTilemap(this, 0, 0, tilemapConfig); // (scene, x, y, mapData, mapConfig)
     global.log("isomap::", this.xdx.isoMap)
@@ -136,17 +167,15 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       .setAlpha(1.0)
       .setDepth(0)                        // z-index of layer (relative to other gameObjects of this scene)
       .setCamera(this.cameras.main)       // camera used by culling layer-objects against viewport
-      .setAnimateCulledOnly(true)         // true: animation run only for items in camera-worldview false: animation run for all items with the prop: animatable = true
       .setExtraTilesToCull(1)             // 1 for ISO60°, 3 for ISO75°
       //.setPosition(this.cameras.main.centerX, this.cameras.main.centerY) // center map-object in viewport
       .setPosition(this.cameras.main.centerX - this.xdx.isoMap.width2, this.cameras.main.centerY - this.xdx.isoMap.height2) // center map-object in viewport
-/*
+      .linkDataBuffer(tilemapBuffer, tilemapBytes)
+      /*
       .addTimer({ name: "moveZ@10fps", fps: 10 }, (timerTicker, preUpdateTicker, preUpdateTime, childList, renderList, animList) => {  // set a periodic timer
         //animList && animList.forEach(item => item.z = tilemapConfig.paddingBottom * Math.sin(2 * Math.PI * ((timerTicker + (item.tileX + item.tileY) * 100) % 500) / 500)); // move z-axis in a sinus-wave by time
         renderList && renderList.forEach(item => { item.z = tilemapConfig.paddingBottom * Math.sin(2 * Math.PI * ((timerTicker + (item.tileX + item.tileY) * 100) % 500) / 500) }); // move z-axis in a sinus-wave by time
       })
-*/
-      /*
       .addTimer({ name: "animate", fps: 15 }, (timerTicker, preUpdateTicker, preUpdateTime, childList, renderList, animList) => { // set a periodic timer
         if (animList && animList.length > 0) {
           //slow: always animate visible and invisible tiles
@@ -162,15 +191,18 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       })
       */
 
+
       const map = this.xdx.isoMap;
       //map.data2D = new Array(map.tilemapConfig.height);
       for (let tileY = 0; tileY < map.tilemapConfig.height; tileY++) {
         //map.data2D[tileY] = new Array(map.tilemapConfig.width);
         for (let tileX = 0; tileX < map.tilemapConfig.height; tileX++) {
           map.setDataObject(tileX, tileY, {
-            assetID: map.tilemapConfig.assetKeys.indexOf("Asset_ISO60_Texturepack"),  // texture to use for frameselection; defaults to assetkeys[0]
-            frameID: 0,                       // framenumber in texture; defaults to random
-            //optional:: hidden:0/1
+            assetID: map.tilemapConfig.assetKeys.indexOf("Asset_ISO60_Texturepack"),  // required: 0..63; index of texture to use for frameselection
+            frameID: 0, // required: 0..127; framenumber in texture; defaults to 0
+            hidden: Phaser.Math.Between(0,9) === 0 ? 1 : 0, //optional:: hidden:0/1
+            flipX: Phaser.Math.Between(0,9) === 0 ? 1 : 0, //optional:: flipX:0/1
+            flipY: 0, //optional:: flipY:0/1
             //optional:: depth: 0,                       // rendering sort-order; defaults to 0 (no sorting === faster)
             //optional:: alpha: 0.0 .. 1.0
             //optional:: tint: Phaser.Math.Between(0xdddddd, 0xeeeeee),
@@ -182,9 +214,9 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
 
           // set frameID:: randomize some frames
           switch (Phaser.Math.Between(0,9)) {
-            case 0: map.setFrameID(tileX,tileY, Phaser.Math.Between(0, 30)); break; // animation state of boy (0 .. 30)
-            case 1: map.setFrameID(tileX,tileY, 31); break; // boy, not animatable
-            default:map.setFrameID(tileX,tileY, 32); break; // empty block
+            case 0: map.setDataProperty(tileX,tileY, "frameID", Phaser.Math.Between(0, 30)); break; // animation state of boy (0 .. 30)
+            case 1: map.setDataProperty(tileX,tileY, "frameID", 31); break; // boy, not animatable
+            default:map.setDataProperty(tileX,tileY, "frameID", 32); break; // empty block
           };
 
         } // of for X
@@ -292,7 +324,13 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       const tileXY  = this.xdx.isoMap.localCoordsToTileCoords(localXY.x, localXY.y);  // convert pixel-coords to tile-coords (array data2D[tileY][tileX])
       const tile    = this.xdx.isoMap.getTileByTileCoords(tileXY.x, tileXY.y);        // get tile (item)
 
-      global.log("click ::tile:: ", pointer, this.xdx.isoMap, tile, tile && tile.tileX, tile && tile.tileY, tile && tile.x, tile && tile.y)
+
+      const geohashDivider = 2; // 2 to 8
+      const geohashExponent = geohash.calcExponent(geohashDivider, this.xdx.isoMap.tilemapConfig.width, this.xdx.isoMap.tilemapConfig.height); // dimXY needs to be fit power(divider, x) with x is an integer
+      const ghash = geohash.point2hash(tileXY.x, tileXY.y, geohashDivider, geohashExponent); // '2AAAAAAAAADAAD' => divider 2; exponent = length(hash) = 13 -> maxDimXY = power(divider, exponent) = 2^13 = 8192 => ALLOWED MAP = 8192 x 8192
+      const grect = geohash.hash2rect(ghash, 0);
+
+      global.log("click ::tile:: ", pointer, this.xdx.isoMap, tile, tile && tile.tileX, tile && tile.tileY, ghash, grect)
 
       if (tile) {
         if (this.xdx.isoMap.isDebug) {
@@ -342,11 +380,12 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
         case "ArrowDown":   camera.scrollY += 10; break;
         case "+":           camera.setZoom(2 * camera.zoom); camera.dirty = true; break;
         case "-":           camera.setZoom(0.5 * camera.zoom); camera.dirty = true; break;
-        case " ":           global.log("DEBUG:: scene, cameras, cameras.main:: ", this, this.cameras, this.cameras.main); break;
+        case " ":           global.log("MAP DEBUG:: scene, cameras, cameras.main:: ", this, this.cameras, this.cameras.main); break;
         //case "a":           this.xdx.isoMap.map.data2DFull.forEach(arr => arr.forEach(item => item.isRunning = !item.isRunning)); break;
-        case "s":           this.xdx.isoMap.removeTimer(); break;
-        case "q":           global.log("animation::", this.xdx.isoMap.shlTileFrame(this.xdx.isoMap.getTileByTileCoords(0,0)).frameID); break;
-        case "w":           global.log("animation::", this.xdx.isoMap.shrTileFrame(this.xdx.isoMap.getTileByTileCoords(0,0)).frameID); break;
+        //case "s":           this.xdx.isoMap.removeTimer(); break;
+        //case "q":           global.log("animation::", this.xdx.isoMap.shlTileFrame(this.xdx.isoMap.getTileByTileCoords(0,0)).frameID); break;
+        //case "w":           global.log("animation::", this.xdx.isoMap.shrTileFrame(this.xdx.isoMap.getTileByTileCoords(0,0)).frameID); break;
+        case "s":           global.log("MAP DEBUG:: ", this.xdx.isoMap.dataview.byteLength, this.xdx.isoMap.dataview); break;
       }
     })
 
