@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser'
-import store from 'store';
+//import store from 'store';
 import MySprite from '../extends/MySprite';
 import assetLogo from "../assets/DemoScene/logo512.png";
 

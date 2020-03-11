@@ -1,4 +1,6 @@
 import * as Phaser from 'phaser'
+import store from 'store'; // mobx-store
+import indexedDB from "localDatabase/indexedDB.js";
 
 import IsometricTilemap from "../extends/isometrictilemap/IsometricTilemapPacked";
 
@@ -106,39 +108,12 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       .setDepth(100)
 
 
-    /*
-    const mapXwidth = 1600000;
-    const mapYwidth = 200000;
-    const hashDivider = 4; // 2 to 8
-    const hashExponent = geohash.calcExponent(hashDivider, mapXwidth, mapYwidth); // dimXY needs to be fit power(divider, x) with x is an integer
-
-    const x = Math.floor(mapXwidth / 2);
-    const y = Math.floor(mapYwidth / 2);
-
-    let hash = geohash.point2hash(x, y, hashDivider, hashExponent); // '2AAAAAAAAADAAD' => divider 2; exponent = length(hash) = 13 -> maxDimXY = power(divider, exponent) = 2^13 = 8192 => ALLOWED MAP = 8192 x 8192
-    let rect = geohash.hash2rect(hash);
-
-    global.log("mapXwidth::    ", mapXwidth);
-    global.log("mapYwidth::    ", mapYwidth);
-    global.log("hashDivider::  ", hashDivider, "2..8");
-    global.log("hashExponent:: ", hashExponent, "(length of hash)");
-    global.log("maxValidDimXY::", Math.pow(hashDivider, hashExponent), `(${hashDivider}^${hashExponent})`);
-    global.log("x/y ::", x, y);
-    global.log("hash::", hash.padEnd(hashExponent));
-    global.log("rect::", rect);
-
-    rect = geohash.hash2rect(hash, 1); //clog("hash::", hash.slice(0,-1).padEnd(hashExponent+1), rect);
-    global.log("rect::", rect);
-    rect = geohash.hash2rect(hash, 2); //clog("hash::", hash.slice(0,-2).padEnd(hashExponent+1), rect);
-    global.log("rect::", rect);
-    rect = geohash.hash2rect(hash, 3); //clog("hash::", hash.slice(0,-3).padEnd(hashExponent+1), rect);
-    global.log("rect::", rect);
-    */
 
 
     const tilemapConfig = {
-      width : 1000,
-      height: 1000,
+      width : store.gameMap.tilemap.width, //10,
+      height: store.gameMap.tilemap.height, //10,
+
       tileWidth : 512, // 256,
       tileHeight: 256, // 128,
       paddingBottom: 512 - 372, //19, // -1: sprite verticaly centered; 0: sprite bottom-based; >0:
@@ -156,9 +131,6 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       //        -> frame 0: empty base-tile
     };
 
-    const tilemapBytes = 2; // 2 bytes per entry
-    const tilemapBuffer = new ArrayBuffer(tilemapBytes * tilemapConfig.width * tilemapConfig.height);
-
     this.xdx.isoMap = new IsometricTilemap(this, 0, 0, tilemapConfig); // (scene, x, y, mapData, mapConfig)
     global.log("isomap::", this.xdx.isoMap)
     this.xdx.isoMap
@@ -170,7 +142,7 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       .setExtraTilesToCull(1)             // 1 for ISO60°, 3 for ISO75°
       //.setPosition(this.cameras.main.centerX, this.cameras.main.centerY) // center map-object in viewport
       .setPosition(this.cameras.main.centerX - this.xdx.isoMap.width2, this.cameras.main.centerY - this.xdx.isoMap.height2) // center map-object in viewport
-      .linkDataBuffer(tilemapBuffer, tilemapBytes)
+      .linkDataview(store.gameMap.tilemap.dataview, store.gameMap.tilemap.bufferBytes)
       /*
       .addTimer({ name: "moveZ@10fps", fps: 10 }, (timerTicker, preUpdateTicker, preUpdateTime, childList, renderList, animList) => {  // set a periodic timer
         //animList && animList.forEach(item => item.z = tilemapConfig.paddingBottom * Math.sin(2 * Math.PI * ((timerTicker + (item.tileX + item.tileY) * 100) % 500) / 500)); // move z-axis in a sinus-wave by time
@@ -196,13 +168,13 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       //map.data2D = new Array(map.tilemapConfig.height);
       for (let tileY = 0; tileY < map.tilemapConfig.height; tileY++) {
         //map.data2D[tileY] = new Array(map.tilemapConfig.width);
-        for (let tileX = 0; tileX < map.tilemapConfig.height; tileX++) {
-          map.setDataObject(tileX, tileY, {
-            assetID: map.tilemapConfig.assetKeys.indexOf("Asset_ISO60_Texturepack"),  // required: 0..63; index of texture to use for frameselection
-            frameID: 0, // required: 0..127; framenumber in texture; defaults to 0
-            hidden: Phaser.Math.Between(0,9) === 0 ? 1 : 0, //optional:: hidden:0/1
-            flipX: Phaser.Math.Between(0,9) === 0 ? 1 : 0, //optional:: flipX:0/1
-            flipY: 0, //optional:: flipY:0/1
+        for (let tileX = 0; tileX < map.tilemapConfig.width; tileX++) {
+          map.setDataObject(tileX, tileY, { // compact object-data to 2 bytes (16 bit)
+            assetID: map.tilemapConfig.assetKeys.indexOf("Asset_ISO60_Texturepack"),  // 8bit = 0..3; 16bit = 0..63; index of texture to use for frameselection
+            frameID: 0, // 8bit = 0..63; 16bit = 0..127; framenumber in texture; defaults to 0
+            hidden: Phaser.Math.Between(0,9) === 0 ? 1 : 0, // optional
+            flipX: Phaser.Math.Between(0,9) === 0 ? 1 : 0, // optional
+            flipY: 0, //optional
             //optional:: depth: 0,                       // rendering sort-order; defaults to 0 (no sorting === faster)
             //optional:: alpha: 0.0 .. 1.0
             //optional:: tint: Phaser.Math.Between(0xdddddd, 0xeeeeee),
@@ -330,7 +302,9 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       const ghash = geohash.point2hash(tileXY.x, tileXY.y, geohashDivider, geohashExponent); // '2AAAAAAAAADAAD' => divider 2; exponent = length(hash) = 13 -> maxDimXY = power(divider, exponent) = 2^13 = 8192 => ALLOWED MAP = 8192 x 8192
       const grect = geohash.hash2rect(ghash, 0);
 
+
       global.log("click ::tile:: ", pointer, this.xdx.isoMap, tile, tile && tile.tileX, tile && tile.tileY, ghash, grect)
+
 
       if (tile) {
         if (this.xdx.isoMap.isDebug) {
@@ -385,7 +359,12 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
         //case "s":           this.xdx.isoMap.removeTimer(); break;
         //case "q":           global.log("animation::", this.xdx.isoMap.shlTileFrame(this.xdx.isoMap.getTileByTileCoords(0,0)).frameID); break;
         //case "w":           global.log("animation::", this.xdx.isoMap.shrTileFrame(this.xdx.isoMap.getTileByTileCoords(0,0)).frameID); break;
-        case "s":           global.log("MAP DEBUG:: ", this.xdx.isoMap.dataview.byteLength, this.xdx.isoMap.dataview); break;
+        case "s":
+          global.log("MAP DEBUG:: ", this.xdx.isoMap.buffer.length, this.xdx.isoMap.dataview.byteLength, this.xdx.isoMap.dataview);
+
+          indexedDB.saveDataview(this.xdx.isoMap.dataview);
+          break;
+        default: break;
       }
     })
 
@@ -488,12 +467,16 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
     if (!this.updateRunning || this.load.isLoading()) return;
     this.updateTicker++;
 
+
+    if (this.updateTicker % 10 === 0) { // do something frame based here
+      const phaserGameVisible = Boolean(store.appState.app.watchers.route.pathname === "/game/phaser"); // check if game-modal is visible
+      this.input.enabled = phaserGameVisible; // enable / disable pointer/touch-events
+      this.input.keyboard.enabled = phaserGameVisible; // enable / disable keyboard-events
+    }
+
     // touch-actions
     this.handleInteractions(time, this.cameras.main, this.input.pointer1, this.input.pointer2);
 
-    if (this.updateTicker % 10 === 0) {
-      // do something frame based here
-    }
 
     //this.updatePointerEvents(time, this.cameras.main, this.input.pointer1, this.input.pointer2, );
   } // of update

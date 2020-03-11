@@ -21,12 +21,11 @@ export default class OAuth extends React.Component {
   */
   componentDidMount() {
     const { socket, provider, onAuthSuccess, onAuthFailed, } = this.props;
-
-    global.log("OAuth:: componentDidMount:: provider:: ", provider, socket);
+    //global.log("OAuth:: componentDidMount:: provider:: ", provider, socket);
 
     const ioRoute = `client.oauth.${provider}.io`;
     socket && socket.on(ioRoute, (err, res) => { // get reply with logindata from server (provider/callback) via socket
-    	global.log("oAuth:: incomming socket message:: ", socket.id, provider, err, res)
+    	//global.log("oAuth:: incomming socket message:: ", socket.id, provider, err, res)
       if (this.state && this.state.windowOpen) {
 	      this.closeWindow();
 	      if (!err) {
@@ -39,7 +38,7 @@ export default class OAuth extends React.Component {
   };
 
   openWindow = () => {
-    const { server, provider, socket, onAuthFailed, onWindowOpen } = this.props;
+    const { server, provider, socket, onWindowOpen } = this.props;
     if (!this.state.disabled && server && provider && socket && socket.id) {
       /*
 	    timer = setTimeout(() => {
@@ -62,8 +61,8 @@ export default class OAuth extends React.Component {
   };
 
   render() {
-    const { server, buttonText, provider, uid, providerLogo, socket, fingerprint, onWindowBlocked, onAuthSuccess, onAuthFailed, onWindowOpen, onWindowClose, } = this.props;
-    const { windowOpen, disabled, } = this.state;
+    const { server, buttonText, provider, uid, providerLogo, socket, fingerprint, onWindowBlocked, /*onAuthSuccess, onAuthFailed, onWindowOpen, onWindowClose,*/ } = this.props;
+    const { windowOpen, /*disabled,*/ } = this.state;
 
     const _uid = (uid) ? uid : "";
     const fphash = (fingerprint && fingerprint.hash) ? fingerprint.hash : "";
@@ -73,8 +72,8 @@ export default class OAuth extends React.Component {
 
     const width = 1200; //window.innerWidth;
     const height= 1200; //window.innerHeight;
-    const left= 0; //(window.innerWidth / 2) - (width / 2);
-    const top = 0; //(window.innerHeight / 2) - (height / 2);
+    //const left= 0; //(window.innerWidth / 2) - (width / 2);
+    //const top = 0; //(window.innerHeight / 2) - (height / 2);
 
     const windowFeatures = {
       width: width,
@@ -105,9 +104,11 @@ export default class OAuth extends React.Component {
           {providerLogo && <img width="25px" height="25px" src={providerLogo} alt="" style={{marginRight: 15,}} />}
           {buttonText}
         </Button>
+        {0===1 &&
         <Button style={{ margin: 5, }} variant="outlined" color="primary" onClick={this.closeWindow}>
           CLOSE
         </Button>
+        }
       </React.Fragment>
     )
   };

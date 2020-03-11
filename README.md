@@ -134,8 +134,16 @@ socket.io
   npm i -s socket.io-client
 
 database
+  //npm i -s pouchdb
+
   npm i -s nedb
-  npm i -s mongodb
+
+  //npm i -s mongodb
+  npm i -s dexie      #wrapper for clientside indexeddb
+
+  npm i -s rxdb                 
+  npm i -s rxjs                 #dependency
+  npm i -s pouchdb-adapter-idb  #adapter for indexeddb
 
 portals
 	npm i -s react-new-window
@@ -206,7 +214,14 @@ jsonwebtoken
   npm i -s jsonwebtoken
 
 database
+  //npm i -s pouchdb
+
   npm i -s nedb nedb-promises
+
+  npm i -s rxdb
+  npm i -s rxjs
+  npm i -s pouchdb-adapter-node-websql
+  npm i -s express-pouchdb
 
 gfx
   npm i -s jimp

@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser'
-import store from 'store';
+//import store from 'store';
 
 import assetBackground from "../assets/DemoScene/background.png";
 import assetLogo from "../assets/DemoScene/logo512.png";
@@ -120,7 +120,7 @@ const SceneClass = class StressTest extends Phaser.Scene { // https://github.com
     global.log("PHASERSCENE:: create():: this:: ",  this, );
     global.log("PHASERSCENE:: create():: data:: ",  data);
     global.log("PHASERSCENE:: create():: react:: ",  this.game.react, );
-    global.log("PHASERSCENE:: create():: mobx-store (phaser):: ",  this.game.react.store.game.get_all(), );
+    global.log("PHASERSCENE:: create():: mobx-store (phaser):: ",  this.game.react.store.game.get_all_observables(), );
 
     this.spritesgroup = this.add.group();
     this._addSprites(this.spritesgroup, 10);

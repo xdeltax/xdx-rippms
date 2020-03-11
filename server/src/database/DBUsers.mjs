@@ -228,7 +228,7 @@ export default class DBUsers extends DBPrototype {
 	}
 
 
-	getUser = async (unsafe_targetuserid, unsafe_userid, unsafe_servertoken) => {
+	get = async (unsafe_targetuserid, unsafe_userid, unsafe_servertoken) => {
     try {
 			const valid_targetuserid= joiValidateFallback(unsafe_targetuserid, null, joi_userid);
 			const valid_userid      = joiValidateFallback(unsafe_userid      , null, joi_userid);

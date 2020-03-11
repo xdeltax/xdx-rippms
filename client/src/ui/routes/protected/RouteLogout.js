@@ -3,7 +3,7 @@ import { observer }  from 'mobx-react';
 
 //import AppLogo from 'assets/applogo.svg';
 
-import store from 'store';
+import rxdbStore from 'rxdbStore'; // rxdb-database
 
 export default ( observer( class extends React.Component {
 
@@ -12,10 +12,9 @@ export default ( observer( class extends React.Component {
   }
 
   render() {
-    global.log("RouteLogout:: render:: ", this.props);
     return (
       <div style={{height: "100%", }}>
-        please wait ...
+        logging out. please wait ...
       </div>
     ) // of return
   } // of render
@@ -23,7 +22,7 @@ export default ( observer( class extends React.Component {
   logout = async () => {
     const { history, } = this.props;
     try {
-      const res = await store.user.doAuthLogout();
+      const res = await rxdbStore.user.doAuthLogout();
       global.log("RouteLogout:: logout:: result:: ", res)
     } catch (error) {
       global.log("RouteLogout:: logout:: ERROR:: ", error)

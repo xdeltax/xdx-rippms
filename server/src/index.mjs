@@ -124,12 +124,12 @@ const awaitServers = async () => {
 }
 
 
-/*
+
 awaitServers()
 .then(result => { clog("@@@ index:: SERVERS RUNNING:: ", result); })
 .catch(error => { clog("@@@ index:: ERROR:: ", error); process.exit(1); });
-*/
 
+/*
 const mapXwidth = 1600000;
 const mapYwidth = 200000;
 
@@ -157,6 +157,7 @@ rect = hash2rect(hash, 2); //clog("hash::", hash.slice(0,-2).padEnd(hashExponent
 clog("rect::", rect);
 rect = hash2rect(hash, 3); //clog("hash::", hash.slice(0,-3).padEnd(hashExponent+1), rect);
 clog("rect::", rect);
+*/
 
 /*
 let hashArray = [];

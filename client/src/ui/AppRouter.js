@@ -1,4 +1,5 @@
 import React from 'react';
+import { toJS }  from 'mobx';
 import { observer }  from 'mobx-react';
 import { withStyles } from '@material-ui/core/styles';
 import {Route, Redirect, Switch, withRouter, } from 'react-router-dom';
@@ -28,14 +29,16 @@ import RouteRegister from "ui/routes/login/RouteRegister";
 import RoutePixiGame from "ui/routes/game/RoutePixiGame";
 
 // protected routes -> access needs authentication
-import AuthRouteLogout from "ui/routes/auth/RouteLogout";
-import AuthRouteHome from "ui/routes/auth/RouteHome";
-import AuthRouteAccount from "ui/routes/auth/RouteAccount";
+import AuthRouteLogout from "ui/routes/protected/RouteLogout";
+import AuthRouteHome from "ui/routes/protected/RouteHome";
+import AuthRouteAccount from "ui/routes/protected/RouteAccount";
 
-import ReactContainerPhaserGame from 'ui/components/game/ReactContainerPhaserGame';
+import GameContainerPhaser from 'game/phaser/GameContainer';
 
 import { updateRouteLocation } from "watchers/onRouteLocationChange";
+
 import store from 'store'; // mobx-store
+import rxdbStore from 'rxdbStore'; // rxdb-database
 
 
 const styles = theme => ({
@@ -66,8 +69,8 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
     super(props);
 
     // REDIRECT TO startRoute (if present)
-    props.startRoute && global.log("AppRouter:: constructor:: STARTROUTE:: ", props.startRoute, );
-    props.startRoute && props.history && (props.history.location.pathname !== props.startRoute) && props.history.push(props.startRoute);
+    props.startRoute && global.log("AppRouter:: constructor:: STARTROUTE:: ", toJS(props.startRoute), props.startRoute.pathname, props.history.location.pathname, )
+    props.startRoute && props.history && (props.history.location.pathname !== props.startRoute.pathname) && props.history.push(props.startRoute.pathname);
   }
 
   getSnapshotBeforeUpdate(prevProps, prevState) { // called right before every render
@@ -91,16 +94,16 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
       // display a button to click -> unhide top-toolbar (and navigation if auth-path)
       <div style={{ position: "fixed", right: 0, top: 0, }}>
         <IconButton color="inherit" style={{ flexGrow: 0, }}  onClick={(event) => {
-          store.appstate.set("app.header.visible", true);
-          store.appstate.set("app.bottomNavigation.visible", true);
+          store.appState.set("app.header.visible", true);
+          store.appState.set("app.bottomNavigation.visible", true);
         }}>
           <KeyboardArrowDownICON />
         </IconButton>
       </div>
     );
 
-    const phaserGameVisible = Boolean(location.pathname === "/game/phaser") /*store.appstate.app.game.visible*/
-    //const pixiGameVisible = Boolean(location.pathname === "/game/pixi") /*store.appstate.app.game.visible*/
+    const phaserGameVisible = Boolean(location.pathname === "/game/phaser") /*store.appState.app.game.visible*/
+    //const pixiGameVisible = Boolean(location.pathname === "/game/pixi") /*store.appState.app.game.visible*/
 
     global.log("AppRouter:: render:: location.pathname:: ", location.pathname, );
 
@@ -111,29 +114,29 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
           height: "100%",
           width: "100%",
           textAlign: "center",
-          color: store.appstate.colors.app.text,
-          background: store.appstate.colors.app.background,
+          color: store.appState.colors.app.text,
+          background: store.appState.colors.app.background,
         }}>
           <ScrollToTop />
 
           <Switch>
-            <Route exact path="/"             render={ (routeProps) => store.isAuthenticated ? <Redirect to="/auth/home" /> : <Redirect to="/login" /> } />
+            <Route exact path="/"             render={ (routeProps) => rxdbStore.user.isAuthenticated ? <Redirect to="/auth/home" /> : <Redirect to="/login" /> } />
 
-            <Route exact path="/login"        render={ (routeProps) => !store.user.isValid ? (<RouteLogin {...routeProps } />) : !store.usercard.isValid ? <Redirect to="/register" /> : <Redirect to="/auth/home" /> } />
-            <Route exact path="/register"     render={ (routeProps) => !store.user.isValid ? (<Redirect to="/login" />) : store.usercard.isValid ? (<Redirect to="/" />) : (<RouteRegister {...routeProps } />) } />
+            <Route exact path="/login"        render={ (routeProps) => !rxdbStore.user.isValidUser ? (<RouteLogin {...routeProps } />) : !rxdbStore.user.isValidUsercard ? <Redirect to="/register" /> : <Redirect to="/auth/home" /> } />
+            <Route exact path="/register"     render={ (routeProps) => !rxdbStore.user.isValidUser ? (<Redirect to="/login" />) : rxdbStore.user.isValidUsercard ? (<Redirect to="/" />) : (<RouteRegister {...routeProps } />) } />
             <Route exact path="/logout"       render={ (routeProps) => (<AuthRouteLogout {...routeProps } />) } />
             <Route exact path="/game/pixi"    render={ (routeProps) => (<RoutePixiGame {...routeProps } />) } />
             <Route exact path="/game/phaser"  render={ (routeProps) => (null/*<RoutePhaserGame {...routeProps } />*/)} />
 
-            <Route exact path="/auth/home"    render={ (routeProps) => store.isAuthenticated ? <AuthRouteHome {...routeProps } /> : <Redirect to="/login" /> } />
-            <Route exact path="/auth/account" render={ (routeProps) => store.isAuthenticated ? <AuthRouteAccount {...routeProps } /> : <Redirect to="/login" /> } />
+            <Route exact path="/auth/home"    render={ (routeProps) => rxdbStore.user.isAuthenticated ? <AuthRouteHome {...routeProps } /> : <Redirect to="/login" /> } />
+            <Route exact path="/auth/account" render={ (routeProps) => rxdbStore.user.isAuthenticated ? <AuthRouteAccount {...routeProps } /> : <Redirect to="/login" /> } />
 
             <Route component={RouteNoMatch} />
           </Switch>
         </div>
 
-        {!store.appstate.app.header.visible && <RenderAGetMyHiddenToolbarBackArrowDownIconButton />}
-        {store.isAuthenticated && <BottomNavigation hide={!store.appstate.app.bottomNavigation.visible} /> }
+        {!store.appState.app.header.visible && <RenderAGetMyHiddenToolbarBackArrowDownIconButton />}
+        {rxdbStore.user.isAuthenticated && <BottomNavigation hide={!store.appState.app.bottomNavigation.visible} /> }
 
         <Modal id="phasergame" keepMounted // modal container for the game (stays mounted all the time)
           open={phaserGameVisible} disableEscapeKeyDown={true} disablePortal={true} disableScrollLock={true} hideBackdrop={true}
@@ -141,9 +144,9 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
         >
           <Fade timeout={0} mountOnEnter exit={true} in={phaserGameVisible} direction={phaserGameVisible ? "up" : "right"} >
 					 <React.Fragment>
-              <ReactContainerPhaserGame gameVisible={phaserGameVisible} style={{ backgroundColor: "transparent", padding:0, margin:0, height:"100%", }} />
-              {!store.appstate.app.header.visible && <RenderAGetMyHiddenToolbarBackArrowDownIconButton />}
-              {store.isAuthenticated && <BottomNavigation hide={!store.appstate.app.bottomNavigation.visible} /> }
+              <GameContainerPhaser gameVisible={phaserGameVisible} style={{ backgroundColor: "transparent", padding:0, margin:0, height:"100%", }} />
+              {!store.appState.app.header.visible && <RenderAGetMyHiddenToolbarBackArrowDownIconButton />}
+              {store.user.isAuthenticated && <BottomNavigation hide={!store.appState.app.bottomNavigation.visible} /> }
  						</React.Fragment>
           </Fade>
         </Modal>

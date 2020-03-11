@@ -23,12 +23,12 @@ const styles = theme => ({
 
     left:0,
     width: '100%',
-    height: store.appstate.app.bottomNavigation.height || 50,
-    minWidth: store.appstate.app.size.minWidth || null,
-    maxWidth: store.appstate.app.size.maxWidth || null,
+    height: store.appState.app.bottomNavigation.height || 50,
+    minWidth: store.appState.app.size.minWidth || null,
+    maxWidth: store.appState.app.size.maxWidth || null,
 
-    color: store.appstate.colors.navigation.text,
-    background: store.appstate.colors.navigation.background,
+    color: store.appState.colors.navigation.text,
+    background: store.appState.colors.navigation.background,
   },
   toolbar: {
     margin: 0,
@@ -44,9 +44,9 @@ const styles = theme => ({
   navigationtabaction: {
     minWidth: 40,
     padding: '6px 0px 0px', // padding: '6px 12px 8px'
-    color: store.appstate.colors.navigation.text,
+    color: store.appState.colors.navigation.text,
     "&$selected": {
-      color: store.appstate.colors.navigation.selected,
+      color: store.appState.colors.navigation.selected,
     }
   },
   // This is required for the '&$selected' selector to work

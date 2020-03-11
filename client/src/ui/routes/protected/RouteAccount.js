@@ -50,14 +50,14 @@ export default ( withStyles(styles)( observer( class extends React.Component {
         overflow: "auto",
         height: "100%",
         width: "100%",
-        color: store.appstate.colors.auth.text,
-        background: store.appstate.colors.auth.background,
+        color: store.appState.colors.auth.text,
+        background: store.appState.colors.auth.background,
       }}>
-        <HeaderNavigationToolbar label="Account" hide={!store.appstate.app.header.visible}
+        <HeaderNavigationToolbar label="Account" hide={!store.appState.app.header.visible}
           //backButtonIcon={<LogoutICON style={{ transform: "scaleX(-1)" }} />}
           onBackButtonClick={ () => history.goBack() }
         />
-        {store.appstate.app.header.visible && (<Toolbar disableGutters variant="dense" />) /* extra padding for content below HeaderNavigationToolbar */ }
+        {store.appState.app.header.visible && (<Toolbar disableGutters variant="dense" />) /* extra padding for content below HeaderNavigationToolbar */ }
 
         <div>
           <Button color="primary" variant="outlined" onClick={ (event) => {
@@ -70,7 +70,7 @@ export default ( withStyles(styles)( observer( class extends React.Component {
           </Button>
         </div>
 
-        {store.appstate.app.bottomNavigation.visible && (<Toolbar disableGutters style={{ marginBottom: 25, }} />) /* extra padding for content below HeaderNavigationToolbar */ }
+        {store.appState.app.bottomNavigation.visible && (<Toolbar disableGutters style={{ marginBottom: 25, }} />) /* extra padding for content below HeaderNavigationToolbar */ }
       </div>
     );
   }

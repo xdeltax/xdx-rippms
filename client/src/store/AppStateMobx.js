@@ -48,7 +48,7 @@ class MobxAppState extends MobxPrototype {
         },
         socket: {
           isConnected: false,
-          callstats: { // updated at every socket-call-response
+          _callstats: { // updated at every socket-call-response
             timeclientout: 0, // unixtime from client right before sending request to server
             timeserverin: 0,  // unixtime from server right after incoming request
             timeserverout: 0, // unixtime from server right before sending result to client

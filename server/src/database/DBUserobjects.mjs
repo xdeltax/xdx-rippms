@@ -77,12 +77,12 @@ export default class DBUserobjects extends DBPrototype {
   }
 
 
-	getUsercard = async (unsafe_targetuserid, unsafe_userid, unsafe_servertoken) => {
+	get = async (unsafe_targetuserid, unsafe_userid, unsafe_servertoken) => {
     try {
 			const valid_targetuserid= joiValidateFallback(unsafe_targetuserid, null, joi_userid);
 			const valid_userid      = joiValidateFallback(unsafe_userid      , null, joi_userid);
 	    const valid_servertoken = joiValidateFallback(unsafe_servertoken , null, joi_servertoken);
-			if (!valid_targetuserid || !valid_userid || !valid_servertoken) throw isERROR(1, "DBUsercards: getUsercard", "usercard query failed", "invalid id or token");
+			if (!valid_targetuserid || !valid_userid || !valid_servertoken) throw isERROR(1, "DBUserobjects: get", "usercard query failed", "invalid id or token");
 
       const isOWN = (valid_userid === valid_targetuserid); // check if OWN-stuff is requestd -> more info is returned
 
@@ -90,7 +90,7 @@ export default class DBUserobjects extends DBPrototype {
 
 	  	return isSUCCESS(thisObject);
 	  } catch (error) {
-	  	return isERROR(99, "DBUsercards: getUsercard", "usercard query failed", error);
+	  	return isERROR(99, "DBUserobjects: get", "usercard query failed", error);
 	  }
 	}
 
@@ -102,10 +102,10 @@ export default class DBUserobjects extends DBPrototype {
 			const valid_targetuserid= joiValidateFallback(unsafe_targetuserid, null, joi_userid);
 			const valid_userid      = joiValidateFallback(unsafe_userid      , null, joi_userid);
 	    const valid_servertoken = joiValidateFallback(unsafe_servertoken , null, joi_servertoken);
-			if (!valid_targetuserid || !valid_userid || !valid_servertoken) throw isERROR(1, "DBUsercards: updateProps", "update usercard failed", "invalid id or token");
+			if (!valid_targetuserid || !valid_userid || !valid_servertoken) throw isERROR(1, "DBUserobjects: updateProps", "update usercard failed", "invalid id or token");
 
       const isOWN = (valid_userid === valid_targetuserid); // check if OWN-stuff is requestd -> more info is returned
-			if (!isOWN) throw isERROR(2, "DBUsercards: updateProps", "update usercard failed", "invalid user",);
+			if (!isOWN) throw isERROR(2, "DBUserobjects: updateProps", "update usercard failed", "invalid user",);
 
 		  // ===============================================
 	    // load userobject from database
@@ -138,7 +138,7 @@ export default class DBUserobjects extends DBPrototype {
 		  v = _validateProperty(unsafe_props, "name", joi_name); if (v !== null) { c++; thisObject.name = v; }
 		  v = _validateProperty(unsafe_props, "email", joi_email); if (v !== null) { c++; thisObject.email = v; }
 		  v = _validateProperty(unsafe_props, "phonenumber", joi_phonenumber); if (v !== null) { c++; thisObject.phonenumber = v; }
-		  if (c <= 0) throw isERROR(3, "DBUsercards: updateProps", "update usercard failed", "nothing to update");
+		  if (c <= 0) throw isERROR(3, "DBUserobjects: updateProps", "update usercard failed", "nothing to update");
 
 	    thisObject.updatedAt = now;
 
@@ -146,17 +146,17 @@ export default class DBUserobjects extends DBPrototype {
 	    // validate data-object
 		  // ===============================================
 	    const valid_object = joiValidateFallback(thisObject, null, joi_schemaObject);
-	    if (!valid_object) throw isERROR(4, "DBUsercards: updateProps", "update usercard failed", "invalid schema");
+	    if (!valid_object) throw isERROR(4, "DBUserobjects: updateProps", "update usercard failed", "invalid schema");
 
 		  // ===============================================
 	    // save userobject to database
 		  // ===============================================
 	    const numReplace = await super.updateFull( {userid: valid_targetuserid}, valid_object);
-	    if (numReplace !== 1) throw isERROR(5, "DBUsercards: updateProps", "update usercard failed", "invalid update count");
+	    if (numReplace !== 1) throw isERROR(5, "DBUserobjects: updateProps", "update usercard failed", "invalid update count");
 
 	  	return isSUCCESS(valid_object);
 	  } catch (error) {
-	  	return isERROR(99, "DBUsercards: updateProps", "update usercard failed", error);
+	  	return isERROR(99, "DBUserobjects: updateProps", "update usercard failed", error);
 	  }
 	}
 

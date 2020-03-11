@@ -15,6 +15,8 @@ export const joi_updatedAt = 	  Joi.date();
 export const joi_mapid = 			  Joi.number().allow(null).min(0);
 export const joi_objectid =     Joi.number().allow(null).min(0);
 export const joi_number =       Joi.number().allow(null).min(0);
+export const joi_binary =       Joi.binary();
+
 
 // private
 export const joi_uid = 				  Joi.string().allow('').min(0).max(99).alphanum().normalize();

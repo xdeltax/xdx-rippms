@@ -1,22 +1,20 @@
 import {decorate, observable, action, runInAction, /*toJS,*/ } from 'mobx';
 import MobxPrototype from "./MobxPrototype";
-import deepCopy from 'tools/deepCopyObject';
+//import deepCopy from 'tools/deepCopyObject';
 
 // appstate
-import MobxAppState from './MobxAppState.js';
+import AppStateMobx from './AppStateMobx.js';
 
 // spinner / ...
-import MobxAppActions from './MobxAppActions.js';
+import AppActionsMobx from './AppActionsMobx.js';
 
 // user-data
-import MobxUser from './MobxUser.js';
-import MobxUsercard from './MobxUsercard.js';
+import UserMobx from './UserMobx.js';
+//import MobxUsercard from './MobxUsercard.js';
 
 // game-data
-import MobxGame from './MobxGame';
-import NonOGame from './NonOGame';
-
-//import SocketIOStore from 'store/socketio';
+import GameMobx from './GameMobx';
+import GameMap from './GameMap';
 
 // debug
 import sleep from "tools/debug/sleeper";
@@ -31,7 +29,7 @@ class Store extends MobxPrototype {
 		appactions: null,
 
 		user: null,
-		usercard: null,
+		//usercard: null,
 
 		game: null,
 	};
@@ -53,25 +51,26 @@ class Store extends MobxPrototype {
 
 		// *** observables
 		// stores all states of the app (width, height, position, tab, colors, ...)
-		this._obervables.appstate = new MobxAppState(this);
+		this._obervables.appstate = new AppStateMobx(this);
 
 		// tracks visual actions (spinners, hints, statusmessages)
-		this._obervables.appactions = new MobxAppActions(this);
+		this._obervables.appactions = new AppActionsMobx(this);
 
 		// stores data of active user
-		this._obervables.user = new MobxUser(this);
-		this._obervables.usercard = new MobxUsercard(this);
+		this._obervables.user = new UserMobx(this);
+		//this._obervables.usercard = new MobxUsercard(this);
 
 		// stores data of running game
-		this._obervables.game = new MobxGame(this);
+		this._obervables.game = new GameMobx(this);
 
 
 		// *** NON-observables
-		this._nonobervables.game = new NonOGame(this);
+		this._nonobervables.game = new GameMap(this);
 
 
 		this.#__initDone = true;
 		resolve();
+
 	}));
 
 	// helpers
@@ -80,27 +79,26 @@ class Store extends MobxPrototype {
 
 
 	// getters and setters
-	get appstate() { return this._obervables.appstate }
-	set appstate(o) { runInAction(() => { this._obervables.appstate = o; }) }
+	get appState() { return this._obervables.appstate }
+	set appState(o) { runInAction(() => { this._obervables.appstate = o; }) }
 
-	get appactions() { return this._obervables.appactions }
-	set appactions(o) { runInAction(() => { this._obervables.appactions = o; }) }
+	get appActions() { return this._obervables.appactions }
+	set appActions(o) { runInAction(() => { this._obervables.appactions = o; }) }
 
 	get user() { return this._obervables.user }
 	set user(o) { runInAction(() => { this._obervables.user = o; }) }
 
-	get usercard() { return this._obervables.usercard }
-	set usercard(o) { runInAction(() => { this._obervables.usercard = o; }) }
+	//get usercard() { return this._obervables.usercard }
+	//set usercard(o) { runInAction(() => { this._obervables.usercard = o; }) }
 
 	get game() { return this._obervables.game }
 	set game(o) { runInAction(() => { this._obervables.game = o; }) }
 
-	get gameNonO() { return this._nonobervables.game }
-	set gameNonO(o) { runInAction(() => { this._nonobervables.game = o; }) }
-
+	get gameMap() { return this._nonobervables.game }
+	set gameMap(o) { runInAction(() => { this._nonobervables.game = o; }) }
 
   get isAuthenticated() {
-    return Boolean(this.user.isValid && this.usercard.isValid);
+    return Boolean(this.user.isValidUser && this.user.isValidUsercard);
   }
 
 };

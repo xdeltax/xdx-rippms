@@ -3,15 +3,19 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import * as serviceWorker from './serviceWorker';
 
-import AppLoadingScreen from './AppLoadingScreen';
-import store from 'store'; // mobx-store
+//import {unixtime} from "tools/datetime";
 
-import fp2 from "fingerprintjs2";
+import AppLoadingScreen from './AppLoadingScreen';
+
+import store from 'store'; // mobx-store
+import rxdbStore from 'rxdbStore'; // rxdb-database
+
+//import fp2 from "fingerprintjs2";
 import promiseToFingerprint from "tools/fingerprint";
 
 const AppLandingPage = React.lazy(() => import('./AppLandingPage')); //import AppRouter from "ui/AppRouter"; // react-router
 
-require("./AppConfiguration"); // import globals
+require("./appConfiguration"); // import globals
 
 ////////////////////////////////////////////////////////////////////////////////
 // global.app-config
@@ -39,6 +43,22 @@ const startApp = async () => {
   // init mobx-store
   await store.init();
   global.log("index:: startApp:: init store:: ", store);
+
+  await rxdbStore.initDatabase();
+  global.log("index:: startApp:: init store:: ", rxdbStore);
+  /*
+  const db = await rxdbStore.connect();
+  global.log("index:: startApp:: init rxdbDatabase:: ", db);
+
+  const r1 = await rxdbStore.collection.insert({ name: "test1", updatedAt: unixtime() });
+  const r2 = await rxdbStore.collection.dump(true);
+  global.log("XXXXXXXXXXXXXXXX", r1, r2)
+
+  const r1 = await rxdbStore.app.upsert({ name: "test1", obj: {t: "22", }, updatedAt: unixtime(), createdAt: unixtime() }).catch(error => global.log("XXXXXX", error));
+  const r2 = await rxdbStore.app.dump(true);
+  global.log("XXXXXXXXXXXXXXXX", r1, r2)
+  */
+
 
 	global.fingerprint = await promiseToFingerprint({ });	// this is async! about 100 ms...
 	global.log("index:: fingerprint:: ", global.fingerprint, );

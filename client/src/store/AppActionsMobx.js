@@ -1,5 +1,6 @@
 import {decorate, observable, runInAction, /*toJS,*/} from 'mobx';
 import MobxPrototype from "./MobxPrototype";
+import {unixtime} from "tools/datetime";
 
 class MobxAppActions extends MobxPrototype {
   constructor(store) { super(store); /*store init-state of all vars::*/ this.saveInitialState(this._obervables, this._helpers); };
@@ -16,7 +17,10 @@ class MobxAppActions extends MobxPrototype {
     spinner: {
 		  isSpinnerVisible: false,
 		  hintText: "",
-    }
+    },
+    logger: {
+      game: [],
+    },
   };
 
   // init of all non-observables
@@ -34,8 +38,10 @@ class MobxAppActions extends MobxPrototype {
   get spinner() { return this.obervables.spinner }
 	set spinner(v) { runInAction(() => { this.obervables.spinner = v; })}
 
-    //get isSpinnerVisible() { return this.spinner.isSpinnerVisible }
-  	//set isSpinnerVisible(v) { runInAction(() => { this.spinner.isSpinnerVisible = v; })}
+  get logger() { return this.obervables.logger }
+	set logger(v) { runInAction(() => { this.obervables.logger = v; })}
+
+
 
 	get loadingNowStatus() { return this.obervables.loading.isLoadingNow }
 	set loadingNowStatus(v) { runInAction(() => {
@@ -62,6 +68,8 @@ class MobxAppActions extends MobxPrototype {
 	get unsavedChangesUser() { return this.saving.unsavedChangesUser }
 	set unsavedChangesUser(v) { runInAction(() => { this.saving.unsavedChangesUser = v; }) }
 
+
+
 	showSpinner = (text, timeout) => { runInAction(() => {
 		this.spinner.hintText = text || "";
 		this.spinner.isSpinnerVisible = true;
@@ -77,6 +85,28 @@ class MobxAppActions extends MobxPrototype {
 		if (this.timer) clearInterval(this.timer);
 		this.spinner.isSpinnerVisible = false;
 		this.spinner.hintText = "";
+  })};
+
+
+
+  loggerBulkAdd = (target, textArray) => { runInAction(() => {
+    if (!target || !textArray || !Array.isArray(textArray)) return;
+    textArray.forEach(item => {
+      this.loggerAdd(target, item.text, item.subtext);
+    });
+  })};
+
+  loggerAdd = (target, text, subtext) => { runInAction(() => {
+    if (!target || !text) return;
+    this.logger[target].unshift({
+      unixtime: unixtime(),
+      text: text,
+      subtext: subtext,
+    });
+  })};
+
+  loggerClear = (target) => { runInAction(() => {
+    this.logger[target] = [];
   })};
 
 }; // of class

@@ -35,12 +35,12 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
         overflow: "auto",
         height: "100%",
         width: "100%",
-        color: store.appstate.colors.auth.text,
-        background: store.appstate.colors.auth.background,
+        color: store.appState.colors.auth.text,
+        background: store.appState.colors.auth.background,
       }}>
-        <HeaderNavigationToolbar label="Pixi.JS v5" hide={!store.appstate.app.header.visible}
+        <HeaderNavigationToolbar label="Pixi.JS v5" hide={!store.appState.app.header.visible}
           onBackButtonClick={ () => { if (history.length > 1) history.goBack(); else history.push("/"); }}
-          //noRespawnButton={!store.appstate.app.game.visible}
+          //noRespawnButton={!store.appState.app.game.visible}
         />
         <ReactContainerPixiGame store={store} />
       </div>

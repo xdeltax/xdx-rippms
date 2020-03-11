@@ -16,6 +16,7 @@ global.nowUnix      = () => global.now() / 1000; // 1572515109.941
 
 global.absRandom    = (value) => Math.floor(value * Math.random());
 global.randomHash   = (value) => "hash" + global.absRandom(100000000);
+global.random       = (range) => Math.floor((range || 100) * Math.random());
 
 global.consoleLog   = require('tools/debug/consoleLog');
 global.consoleWarn  = require('tools/debug/consoleWarn');
@@ -31,23 +32,9 @@ global.info  = ( ...restArgs ) => { global.consoleInfo (global.debugTime(), rest
 global.error = ( ...restArgs ) => { global.consoleError(global.debugTime(), restArgs); };
 
 
-//if (process.env.NODE_ENV === "development")
-{
-  global.DEBUG_SHOW_DEBUGOBJECTPRETTY = true;
-
-  global.DEBUG_AUTH_ISVALIDUSER = false; // store.user.isValidUser()
-  global.DEBUG_AUTH_ISVALIDPROFILE = false; // store.user.isValidUserProfile()
-  global.DEBUG_AUTH_ALLOW_FAKE_IDS = true; // store.user.loginWithFacebook(fakeUser, fakeProfile)
-
-  global.DEBUG_DISABLE_PERSISTENSAVEONCLOSEAPP = false; // persistent:: saveToPersistentDatabase()
-  global.DEBUG_DISABLE_PERSISTENLOADONOPENAPP = false; // persistent:: loadFromPersistentDatabase()
-
-  global.DEBUG_DISABLE_SOCKETCONNECT = true; // store.init() -> this.socketio.connect()
-  //global.DEBUG_AUTH_FAKE_SERVERRESPONSE = false; // store.user.loginWithFacebook(fakeUser, fakeProfile)
-  //DEBUG_DISABLE_REQUIREFACEBOOKTOLOGIN = false;
-  //DEBUG_DISABLE_REQUIRESERVERTOKEN = false; // used in routes/socketio
-  //DEBUGMODE_MOCK_A_USER = false;
-}
+//if (process.env.NODE_ENV === "development") { }
+global.DEBUG_SHOW_DEBUGOBJECTPRETTY = true;  // in ./AppLandingPage.js
+global.DEBUG_AUTH_FAKE_ISVALIDUSER  = false; // in ./rxdbStore/UserCollection.js
 
 /*
 ////////////////////////////////////////////////////////////////////////////////

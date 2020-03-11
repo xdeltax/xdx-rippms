@@ -6,8 +6,8 @@ const updateStatus = () => {
   let type = connection.effectiveType;
   let downLink = connection.effectiveType;
 
-  store.appstate.set("app.watchers.connection.type", type);
-  store.appstate.set("app.watchers.connection.downlink", downLink);
+  store.appState.set("app.watchers.connection.type", type);
+  store.appState.set("app.watchers.connection.downlink", downLink);
 
   global.log("watcher/connection::", connection, type, downLink, );
 }

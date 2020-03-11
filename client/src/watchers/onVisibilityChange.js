@@ -18,8 +18,8 @@ const updateStatus = (event) => {
   //let hidden = document.hasOwnProperty("hidden") ? document.hidden : null;
   let visibilityState = document.hasOwnProperty("visibilityState") ? Document.visibilityState : null;
 
-  store.appstate.set("app.watchers.visibility.hidden", hidden);
-  store.appstate.set("app.watchers.visibility.visibilityState", visibilityState);
+  store.appState.set("app.watchers.visibility.hidden", hidden);
+  store.appState.set("app.watchers.visibility.visibilityState", visibilityState);
 
   global.log("watcher/visibility::", event, hidden, visibilityState, visibilityChange,);
 }

@@ -1,24 +1,33 @@
 import React from 'react';
+import { toJS, }  from 'mobx';
 import { observer } from 'mobx-react';
-import { withStyles } from '@material-ui/core/styles';
+//import { withStyles } from '@material-ui/core/styles';
 import { withRouter } from 'react-router-dom';
 import { SizeMe } from "react-sizeme";
 
+import List from '@material-ui/core/List';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemText from '@material-ui/core/ListItemText';
+
 import HeaderNavigationToolbar from "ui/components/header/HeaderNavigationToolbar";
 
-import tryFallback from "tools/tryFallback";
+//import tryFallback from "tools/tryFallback";
 
 // phaser game
 import PhaserGame from "game/phaser/game";
 
 // phaser scenes
-import StressTest from 'game/phaser/scenes/StressTest';
+//import StressTest from 'game/phaser/scenes/StressTest';
 import Tilemap from 'game/phaser/scenes/Tilemap';
 import Gui from 'game/phaser/scenes/Gui';
 
 import store from 'store';
 
 const GameContainer = withRouter( observer( class GameContainer extends React.Component { //export default observer(class PhaserGameContainer extends React.Component {
+  state = {
+    show: false,
+  }
+
   _game = null;
   _scenes = {};
 
@@ -26,28 +35,61 @@ const GameContainer = withRouter( observer( class GameContainer extends React.Co
     if (this._game) {
       this._game.destroy(); // game.destroy(removeCanvas, noReturn);
       this._game = null;
-      global.log("ReactContainerPhaserGame:: componentDidUnmount:: ", this._game);
+      global.log("GameContainer:: componentDidUnmount:: ", this._game);
     }
   };
 
-  componentDidMount = () => {
+  componentDidMount = async () => {
     const { size } = this.props;
 
     if (!this._game) {
       this.store = store; // mobx-store -> reachable in game -> this.game.react.store...
-      this._game = new PhaserGame(this, size);
-      this.initGameScenes(this._game);
-      this.initGameEvents(this._game);
 
-      global.log("ReactContainerPhaserGame:: componentDidMount:: ", this, this._game, this._game.device, size)
-    } else { // should not happend
-      //global.log("+++", store.game.game)
-    }
+      try {
+        this.setState({ show: true, });
+        store.appActions.loggerClear("game");
+
+        // load assets here and store to indexedDB
+        await this.loadGameAssets();
+
+        // start game init-sequence
+        this._game = new PhaserGame(this, size);
+        this.initGameScenes(this._game);
+        this.initGameEvents(this._game);
+
+      } finally {
+        this.setState({ show: false, });
+        store.appActions.hideSpinner();
+
+        global.log("GameContainer:: componentDidMount:: ", this, this._game, this._game.device, size)
+      }
+    };
   };
 
 
+  loadGameAssets = async () => {
+    global.log('GameContainer:: loadGameAssets:: started ...', );
+
+    store.appActions.loggerAdd("game", "loading Assets", "Asset 1" );
+    store.appActions.showSpinner("loading gameAsset 1", );
+    await store.sleep(2000);
+
+    store.appActions.loggerAdd("game", "loading Assets", "Asset 2" );
+    store.appActions.showSpinner("loading gameAsset 2", );
+    await store.sleep(2000);
+
+    store.appActions.loggerAdd("game", "loading Assets", "Asset 3" );
+    store.appActions.showSpinner("loading gameAsset 3", );
+    await store.sleep(2000);
+
+    store.appActions.loggerAdd("game", "loading Assets", "FINISHED" );
+
+    global.log('GameContainer:: loadGameAssets:: finished!', );
+  }
+
+
   initGameScenes = (game) => {
-    global.log('ReactContainerPhaserGame:: initGameScenes:: ', game);
+    global.log('GameContainer:: initGameScenes:: ', game);
     // attn.::
     // never call scenes through SceneManager ==> this.game.scene.launch("StressTest", ) <- "launch" will not exist
     // always call scenes through Scenes-Class => create new Class -> and refer to it -> this._scenes.demoScene.scene.scene.launch("StressTest", )
@@ -66,34 +108,34 @@ const GameContainer = withRouter( observer( class GameContainer extends React.Co
   };
 
   initGameEvents = (game) => {
-    global.log('ReactContainerPhaserGame:: initGameEvents', );
+    global.log('GameContainer:: initGameEvents', );
 
 	  window.addEventListener('resize', event => {
 	    this.onResize(event);
 	  })
 
     game.events.on('pause', () => { // Pause (window is invisible)
-      global.log('ReactContainerPhaserGame:: Event:: pause ', );
+      global.log('GameContainer:: Event:: pause ', );
     });
 
     game.events.on('resize', () => { // Resume (window is visible)
-      global.log('ReactContainerPhaserGame:: Event:: resize ', );
+      global.log('GameContainer:: Event:: resize ', );
     });
 
     game.events.on('resume', () => { // Resume (window is visible)
-      global.log('ReactContainerPhaserGame:: Event:: resume ', );
+      global.log('GameContainer:: Event:: resume ', );
     });
 
     game.events.on('blur', () => { // The blur event is raised when the window loses focus
-      global.log('ReactContainerPhaserGame:: Event:: blur ', );
+      global.log('GameContainer:: Event:: blur ', );
     });
 
     game.events.on('hidden', () => {
-      global.log('ReactContainerPhaserGame:: Event:: hidden ', );
+      global.log('GameContainer:: Event:: hidden ', );
     });
 
     game.events.on('visible', () => {
-      global.log('ReactContainerPhaserGame:: Event:: visible ', );
+      global.log('GameContainer:: Event:: visible ', );
     });
   };
 
@@ -101,20 +143,20 @@ const GameContainer = withRouter( observer( class GameContainer extends React.Co
   onResize = (event) => {
   	const w = window.innerWidth
     const h = window.innerHeight
-    global.log('ReactContainerPhaserGame:: Event:: resize ', event, w, h);
+    global.log('GameContainer:: Event:: resize ', event, w, h);
   };
 
 
   click_clearAll = (e) => {
     store.game.clear();
-    global.log("ReactContainerPhaserGame:: store.game.clear:: ", store.game);
+    global.log("GameContainer:: store.game.clear:: ", store.game);
   };
 
   /*
   click_addLife = (e) => {
     //this.game && this.game.scene.keys.SceneMap.events.emit('addLife'); // eventhandler in scene "mainScene"
     store.game.lives++;
-    global.log("ReactContainerPhaserGame:: store.game.lives:: ", store.game.lives, store.game);
+    global.log("GameContainer:: store.game.lives:: ", store.game.lives, store.game);
   };
 
   click_addLife2 = (e) => {
@@ -126,29 +168,47 @@ const GameContainer = withRouter( observer( class GameContainer extends React.Co
   render() {
     const {
       size,  // injected from sizeMe
-      style, // destructured to dismiss
-      gameVisible, // component is active
+      //style, // destructured to dismiss
+      //gameVisible, // component is active
 
-      classes,  // withStyles(styles)
+      //classes,  // withStyles(styles)
       history,  // history: {length: 50, action: "POP", location: {…}, createHref: ƒ, push: ƒ, …} -> router-history::  history.push('/dashboard/users/1');
       //location, // location: {pathname: "/login", search: "", hash: "", state: undefined, key: "whjdry"}
       //match,    // match: {path: "/login", url: "/login", isExact: true, params: {…}}
-      ...restProps // other props from RoutePhaserGame.js
+      //...restProps // other props from RoutePhaserGame.js
     } = this.props;
-    global.log("ReactContainerPhaserGame:: render:: size:: ", this, size.width, size.height, )
 
-    const livesMobx = tryFallback(()=>store.game.lives, -1);
+    global.log("GameContainer:: render:: size:: ", this, size.width, size.height, )
+
+    //const livesMobx = tryFallback(()=>store.game.lives, -1);
+
+    const GameLogList = (props) => {
+      let i = 0;
+      return (!props.list || !Array.isArray(props.list)) ? null : (
+        <List dense style={props.style || {}}>
+          {props.list.map(item => (
+            <ListItem dense key={"gameloglist" + i++}>
+              <ListItemText primary={`${item.unixtime}:: ${item.text}:: ${item.subtext}`} secondary={``} style={{padding:0, margin:0, }}/>
+            </ListItem>
+          ))}
+        </List>
+      );
+    };
 
     return (
       <React.Fragment>
-        <HeaderNavigationToolbar label="Phaser 3" hide={!store.appstate.app.header.visible}
+        <HeaderNavigationToolbar label="Phaser 3" hide={!store.appState.app.header.visible}
           onBackButtonClick={ () => { if (history.length > 1) history.goBack(); else history.push("/"); }}
-          //noRespawnButton={!store.appstate.app.game.visible}
+          //noRespawnButton={!store.appState.app.game.visible}
         />
 
-        <div id="phaserGameInjectID" style={{ height: "100%", }} />
+        <div id="reactUnderlayScreen" style={{ zIndex:-1, position: "absolute", top: 0, left: 0, width: "100%"}}>
+          <GameLogList list={toJS(store.appActions.logger.game)} style={{ backgroundColor: "yellow", overflow: 'auto', /*maxHeight: 300,*/ }}/>
+        </div>
 
-        <div id="reactOverlayScreen" style={{ position: "absolute", top: 0, left: 0, }}>
+        <div id="phaserGameInjectID" style={{ zIndex:2, height: "100%", }} />
+
+        <div id="reactOverlayScreen" style={{ zIndex:3, position: "absolute", top: 0, left: 0, width: "100%"}}>
         	Hallo
         </div>
       </React.Fragment>
@@ -215,8 +275,8 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
         overflow: "auto",
         height: "100%",
         width: "100%",
-        color: store.appstate.colors.auth.text,
-        background: store.appstate.colors.auth.background,
+        color: store.appState.colors.auth.text,
+        background: store.appState.colors.auth.background,
       }}>
         <GameContainerWithSize gameVisible={gameVisible} />
 

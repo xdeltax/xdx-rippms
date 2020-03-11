@@ -32,6 +32,9 @@ import DBSockets from '../database/DBSockets.mjs';
 import DBUsercards from '../database/DBUsercards.mjs';
 import DBUserobjects from '../database/DBUserobjects.mjs';
 import DBGamemaps from '../database/DBGamemaps.mjs';
+import DBGameGroundLayers from '../database/DBGameGroundLayers.mjs';
+
+import RXDBGame from '../database/RXDBGame.mjs';
 
 import ServerToServerSocketIOClient from "./server2server/socketIOClient.mjs";
 
@@ -40,14 +43,10 @@ import express_Route_CatchAll from "./express/route.catchAll.mjs";
 
 import authSocketConnection from "./socket/auth.socket.connection.mjs";
 import authSocket from "./socket/auth.socket.mjs";
-import {routeAuth_userLogout,
-        routeAuth_userstoreGet,
-        routeAuth_userGet,
-        routeAuth_userUpdateProps,
-        routeAuth_usercardGet,
-        routeAuth_usercardUpdateProps,
-        routeFree_testThis,
-      } from "./socket/routes.socket.mjs";
+
+import routesSocket from "./socket/routes.socket.mjs";
+import routesGameMapAPI from "./socket/routes.gameMapAPI.mjs";
+
 
 
 export default async function mainServer(tryPort) {
@@ -58,7 +57,18 @@ export default async function mainServer(tryPort) {
     dbSockets: new DBSockets(),
     dbUsers: new DBUsers(),
     dbUsercards: new DBUsercards(),
+    dbUserobjects: new DBUserobjects(),
+    dbGamemaps: new DBGamemaps(),
+    dbGameGroundLayers: new DBGameGroundLayers(),
+
+    rxdbGame: await new RXDBGame().connect(),
   }
+
+  //const db = await database.rxdbGame.connect();
+  //const {dbApp} = db.server({ startServer: false });
+  //app.use('/db', dbApp);
+
+
 
   clog("app:: nedb:: loading Sockets... ", );
   const dbSocketsCount = await database.dbSockets.connect(); clog("app:: nedb:: DBSockets count:", dbSocketsCount);
@@ -74,6 +84,16 @@ export default async function mainServer(tryPort) {
   clog("app:: nedb:: loading DBUsercards... ", );
   const dbUsercardsCount = await database.dbUsercards.connect(); clog("app:: nedb:: DBUsercards count:", dbUsercardsCount);
   //if (!Number.isInteger(dbUsercardsConnected)) throw new Error("failed to connect to database *usercards*");
+
+  clog("app:: nedb:: loading DBUserobjects... ", );
+  const dbUserobjectsCount = await database.dbUserobjects.connect(); clog("app:: nedb:: DBUserobjects count:", dbUserobjectsCount);
+
+  clog("app:: nedb:: loading DBGamemaps... ", );
+  const dbGamemapsCount = await database.dbGamemaps.connect(); clog("app:: nedb:: DBGamemaps count:", dbGamemapsCount);
+
+  clog("app:: nedb:: loading DBGameGroundLayers... ", );
+  const dbGameGroundLayersCount = await database.dbGameGroundLayers.connect(); clog("app:: nedb:: DBGameGroundLayers count:", dbGameGroundLayersCount);
+
 
   // ===============================================
   // EXPRESS: init
@@ -148,11 +168,10 @@ export default async function mainServer(tryPort) {
   // ===============================================
   app.use((req, res, next) => {
     //console.log('inject to res');
-    req.server = 'mainServerWasHere';
-    req.database = database;
+    req._server = 'mainServerWasHere';
+    req._database = database;
     next();
   });
-
 
   // ===============================================
   // EXPRESS: middleware for every new socket-connect
@@ -173,12 +192,12 @@ export default async function mainServer(tryPort) {
     // req.user from passport.use() -> cb(null, user)
     // req.session from passportInjectSession()
     // req.clientip from middleware-inject
-    // req.servername from middleware-inject
-    // req.database = { dbSockets, dbUsers, dbUsercards, ... } from middleware-inject
+    // req._server from middleware-inject
+    // req._database = { dbSockets, dbUsers, dbUsercards, ... } from middleware-inject
     const {
       user, 		// injected from passport.authenticate()
       session, 	// injected from passport / passportInjectSession
-      database, // injected form express-middleware
+      _database, // injected form express-middleware
     } = req;
 
     const {
@@ -186,6 +205,12 @@ export default async function mainServer(tryPort) {
       fingerprinthash,  // from client-call:: fingerprint of client
       uid,              // from client-call:: debug-mode to generate fake-users -> uid = extension to providerid === uid + providerid;
     } = session || { }; // const url = `${server}/${provider}.io?sid=${socketid}&fp=${fphash}&uid=${_uid}&username=1&password=1`;
+
+    const {
+      dbUsers,
+      dbUsercards,
+      dbUserobjects,
+    } = _database || { };
 
     const {
       provider, // "facebook", "google", "local"
@@ -197,11 +222,6 @@ export default async function mainServer(tryPort) {
       emails,
       username,
     } = user || { };
-
-    const {
-      dbUsers,
-      dbUsercards,
-    } = database || { };
 
     if (socketid && provider) { // valid: (provider === "google" || provider === "facebook" || provider === "local")) {
       const _providerid = id ? id : null;
@@ -217,16 +237,17 @@ export default async function mainServer(tryPort) {
 
       const {err, res: res_user} = await dbUsers.loginWithProvider(provider, _providerid, _providertoken, _uid, _fingerprinthash);
       if (!err && res_user) {
+        const {err: err_usercard, res: res_usercard} = await dbUsercards.get(res_user.userid, res_user.userid, res_user.servertoken);
+        const {err: err_userobject, res: res_userobject} = await dbUserobjects.get(res_user.userid, res_user.userid, res_user.servertoken);
         res = {
-          user: res_user,
-          usercard: null,
-        };
+          status: "login with provider",
+          provider: provider,
+          socketid: socketid,
 
-        // query usercard
-        const {err: err_usercard, res: res_usercard} = await dbUsercards.getUsercard(res_user.userid, res_user.userid, res_user.servertoken);
-        if (!err_usercard) {
-          res.usercard = res_usercard;
-        }
+          user: res_user || {},
+          usercard: res_usercard || {},
+          userobject: res_userobject || {},
+        };
         //clog(`***(X) passportAuthCallback:: /${provider}.io.callback:: STEP2:: `, err_usercard, res_usercard);
       }
 
@@ -261,10 +282,11 @@ export default async function mainServer(tryPort) {
     const socketid = (req && req.query) ? req.query.sid : null;
     const fingerprinthash = (req && req.query) ? req.query.fp : null;
     const uid = (req && req.query) ? req.query.uid : null;
+
     req.session.socketid = socketid;
     req.session.fingerprinthash = fingerprinthash;
     req.session.uid = uid;
-    clog("passportInjectSession:: ", socketid, req.query, req.session,)
+    //clog("passportInjectSession:: ", socketid, req._query, req.session,)
     next();
   };
 
@@ -283,6 +305,7 @@ export default async function mainServer(tryPort) {
   // ===============================================
   passport.use(new passportFacebook.Strategy(passportStrategyFacebookConfig, verifyCallback));
   passport.use(new passportGoogle.Strategy  (passportStrategyGoogleConfig, verifyCallback));
+
 
   // ===============================================
   // PASSPORT: REST-API triggerd by client-call
@@ -315,18 +338,36 @@ export default async function mainServer(tryPort) {
     res.status(200).type('json').send(JSON.stringify({time: new Date(),}, null, 4));
   });
 
+  app.get('/create.groundlayer', async (req, res, next) => {
+    clog("CALL ", req.route.path);
+    const {
+      _database, // injected form express-middleware
+    } = req;
+
+    const {
+      dbGameGroundLayers
+    } = _database || { };
+
+    const result = await dbGameGroundLayers.set(1, 100, 100);
+    clog("XXXXXXXX", result);
+
+    res.status(200).type('json').send(JSON.stringify({time: new Date(),}, null, 4));
+  });
+
+
+
   app.get('/test', async (req, res, next) => {
     clog("CALL ", req.route.path);
-    const { database } = req || {};
-    const { dbSockets, dbUsers, dbUsercards, dbXXX, } = database || {};
+    const { _database } = req || {};
+    const { dbSockets, dbUsers, dbUsercards, dbUserobjects, dbXXX, } = _database || {};
     clog("/test:: ", await dbSockets.count(), dbSockets.client)
     res.status(200).type('json').send(JSON.stringify({time: new Date(),}, null, 4));
   });
 
   app.get('/debug/db.io', async (req, res, next) => {
     clog("CALL ", req.route.path);
-    const { database } = req || {};
-    const { dbSockets, dbUsers, dbUsercards, dbXXX, } = database || {};
+    const { _database } = req || {};
+    const { dbSockets, dbUsers, dbUsercards, dbUserobjects, dbXXX, } = _database || {};
     const obj = {
       text: "/debug/db.io",
       unixtime: unixtime(),
@@ -341,7 +382,10 @@ export default async function mainServer(tryPort) {
         count: dbUsers && await dbUsers.count(),
       },
       dbUsercards: {
-        count:dbUsercards && await dbUsercards.count(),
+        count: dbUsercards && await dbUsercards.count(),
+      },
+      dbUserobjects: {
+        count: dbUserobjects && await dbUserobjects.count(),
       },
       dbXXX: {
         count: dbXXX && await dbXXX.count(),
@@ -431,9 +475,9 @@ export default async function mainServer(tryPort) {
     // ===============================================
     socket.use((packet, next) => {
       const [route, req, clientEmitCallback] = packet || {};
-      req.servername = 'mainServerWasHere';
-      req.database = database;
-      req.timeserverin = unixtime(); // inject time to req
+      req._servername = 'mainServerWasHere';
+      req._database = database;
+      req._timeserverin = unixtime(); // inject time to req
       next();
     });
 
@@ -464,6 +508,13 @@ export default async function mainServer(tryPort) {
     // ===============================================
     socket.use((packet, next) => authSocket(socket, packet, next));
 
+    // ===============================================
+    // event-handlers: routes
+    // ===============================================
+    socket.use((packet, next) => routesSocket(socket, packet, next));
+    socket.use((packet, next) => routesGameMapAPI(socket, packet, next));
+
+    /*
     socket.on('auth/store/user/logout', routeAuth_userLogout);
 
     // route:: auth/store/userstore/get -> res = {userid: "xxx", user: {}, usercard: {}, }
@@ -476,6 +527,7 @@ export default async function mainServer(tryPort) {
     socket.on('auth/store/usercard/update', routeAuth_usercardUpdateProps);
 
     socket.on('free/test/this', routeFree_testThis);
+    */
   }); // of "connection"
 
 

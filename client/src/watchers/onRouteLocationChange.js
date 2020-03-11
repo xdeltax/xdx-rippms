@@ -9,7 +9,7 @@ import store from 'store'; // mobx-store
 */
 export const updateRouteLocation = (newPathname, oldPathname) => {
   if (newPathname !== oldPathname) { // on every url-change
-    store.appstate.set("app.watchers.route.pathname", newPathname);
+    store.appState.set("app.watchers.route.pathname", newPathname);
 
     global.log("watcher:: routeLocation:: new pathname:: ", newPathname, );
   }

@@ -13,6 +13,8 @@ import * as Phaser from 'phaser'
 import IsoWebGLRenderer from "./IsoWebGLRenderer";
 import IsoCanvasRenderer from "./IsoCanvasRenderer";
 
+import * as bytebuffer4Tilemap from "game/tools/bytebuffer4Tilemap";
+
 export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // based on blitter
   initDone = false;
 
@@ -46,6 +48,7 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
 
     this.children = []; // *** unused *** // new Phaser.Structs.List();
     this.cullList = [];
+    this.cullBounds = {};
 
     // statistics
     this.timeInMS_cullViewport = 0;
@@ -56,7 +59,7 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
     this.setAssetIDs(tilemapConfig.assetKeys);
 
     this.setDebug();
-    this.setParentMap();
+    //this.setParentMap();
     this.setCamera(); // default camera to run cull() against
     this.setPosition();
     this.setExtraTilesToCull();
@@ -135,24 +138,26 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
     this.buffer = null;
   }
 
-  linkDataBuffer = (buffer, bytes) => {
-    //this.buffer = buffer;
-    this.allocateDataBuffer(buffer, bytes);
+  linkDataview = (dataview, bytes) => {
+    //this.buffer = dataview.buffer;
+    this.bufferbytes = bytes || 2;
+    this.dataview = dataview;
     return this;
   }
 
+  /*
   allocateDataBuffer = (buffer, bytes) => {
     this.bufferbytes = bytes || 2;
 
     this.buffer = buffer || new ArrayBuffer(this.bufferbytes * this.tilemapConfig.width * this.tilemapConfig.height); // this.buffer.length
     this.dataview = new DataView(this.buffer);
-    /*
-    switch (bytes) {
-      default: this.bufferview = new Uint8Array(this.buffer); break; // this.bufferview.byteLength
-      case 2: this.bufferview = new Uint16Array(this.buffer); break;
-      case 4: this.bufferview = new Uint32Array(this.buffer); break;
-    }
-    */
+
+    //switch (bytes) {
+    //  default: this.bufferview = new Uint8Array(this.buffer); break; // this.bufferview.byteLength
+    //  case 2: this.bufferview = new Uint16Array(this.buffer); break;
+    //  case 4: this.bufferview = new Uint32Array(this.buffer); break;
+    //}
+
     // bytes = 1;
     // map 5'000 x 5'000 = 23mb
     // map 10'000 x 10'000 = 95mb
@@ -167,6 +172,7 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
 
     return this;
   }
+  */
 
   setDataProperty = (tileX, tileY, prop, value) => {
     const obj = this.getDataObject(tileX, tileY);
@@ -178,61 +184,27 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
   setDataObject = (tileX, tileY, obj) => {
     if (!this.dataview) return; //if (!this.bufferview) return;
     try {
-      // 8bit-stuff:: frameID (6bit) assetID(2bit)
-      // frameID 63 -> hex 00111111 << 2 = 11111100
-      // assetID  3 -> hex xxxxxx11
-      //const bit8 = (frameID << 2) + assetID;
-      //this.dataview.setUint8(tileX + tileY * this.tilemapConfig.width, bit8); // uses always big-endian
-      //this.bufferview[tileX + tileY * width] = bit8; // assetID 2bit 0..3; frameID 6bit 0..63
-
-      // 16bit-stuff:: frameID(7bit) assetID(6bit) flipX(1bit) flipY(1bit) hidden(1bit)
-      const bit16 = (Number(obj.frameID || 0) << 9)   // frameID 127 -> hex 00000000 01111111 << 9 = 11111110 00000000
-                  + (Number(obj.assetID || 0) << 3)   // assetID  63 -> hex 00000000 00111111 << 3 = fffffff1 11111000
-                  + (Number(obj.flipX   || 0) << 2)   // flipX     1 -> hex 00000000 00000001 << 2 = fffffffa aaaaax00
-                  + (Number(obj.flipY   || 0) << 1)   // flipY     1 -> hex 00000000 00000001 << 1 = fffffffa aaaaaxy0
-                  + (Number(obj.hidden  || 0)     );  // hidden    1 -> hex 00000000 00000001 << 0 = fffffffa aaaaaxyh
-      this.dataview.setUint16(this.bufferbytes * (tileX + tileY * this.tilemapConfig.width), bit16); // uses always big-endian
-      //this.bufferview[tileX + tileY * this.tilemapConfig.width] = bit16; // uses plattform endian
+      switch (this.bufferbytes) {
+        //arraybuffer:: case 2: this.dataview.setUint16(this.bufferbytes * (tileX + tileY * this.tilemapConfig.width), bytebuffer4Tilemap.groundlayer_objectToUint16(obj)); break; // setUint16 uses always big-endian
+        //arraybuffer:: default:this.dataview.setUint8(this.bufferbytes * (tileX + tileY * this.tilemapConfig.width), bytebuffer4Tilemap.groundlayer_objectToUint8(obj)); break;
+        default:this.dataview[this.bufferbytes * (tileX + tileY * this.tilemapConfig.width)] = bytebuffer4Tilemap.groundlayer_objectToUint8(obj); break;
+      }
     } catch(error) {
       // fail silently
     }
   }
 
   getDataObject = (tileX, tileY) => {
-    if (!this.dataview) return null; //if (!this.bufferview) return null;
     try {
-      //const bit8  = this.dataview.getUint8(this.bufferbytes * (tileX + tileY * this.tilemapConfig.width));
-      //const bit8 = this.bufferview[tileX + tileY * this.tilemapConfig.width];
-      //const assetID = bit8 & 3;   // 3 === 0x11000000
-      //const frameID = bit8 >>> 2; // shift 2 bits -> remove aa and fill with 0
+      if (!this.dataview || tileX < 0 || tileY < 0 || tileX >= this.tilemapConfig.width || tileY >= this.tilemapConfig.height) return null; //if (!this.bufferview) return null;
+      switch (this.bufferbytes) {
+        //arraybuffer:: case 2: return bytebuffer4Tilemap.groundlayer_uint16ToObject(tileX, tileY, this.dataview.getUint16(this.bufferbytes * (tileX + tileY * this.tilemapConfig.width))); break;
+        //arraybuffer:: default:return bytebuffer4Tilemap.groundlayer_uint8ToObject(tileX, tileY, this.dataview.getUint8(this.bufferbytes * (tileX + tileY * this.tilemapConfig.width))); break;
 
-      const bit16 = this.dataview.getUint16(this.bufferbytes * (tileX + tileY * this.tilemapConfig.width)); //const bit16 = this.bufferview[tileX + tileY * this.tilemapConfig.width];
+        //case 2 :return bytebuffer4Tilemap.groundlayer_uint16ToObject(tileX, tileY, this.dataview.readUInt16LE(this.bufferbytes * (tileX + tileY * this.tilemapConfig.width))); break;
+        //default:return bytebuffer4Tilemap.groundlayer_uint8ToObject(tileX, tileY, this.dataview.readUInt8(this.bufferbytes * (tileX + tileY * this.tilemapConfig.width))); break;
 
-      const hidden  = bit16 & 1;          // fffffffa aaaaaxyh & 0x00000000 00000001 -> h
-      const flipY   = (bit16 >>> 1) & 1;  // 0fffffff aaaaaaxy & 0x00000000 00000001 -> y
-      const flipX   = (bit16 >>> 2) & 1;  // 00ffffff faaaaaax & 0x00000000 00000001 -> x
-      const assetID = (bit16 >>> 3) & 63; // 000fffff ffaaaaaa & 0x00000000 00111111 -> aaaaaa
-      const frameID = (bit16 >>> 9) & 127;// 00000000 0fffffff & 0x00000000 01111111 -> fffffff
-
-      return { // item
-        // required
-        assetID: assetID,
-        frameID: frameID,
-
-        // optional (or 0)
-        flipX: flipX || 0,
-        flipY: flipY || 0,
-        hidden: hidden || 0,
-
-        // unsupported for now
-        z: 0,
-        depth: 0,
-        alpha: 1.0,
-        tint: 0xffffff,
-
-        // computed:: insert tileX/Y information, because its lost in a transformation from the 2d-array to an 1d-array in getRenderList / cullList
-        tileX: tileX,
-        tileY: tileY
+        default: bytebuffer4Tilemap.groundlayer_uint8ToObject(tileX, tileY, this.dataview[this.bufferbytes * (tileX + tileY * this.tilemapConfig.width)]); break;
       }
     } catch(error) {
       return null;
@@ -256,6 +228,13 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
     //if (tileX < 0 || tileX >= this.data2D[tileY].length) return null;
     return this.getDataObject(tileX, tileY); // (this.data2D[tileY] || [])[tileX];
   }
+
+
+  ///////////////////////////////////////////////////////////
+  ///
+  // internal
+  ///
+  ///////////////////////////////////////////////////////////
 
   _getTextureByKey = (assetkey) => { // imput:: key (name of texture / asset) OR texture
     const texture = this.scene.textures.get(assetkey); // phaser/textures/textureManager:: fallback to __MISSING
@@ -283,35 +262,9 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
   }
 
 
-  setTileFrameByID = (item, frameID, min, max) => { // frameID / animation sequence is ordered by filename of each frame
-    if (isNaN(min)) min = 0;
-    if (isNaN(max)) max = this.getTextureFrameCount(item.assetID) - 1; // item.frameTotal - 1;
-
-    item.frameID = (frameID >= min && frameID <= max) ? frameID : min;
-    return item;
-  }
-
-  shrTileFrame = (item, min, max) => { // frameID / animation sequence is ordered by filename of each frame
-    if (isNaN(min)) min = 0;
-    if (isNaN(max)) max = this.getTextureFrameCount(item.assetID) - 1; // item.frameTotal - 1;
-
-    const frameID = (item.frameID < max) ? item.frameID + 1 : min;
-    return this.setTileFrameByID(item, frameID);
-  }
-
-  shlTileFrame = (item, min, max) => { // frameID / animation sequence is ordered by filename of each frame
-    if (isNaN(min)) min = 0;
-    if (isNaN(max)) max = this.getTextureFrameCount(item.assetID) - 1; // item.frameTotal - 1;
-
-    const frameID = (item.frameID > min) ? item.frameID - 1 : max;
-    this.setTileFrameByID(item, frameID)
-    return this.setTileFrameByID(item, frameID);
-  }
-
-
   ///////////////////////////////////////////////////////////
   ///
-  // map
+  // camera
   ///
   ///////////////////////////////////////////////////////////
 
@@ -322,11 +275,19 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
     return this;
   }
 
-  setParentMap = (map) => { // set camera (worldview) to use culling-function against
+/*
+  setParentMap = (map) => {
     if (!map) map = null;
     this.parentMap = map;
     return this;
   }
+*/
+
+  ///////////////////////////////////////////////////////////
+  ///
+  // textures
+  ///
+  ///////////////////////////////////////////////////////////
 
   setAssetIDs = (arrayOfAssetKeys) => {
     this.assetIDs = [];
@@ -435,7 +396,7 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
     // ----------------  _______________________
     //
 
-    const origin = 0.5;
+    //const origin = 0.5;
 
     // transform tile-coords to rotated coordinate-system (iso-coords)
     const tileXX = (tileX - tileY) / 2; // still tile-coords but rotated (top/left is now transformed to top-spike)
@@ -526,7 +487,7 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
   ///////////////////////////////////////////////////////////
 
   setExtraTilesToCull = (value) => {
-    this.extraTilesToCull = (!isNaN(value)) ? value : 1; // default 1 is fine for ISOM60°. for ISO75° it is not enough.
+    this.extraTilesToCull = (!isNaN(value)) ? value : 1; // default 1 is fine for ISOM60°. for ISO75° it would be not enough.
     return this;
   }
 
@@ -561,6 +522,8 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
     const maxX = Math.max(tileTL.x, tileTR.x, tileBL.x, tileBR.x); // -> tileBR.x
     const minY = Math.min(tileTL.y, tileTR.y, tileBL.y, tileBR.y); // -> tileTR.x
     const maxY = Math.max(tileTL.y, tileTR.y, tileBL.y, tileBR.y); // -> tileBL.x
+
+    this.cullBounds = { tileX: { min: minX, max: maxX }, tileY: { min: minY, max: maxY } };
 
     // a very excact and crazy fast culling (independant from map-size)
     for (let tileY = minY; tileY <= maxY; tileY++) {

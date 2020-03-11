@@ -22,7 +22,7 @@ class SocketIO {
   get isConnected()  { return this._isConnected }
   set isConnected(v) {
     this._isConnected = v;
-    store.appstate.set("app.watchers.socket.isConnected", v);
+    store.appState.set("app.watchers.socket.isConnected", v);
   }
 
   get socketID()  { return (this.socket) ? this.socket.id : null }
@@ -141,8 +141,8 @@ class SocketIO {
     */
 
     this.socket.on("pong", (ms) => { // responsetime
-      global.log("socket:: event:: pong:: ", ms, this.socket.id, this.socket.connected, );
-      store.appstate.set("app.watchers.socket.pongMS", ms);
+      //global.log("socket:: event:: pong:: ", ms, this.socket.id, this.socket.connected, );
+      store.appState.set("app.watchers.socket.pongMS", ms);
       this.onSocketPong && this.onSocketPong(this.socket, ms);
     });
   };
@@ -172,18 +172,18 @@ class SocketIO {
 
       // call server
       try {
-        req.timeclientout = unixtime(); // inject to request
+        req._timeclientout = unixtime(); // inject to request
         this.socket.emit(ioRoute, req, (err, res) => {
           clearTimeout(timer);
           if (err) reject(err);
 
-          if (res && res.hasOwnProperty("callstats")) {
-            res.callstats.timeclientin = unixtime(); // inject to result
-            res.callstats.client2client = 1000 * (res.callstats.timeclientin - res.callstats.timeclientout);
-            res.callstats.client2server = 1000 * (res.callstats.timeserverin - res.callstats.timeclientout);
-            res.callstats.server2server = 1000 * (res.callstats.timeserverout - res.callstats.timeserverin);
-            res.callstats.server2client = 1000 * (res.callstats.timeclientin - res.callstats.timeserverout);
-            store.appstate.set("app.watchers.socket.callstats", res.callstats);
+          if (res && res.hasOwnProperty("_callstats")) {
+            res._callstats.timeclientin = unixtime(); // inject to result
+            res._callstats.client2client = 1000 * (res._callstats.timeclientin - res._callstats.timeclientout);
+            res._callstats.client2server = 1000 * (res._callstats.timeserverin - res._callstats.timeclientout);
+            res._callstats.server2server = 1000 * (res._callstats.timeserverout - res._callstats.timeserverin);
+            res._callstats.server2client = 1000 * (res._callstats.timeclientin - res._callstats.timeserverout);
+            store.appState.set("app.watchers.socket._callstats", res._callstats);
           }
 
           resolve(res);

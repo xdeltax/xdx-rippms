@@ -89,12 +89,12 @@ export default class DBUsercards extends DBPrototype {
   }
 
 
-	getUsercard = async (unsafe_targetuserid, unsafe_userid, unsafe_servertoken) => {
+	get = async (unsafe_targetuserid, unsafe_userid, unsafe_servertoken) => {
     try {
 			const valid_targetuserid= joiValidateFallback(unsafe_targetuserid, null, joi_userid);
 			const valid_userid      = joiValidateFallback(unsafe_userid      , null, joi_userid);
 	    const valid_servertoken = joiValidateFallback(unsafe_servertoken , null, joi_servertoken);
-			if (!valid_targetuserid || !valid_userid || !valid_servertoken) throw isERROR(1, "DBUsercards: getUsercard", "usercard query failed", "invalid id or token");
+			if (!valid_targetuserid || !valid_userid || !valid_servertoken) throw isERROR(1, "DBUsercards: get", "usercard query failed", "invalid id or token");
 
       const isOWN = (valid_userid === valid_targetuserid); // check if OWN-stuff is requestd -> more info is returned
 
@@ -102,7 +102,7 @@ export default class DBUsercards extends DBPrototype {
 
 	  	return isSUCCESS(thisObject);
 	  } catch (error) {
-	  	return isERROR(99, "DBUsercards: getUsercard", "usercard query failed", error);
+	  	return isERROR(99, "DBUsercards: get", "usercard query failed", error);
 	  }
 	}
 

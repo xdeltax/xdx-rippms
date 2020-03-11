@@ -1,5 +1,5 @@
 import React from 'react';
-//import { toJS } from 'mobx';
+import { toJS } from 'mobx';
 import { observer }  from 'mobx-react';
 import { withStyles } from '@material-ui/core/styles';
 
@@ -9,15 +9,18 @@ import Typography from '@material-ui/core/Typography';
 import OAuth from 'ui/components/auth/OAuth'
 //import tryFallback from "tools/tryFallback";
 
-import store from 'store';
-import socketio from 'socket'; // socket
+import socketio from 'api/socket'; // socket
 
-import { saveToPersistentDatabase} from "database/persistentDB.js";
+import store from 'store';
+import rxdbStore from 'rxdbStore'; // rxdb-database
+
+import * as localDatabase from "localDatabase/index.js";
+import * as serverAPI from "api/serverAPI.js";
 
 // assets
 import AppLogo from 'assets/applogo.svg';
 import FacebookLogo from 'assets/Facebook_Logo_(2019)_144x144.png';
-import InstagramLogo from 'assets/Instagram_Logo_2016.svg';
+//import InstagramLogo from 'assets/Instagram_Logo_2016.svg';
 import GoogleLogo from 'assets/Google_Logo_512x512.svg';
 
 const styles = theme => ({
@@ -44,18 +47,21 @@ const styles = theme => ({
 export default ( withStyles(styles)( observer( class extends React.Component {
   state = {  }
 
-  onAuthSuccess = async (socketid, provider, userObject) => {
-  	global.log("OAuth:: Success:: Callback:: ", socketid, provider, userObject);
-
-  	// userObject = {
+  onAuthSuccess = async (socketid, provider, userdataFromServer) => {
+  	//global.log("OAuth:: Success:: Callback:: ", socketid, provider, userObject);
+    // userdataFromServer = {
+    //   status: "login with provider",
+    //   provider: provider,
+    //   socketid: socketid,    //
   	//	 user: { ... }
-  	//	 usercard: { ... }
+    //   usercard ...
   	// }
-  	await store.user.doAuthLogin(userObject);
+    await rxdbStore.user.doAuthLogin(socketid, provider, null, userdataFromServer);
   }
 
-  onAuthFailed = (socketid, provider, error) => {
-  	global.log("OAuth:: Failed:: Callback:: ", socketid, provider, error);
+  onAuthFailed = async (socketid, provider, error) => {
+  	//global.log("OAuth:: Failed:: Callback:: ", socketid, provider, error);
+    await rxdbStore.user.doAuthLogin(socketid, provider, error, null);
   }
 
   render() {
@@ -67,14 +73,15 @@ export default ( withStyles(styles)( observer( class extends React.Component {
       //match,    // match: {path: "/login", url: "/login", isExact: true, params: {…}}
     } = this.props;
 
+
     return (
       <div className={classes.root} style={{
         position: "relative",
         overflow: "auto",
         height: "100%",
         width: "100%",
-        color: store.appstate.colors.login.text,
-        background: store.appstate.colors.login.background,
+        color: store.appState.colors.login.text,
+        background: store.appState.colors.login.background,
       }}>
         <div style={{ position: "relative", top: 0, height: "30vh", minHeight: "150px", backgroundColor:"transparent" }}>
           <Typography className={classes.fontIndieItalic} align="center" noWrap style={{fontSize: 72, }}>xdx</Typography>
@@ -108,22 +115,43 @@ export default ( withStyles(styles)( observer( class extends React.Component {
           </Button>
         </div>
 
+        <div>
+          <Button variant="outlined" onClick={()=> localDatabase.saveAppData(true) }>saveToPersistentDatabase</Button>
+          <Button variant="outlined" onClick={()=> { store.appActions.showSpinner("test the spinner", 5000) }}>show Spinner</Button>
 
-          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
-					  // ===============================================
-					  // load store-data from server-database
-					  // ===============================================
-					  store.user.userid = "66f57373e76612339caf72ee103c4a52db256481";
-					  store.user.servertoken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2lkIjoiNjZmNTczNzNlNzY2MTIzMzljYWY3MmVlMTAzYzRhNTJkYjI1NjQ4MSIsInB2ZCI6ImZhY2Vib29rIiwicGlkIjoiNTczOTI5Mzg5NzQyODYzIiwiaGFzaCI6IjJkZjYzYmQ5NWMwMTM5ZWEyN2MyZTJkMzlkYjgwYzA1OWNmN2U2OTEiLCJpYXQiOjE1Nzc2NzQyMjgsImV4cCI6MTU3ODI3OTAyOCwiYXVkIjoibWVtYmVyIiwiaXNzIjoieGR4Iiwic3ViIjoieCIsImp0aSI6ImlkMSJ9.tOja7fzkxSZzrDoqNplHUQ0wWGgR4EV5NXvRJ2_97s0";
-				    const resObj = await store.user.getUserStoreFromServerANDMergeWithStore();
-				    global.log("getUserStoreFromServerANDMergeWithStore:: resObj:: ", resObj);
-          }} >
-          	GETUSERSTORE
-          </Button>
+          <Button variant="outlined" onClick={()=> serverAPI.testServerResponse("hello from button") }>test server response</Button>
 
-          <Button variant="outlined" onClick={()=> saveToPersistentDatabase(true) }>saveToPersistentDatabase</Button>
-          <Button variant="outlined" onClick={()=> { store.appactions.showSpinner("test the spinner", 5000) }}>show Spinner</Button>
+          <Button variant="outlined" onClick={async () => {
+            const x = await rxdbStore.user.collection.findOne().exec();
+            global.log("DATABASE DUMP:: ", x, rxdbStore, rxdbStore.user, await rxdbStore.user.collection2json());
+          }}>rxdb dump database</Button>
 
+          <Button variant="outlined" onClick={async () => {
+            const c = await rxdbStore.user.count();
+            const x = await rxdbStore.user.mobx2json;
+            const y = await rxdbStore.user.collection2json();
+            const ydocs = y.docs;
+            global.log("GETGETGET:: ", toJS(x), y, ydocs, c);
+          }}>get</Button>
+
+          <Button variant="outlined" onClick={async () => {
+            const rnd = global.random(100);
+            global.log("SET:: ", rnd)
+            const x = await rxdbStore.user.setProp("updatedAt", rnd);
+
+            //const x = await rxdbStore.user.setProp("card.test2", global.random(100) );
+            //global.log("COUNT:: ", await rxdbStore.user.count());
+            //global.log("x", x, rxdbStore.user.getProp.updatedAt)
+
+            //const xx = await rxdbStore.user.setProp("card.test", global.random(100) );
+            //global.log("xx", xx, rxdbStore.user.mobx2json)
+          }}>set</Button>
+
+          <Button variant="outlined" onClick={async () => {
+            const x = await rxdbStore.user.mobx;
+            global.log("XXXXXXXXXXXXX", toJS(x))
+          }}>{rxdbStore.user.getProp.updatedAt || "XXX"}</Button>
+        </div>
 
       </div>
     ) // of return
