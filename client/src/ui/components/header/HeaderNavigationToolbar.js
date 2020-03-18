@@ -25,7 +25,7 @@ import KeyboardArrowDownICON from '@material-ui/icons/KeyboardArrowDown';
 import IconButtonHelptext from "ui/components/helpers/IconButtonHelptext";
 import IconButtonWithMenu from 'ui/components/helpers/IconButtonWithMenu';
 
-import store from 'store';
+import rxdbStore from 'rxdbStore'; // rxdb-database
 
 const styles = theme => ({
   appbar: {
@@ -35,12 +35,12 @@ const styles = theme => ({
 
     left:0,
     width: '100%',
-    //height: store.appState.app.header.height,
-    minWidth: store.appState.app.size.minWidth || null,
-    maxWidth: store.appState.app.size.maxWidth || null,
+    //height: rxdbStore.app.getProp.state.header.height,
+    minWidth: rxdbStore.app.getProp.config.size.minWidth || null,
+    maxWidth: rxdbStore.app.getProp.config.size.maxWidth || null,
 
-    color: store.appState.colors.navigation.text,
-    background: store.appState.colors.header.background,
+    color: rxdbStore.app.getProp.config.color.navigation.text,
+    background: rxdbStore.app.getProp.config.color.header.background,
 
     //alignItems: 'center',
     //justifyContent: 'space-between',
@@ -74,8 +74,8 @@ export default withStyles(styles)( observer( class extends React.Component {
       {!noRespawnButton && hide && // HIDE-BUTTON:: display a button to click -> unhide top-toolbar (and navigation if auth-path)
         <div style={{ position: "fixed", right: 0, top: 0, }}>
           <IconButton color="inherit" style={{ flexGrow: 0, }}  onClick={(event) => {
-            store.appState.set("app.header.visible", true);
-            store.appState.set("app.bottomNavigation.visible", true);
+            rxdbStore.app.setProp("state.header.visible", true);
+            rxdbStore.app.setProp("state.bottomNavigation.visible", true);
           }}>
             <KeyboardArrowDownICON />
           </IconButton>
@@ -98,7 +98,7 @@ export default withStyles(styles)( observer( class extends React.Component {
             </Typography>
 
             <IconButtonHelptext
-              color="inherit" textColorWindow={store.appState.colors.menu.text} backgroundColorWindow={store.appState.colors.menu.background}
+              color="inherit" textColorWindow={rxdbStore.app.getProp.config.color.menu.text} backgroundColorWindow={rxdbStore.app.getProp.config.color.menu.background}
               icon={(1===0) ? <WifiOnICON /> : <WifiOffICON />}
               noTypography
             >
@@ -108,7 +108,7 @@ export default withStyles(styles)( observer( class extends React.Component {
             </IconButtonHelptext>
 
             <IconButtonWithMenu // button to navigate to user-profile orientate stuff and logout
-              color="inherit" textColorWindow={store.appState.colors.menu.text} backgroundColorWindow={store.appState.colors.menu.background}
+              color="inherit" textColorWindow={rxdbStore.app.getProp.config.color.menu.text} backgroundColorWindow={rxdbStore.app.getProp.config.color.menu.background}
               icon={<AccountCircleICON />}
               headerLabel="Account Management"
               menuItems={["Account", "Logout", ]}
@@ -118,7 +118,7 @@ export default withStyles(styles)( observer( class extends React.Component {
             }} />
 
             <IconButtonHelptext // button to show help-text
-              color="inherit" textColorWindow={store.appState.colors.menu.text} backgroundColorWindow={store.appState.colors.menu.background}
+              color="inherit" textColorWindow={rxdbStore.app.getProp.config.color.menu.text} backgroundColorWindow={rxdbStore.app.getProp.config.color.menu.background}
               noTypography
             >
               <Typography className={classes.typography}>
@@ -127,8 +127,8 @@ export default withStyles(styles)( observer( class extends React.Component {
             </IconButtonHelptext>
 
             <IconButton color="inherit" onClick={(event) => { // buttom to hide this toolbar and bottomNavigation
-              store.appState.set("app.header.visible", false);
-              store.appState.set("app.bottomNavigation.visible", false);
+              rxdbStore.app.setProp("state.header.visible", false);
+              rxdbStore.app.setProp("state.bottomNavigation.visible", false);
             }}>
               <KeyboardArrowUpICON />
             </IconButton>

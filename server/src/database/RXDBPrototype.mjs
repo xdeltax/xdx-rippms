@@ -5,7 +5,7 @@ import {abs_path, } from "../basepath.mjs";
 import RxDB from 'rxdb';
 import RxDBPouchDBAdapterNodeWebsql from 'pouchdb-adapter-node-websql';
 //import RxDBErrorMessagesModule from 'rxdb/plugins/error-messages';
-import RxDBServerPlugin from 'rxdb/dist/lib/plugins/server.js'; // add the server-plugin
+//import RxDBServerPlugin from 'rxdb/dist/lib/plugins/server.js'; // add the server-plugin
 
 //import { createRequire } from 'module';
 //const require = createRequire(import.meta.url);
@@ -93,7 +93,7 @@ export default class DBPrototype {
 
   async loadDatabaseAdapter() {
     // plugins
-    RxDB.plugin(RxDBServerPlugin);
+    //RxDB.plugin(RxDBServerPlugin);
     //RxDB.plugin(RxDBErrorMessagesModule);
     RxDB.plugin(RxDBPouchDBAdapterNodeWebsql); //RxDB.plugin(require('pouchdb-adapter-node-websql'));
 

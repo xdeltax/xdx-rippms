@@ -8,6 +8,7 @@ import HeaderNavigationToolbar from "ui/components/header/HeaderNavigationToolba
 import ReactContainerPixiGame from 'ui/components/game/ReactContainerPixiGame';
 
 import store from 'store';
+import rxdbStore from 'rxdbStore'; // rxdb-database
 
 const styles = theme => ({
   root: {
@@ -35,14 +36,14 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
         overflow: "auto",
         height: "100%",
         width: "100%",
-        color: store.appState.colors.auth.text,
-        background: store.appState.colors.auth.background,
+        color: rxdbStore.app.getProp.config.color.auth.text,
+        background: rxdbStore.app.getProp.config.color.auth.background,
       }}>
-        <HeaderNavigationToolbar label="Pixi.JS v5" hide={!store.appState.app.header.visible}
+        <HeaderNavigationToolbar label="Pixi.JS v5" hide={!rxdbStore.app.getProp.state.header.visible}
           onBackButtonClick={ () => { if (history.length > 1) history.goBack(); else history.push("/"); }}
-          //noRespawnButton={!store.appState.app.game.visible}
+          //noRespawnButton={!rxdbStore.app.getProp.state.game.visible}
         />
-        <ReactContainerPixiGame store={store} />
+        <ReactContainerPixiGame store={store} rxdbStore={rxdbStore} />
       </div>
     );
   }

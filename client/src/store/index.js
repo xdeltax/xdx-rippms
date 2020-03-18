@@ -9,7 +9,7 @@ import AppStateMobx from './AppStateMobx.js';
 import AppActionsMobx from './AppActionsMobx.js';
 
 // user-data
-import UserMobx from './UserMobx.js';
+//import UserMobx from './UserMobx.js';
 //import MobxUsercard from './MobxUsercard.js';
 
 // game-data
@@ -28,7 +28,7 @@ class Store extends MobxPrototype {
 		appstate: null,
 		appactions: null,
 
-		user: null,
+		//user: null,
 		//usercard: null,
 
 		game: null,
@@ -57,7 +57,7 @@ class Store extends MobxPrototype {
 		this._obervables.appactions = new AppActionsMobx(this);
 
 		// stores data of active user
-		this._obervables.user = new UserMobx(this);
+		//this._obervables.user = new UserMobx(this);
 		//this._obervables.usercard = new MobxUsercard(this);
 
 		// stores data of running game
@@ -85,8 +85,8 @@ class Store extends MobxPrototype {
 	get appActions() { return this._obervables.appactions }
 	set appActions(o) { runInAction(() => { this._obervables.appactions = o; }) }
 
-	get user() { return this._obervables.user }
-	set user(o) { runInAction(() => { this._obervables.user = o; }) }
+	//get user() { return this._obervables.user }
+	//set user(o) { runInAction(() => { this._obervables.user = o; }) }
 
 	//get usercard() { return this._obervables.usercard }
 	//set usercard(o) { runInAction(() => { this._obervables.usercard = o; }) }
@@ -96,10 +96,6 @@ class Store extends MobxPrototype {
 
 	get gameMap() { return this._nonobervables.game }
 	set gameMap(o) { runInAction(() => { this._nonobervables.game = o; }) }
-
-  get isAuthenticated() {
-    return Boolean(this.user.isValidUser && this.user.isValidUsercard);
-  }
 
 };
 

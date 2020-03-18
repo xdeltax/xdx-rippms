@@ -31,7 +31,7 @@ const GameContainer = observer(class GameContainer extends React.Component { //e
   }
 
   PixiDIV = (element) => {
-    const { store, size } = this.props;
+    const { store, rxdbStore, size } = this.props;
 
     // the element is the DOM object that we will use as container to add pixi stage(canvas)
     this._pixiDIV = element;
@@ -40,6 +40,7 @@ const GameContainer = observer(class GameContainer extends React.Component { //e
     if (this._pixiDIV && this._pixiDIV.children.length <= 0) {
       // add mobx-store to react-component
       this.store = store; // reachable in game:: this.game.react.store...
+      this.rxdbStore = rxdbStore; // reachable in game:: this.game.react.rxdbStore...
 
       this.app = new PixiGame(this, size); // this.app = new PIXI.Application(pixiConfig);
 

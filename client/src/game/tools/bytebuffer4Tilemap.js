@@ -1,10 +1,10 @@
 //https://nodejs.org/api/buffer.html#buffer_buffer_from_buffer_alloc_and_buffer_allocunsafe
 
-//export const createArrayBuffer = (bufferBytes, width, height) => new ArrayBuffer(bufferBytes * width * height);
-//export const createArrayBufferDataView = (arraybuffer) => new DataView(arraybuffer);
+//export const createBuffer = (bufferBytes, width, height) => new ArrayBuffer(bufferBytes * width * height);
+//export const createDataView = (arraybuffer) => new DataView(arraybuffer);
 
+//export const createBufferUnsafe = (bufferBytes, width, height) => Buffer.allocUnsafe(bufferBytes * width * height); // buffer = uint8array // no fill => faster
 export const createBuffer = (bufferBytes, width, height) => Buffer.alloc(bufferBytes * width * height); // buffer = uint8array // fill with zeros
-export const createBufferUnsafe = (bufferBytes, width, height) => Buffer.allocUnsafe(bufferBytes * width * height); // buffer = uint8array // no fill => faster
 export const createDataView = (buffer) => buffer;
 
 export const isBuffer = (buffer) => Buffer.isBuffer(buffer);

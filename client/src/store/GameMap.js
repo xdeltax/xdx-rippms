@@ -1,6 +1,5 @@
 import PrototypeStore from "./PrototypeStore";
 import * as bytebuffer4Tilemap from "game/tools/bytebuffer4Tilemap";
-import * as localDatabase from "localDatabase/index.js"; // loadAppData, saveAppData, deleteAppData
 import * as gameMapAPI from "api/gameMapAPI.js";
 
 export default class GameMap extends PrototypeStore {
@@ -62,7 +61,7 @@ export default class GameMap extends PrototypeStore {
         //user: user || {},
       });
 
-      await localDatabase.saveAppData();
+      //await localDatabase.saveAppData();
     }
 
     if (err) {

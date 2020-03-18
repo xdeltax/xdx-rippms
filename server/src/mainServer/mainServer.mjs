@@ -101,6 +101,10 @@ export default async function mainServer(tryPort) {
   const app = express();
 
 
+
+  //nst {app: dbApp, server: dbServer} = database.rxdbGame.server({ startServer: false });
+  //app.use('/db', dbApp);
+
   // ===============================================
   // WEBSERVER: config the webserver http or https
   // ===============================================

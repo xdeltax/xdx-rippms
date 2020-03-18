@@ -1,4 +1,5 @@
 import { configure, /*toJS*/ } from 'mobx';
+import {unixtime} from "tools/datetime";
 //import { install } from '@material-ui/core/styles';
 
 //import '@ionic/core/css/core.css';
@@ -13,6 +14,7 @@ global.now          = () => new Date(); // Thu Oct 31 2019 10:45:09 GMT+0100
 global.nowTimePretty= () => global.now().toLocaleTimeString(); // 10:47:05
 global.nowDatePretty= () => global.now().toLocaleDateString(); // 31.10.2019
 global.nowUnix      = () => global.now() / 1000; // 1572515109.941
+global.nowunix      = () => global.nowUnix();
 
 global.absRandom    = (value) => Math.floor(value * Math.random());
 global.randomHash   = (value) => "hash" + global.absRandom(100000000);
@@ -35,7 +37,7 @@ global.error = ( ...restArgs ) => { global.consoleError(global.debugTime(), rest
 //if (process.env.NODE_ENV === "development") { }
 global.DEBUG_SHOW_DEBUGOBJECTPRETTY = true;  // in ./AppLandingPage.js
 global.DEBUG_AUTH_FAKE_ISVALIDUSER  = false; // in ./rxdbStore/UserCollection.js
-
+global.DEBUG_DISABLE_SOCKETCONNECT  = true;  // in ./AppLandingPage.js
 /*
 ////////////////////////////////////////////////////////////////////////////////
 // IONIC-config

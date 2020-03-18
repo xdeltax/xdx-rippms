@@ -5,8 +5,12 @@ import RxDBPouchDBAdapterIDB from 'pouchdb-adapter-idb';
 //import RxDBNoValidateModule from 'rxdb/plugins/no-validate';
 import RxDBZSchemaValidateModule from 'rxdb/plugins/validate-z-schema';
 
-//import RXDBAppStateCollection from "./rxdbAppStateCollection";
-import UserCollection from "./UserCollection";
+import AppMobxCollection from "./AppMobxCollection";
+import UserMobxCollection from "./UserMobxCollection";
+
+import GameMobxCollection from "./GameMobxCollection";
+import GameConfigCollection from "./GameConfigCollection";
+import GameMapCollection from "./GameMapCollection";
 
 class RXDBStore {
   get databaseURL()   { return ""; /*process.env.DATABASE_RXDB_URL;*/ }
@@ -14,10 +18,31 @@ class RXDBStore {
   get fullpath()      { return this.databaseURL + this.databaseName; /*abs_path(path.join("..", this.databaseURL, this.databaseName));*/ }
 
   constructor() {
-    this._db = null;
-    this.appStateCollection= null;
-    this.userCollection = null;
+    this.db = null;
+    this.app= null;
+    this.user = null;
+    this.gameMobx = null;
+    this.gameConfig = null;
+    this.gameMap = null;
   };
+
+  get db() { return this._db; }
+  set db(v){ this._db = v; }
+
+  get app() { return this.appMobxCollection; }
+  set app(v){ this.appMobxCollection = v; }
+
+  get user() { return this.userMobxCollection; }
+  set user(v){ this.userMobxCollection = v; }
+
+  get gameMobx() { return this.gameMobxCollection; }
+  set gameMobx(v){ this.gameMobxCollection = v; }
+
+  get gameConfig() { return this.gameConfigCollection; }
+  set gameConfig(v){ this.gameConfigCollection = v; }
+
+  get gameMap() { return this.gameMapCollection; }
+  set gameMap(v){ this.gameMapCollection = v; }
 
   initDatabase = async () => {
     // ===============================================
@@ -29,19 +54,18 @@ class RXDBStore {
     // ===============================================
     // create / open collections
     // ===============================================
-    //this.appStateDB = await rxdbAppState.connect(); // return db
-    this.userCollection = await new UserCollection(this.db); // return collection-ref
-    await this.userCollection.initCollection(); // create
+    this.app  = await new AppMobxCollection(this.db); // return collection-ref
+    this.user = await new UserMobxCollection(this.db); // return collection-ref
+    this.gameMobx = await new GameMobxCollection(this.db); // return collection-ref
+    this.gameConfig = await new GameConfigCollection(this.db); // return collection-ref
+    this.gameMap = await new GameMapCollection(this.db); // return collection-ref
+
+    await this.app.initCollection();
+    await this.user.initCollection();
+    await this.gameMobx.initCollection();
+    await this.gameConfig.initCollection();
+    await this.gameMap.initCollection();
   }
-
-  get db() { return this._db; }
-  set db(v){ this._db = v; }
-
-  //get appState() { return this.rxdbAppState.collection; }
-  //set appState(v){ this.rxdbAppState.collection = v; }
-
-  get user() { return this.userCollection; }
-  set user(v){ this.userCollection = v; }
 
   // ===============================================
   // database-stuff
@@ -67,6 +91,8 @@ class RXDBStore {
   // helpers
   // ===============================================
   openDatabase = async () => { // static method (not affected by instance) -> called with classname: DBGeoData.load
+    if (this.db) return true;
+
     global.log("RXDBPrototype:: created database:: ", this.fullpath ); // full
     this.db = await RxDB.create({
       name: this.fullpath,
@@ -105,33 +131,3 @@ class RXDBStore {
 
 const rxdbStore = new RXDBStore();
 export default rxdbStore;
-
-
-
-/*
-  rxdbStore.appState: { // collection appState
-
-  },
-
-  rxdbStore.appUser: { // collection appUser
-    userid: UNIQUE
-    auth: { // property "auth"
-      userid,
-      servertoken,
-      ...
-    },
-    card: {
-      userid
-      phonenumber
-      email
-      ...
-    },
-    createdAt,
-    updatedAt,
-  },
-
-  rxdbStore.gameState: { // collection gameState
-
-  },
-}
-*/

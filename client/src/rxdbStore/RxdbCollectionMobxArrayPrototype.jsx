@@ -4,13 +4,16 @@ import deepCopy from 'tools/deepCopyObject';
 //import deepMerge from 'tools/deepMergeObject';
 
 class RxdbCollectionMobxPrototype {
+  _mobx;
+  _data = null;
   get collectionName(){ return this._collectionName; }
   get isObserved() { return this._isObserved; }
+  get db() { return this._db; }
+  get collection() { return this._collection }
+  get socket() { return this._socketio }
 
   constructor(isObserved, database, collectionName, rxdbSchema, memorySchema, migrationStrategies) {
-    this._unsavedChanges = false;
-
-    this._isObserved = isObserved || true;
+    this._isObserved = isObserved;
     this._db = database || null;
     this._collectionName = collectionName || null;
     this._rxdbSchema = rxdbSchema || { };
@@ -22,9 +25,6 @@ class RxdbCollectionMobxPrototype {
 
     this._serverIsMaster = false;
 
-    // init mobx-observable with default-data from memorySchema
-    this.syncRxdbToMemory(); //if (isObserved) { runInAction(() => { this._mobx = deepCopy(memorySchema) || { }; }); } else { this._data = deepCopy(memorySchema) || { }; }
-
     return this; // return collection
   }
 
@@ -32,52 +32,81 @@ class RxdbCollectionMobxPrototype {
     // 1) create or open collection
     await this.createCollection(this._rxdbSchema, this._migrationStrategies);
     // 2) if collection is empty -> create database-document from mobx-data
-    if (await this.count() < 1) await this.createupdateDocument(this.memory2json, true); // if database is empty -> create database-document from mobx
+    await this.syncRxdbToMemory(); //if (isObserved) { runInAction(() => { this._mobx = deepCopy(memorySchema) || { }; }); } else { this._data = deepCopy(memorySchema) || { }; }
+    // if (await this.count() < 1) await this.upsertDocument(this.memory2json, true); // if database is empty -> create database-document from mobx
     // 3) make collection reactive to changes in database --> if collection changes, update mobx/data-data
     if (isReactive) await this.subscribeToCollection(); // make collection changes reactive -> send to mobx on collection-data-change
     //await this.subscribeToProperties("updatedAt");
+
+    return this;
   }
 
   destroy() {
     this.unsubscribeFromCollection();
   }
 
+
+  // ===============================================
+  // rxjs / mobx sync-operations
+  // ===============================================
+  /*
+  syncMemoryToRxdb = async () => {
+    await this.upsertDocument(this.memory2json, true);
+  };
+  */
+  syncRxdbToMemory = async (docArray) => {
+    if (!docArray) docArray = await this.documents2json();
+    if (this.isObserved) {
+      runInAction(() => { this._mobx = deepCopy(docArray) });
+    } else {
+      this._data = deepCopy(docArray);
+    }
+    //global.log("*** syncRxdbToMemory:: ", docArray, deepCopy(docArray), this.isObserved, this._data, this.getall)
+    //global.log("XXXXXXXXX2:: syncRxdbToMemory:: ", dump, dump.docs, docArray, this._data, toJS(this._mobx) )
+  };
+
+
   // ===============================================
   // mobx-observable-operations (READ-Operations)
   // ===============================================
-  get mobx()      { return this._mobx; }  // mobx readonly -> all write operations only to database
-  get mobx2json() { return toJS(this._mobx); }  // mobx readonly -> all write operations only to database
-	//set mobx(v) { runInAction(() => { this._mobx = v; }) }
+  get mobx()        { return this._mobx; }  // mobx readonly -> all write operations only to database
+  get mobx2json()   { return toJS(this._mobx); }  // mobx readonly -> all write operations only to database
 
-  get data()      { return this._data; }  // data readonly -> all write operations only to database
-  get data2json() { return deepCopy(this._data) || { }; }  // data readonly -> all write operations only to database
+  get data()        { return this._data; }  // data readonly -> all write operations only to database
+  get data2json()   { return deepCopy(this._data) || { }; }  // data readonly -> all write operations only to database
 
   // same as this.getProp but without failsafe!  this.getProp.unknownprop will fail!!!
   get memory()      { return (this.isObserved) ? this._mobx : this._data; }  // data readonly -> all write operations only to database
   get memory2json() { return (this.isObserved) ? toJS(this._mobx) : deepCopy(this._data) || { }; }  // data readonly -> all write operations only to database
 
   // same as this.memory but with failsafe!  this.getProp.unknownprop will not fail
-  get getProps()  { return this.getProp }
-  get getProp()   { return this.memory || { }; }
+  get getProp()     { return this.memory || { }; }
+  get getProps()    { return this.getProp }
 
   get getall() { return (this.isObserved) ? toJS(this._mobx) : this._data };
-  getAll() { return this.getall };
+  getAll = () => this.getall;
+
+  get getDefault()  { return this._memorySchema }
+
 
   // ===============================================
   // rxdb-collection-operations (WRITE-Operations)
   // ===============================================
-  get db() { return this._db; }
-  //set db(v){ this._db = v; }
+  get findDocs() { return this.collection.find(); }
+  get findDoc()  { return this.collection.findOne(); }
 
-  get collection() { return this._collection }
-  //set collection(v){ this._collection = v}
-
-  get socket() { return this._socketio }
-
-  async createupdateDocument(doc, ignore) {
-    await this.collection.upsert(doc); // create or replace database-document
-    if (!ignore) this._unsavedChanges = true;
+  async upsertDocument(doc, noSync) { // create or overwrite document
+    const newdoc = await this.collection.upsert(doc); // create or replace database-document
+    if (!noSync) await this.syncRxdbToMemory();
+    return newdoc;
   }
+
+  async setPropInDocs(prop, value, docArray) {
+    if (!Array.isArray(docArray) || docArray.length < 1) return null;
+    await docArray.forEach(async (tempdoc) => { await tempdoc.atomicSet(prop, value) });
+    await this.syncRxdbToMemory();
+  }
+
 
   async setProps(prop, value) { return await this.setProp(prop, value) }
   async setProp(prop, value) { // const x = await rxdbStore.user.setProp("card.test", 111 ); -> set _mobx: { card: {test:111} }
@@ -93,7 +122,6 @@ class RxdbCollectionMobxPrototype {
           this._data = resultDocJSON; // pre-sync to be fast (dont wait for subscribeToCollection-sync)
         };
         //global.log("setProp:: ", this._data)
-        this._unsavedChanges = true;
         return resultDocJSON;
       } else {
         return null;
@@ -101,43 +129,7 @@ class RxdbCollectionMobxPrototype {
     } catch (error) {
       return null;
     }
-    /*
-    //optimistic fast-sync:: runInAction(() => { this._mobx[prop] = val; });
-    this.collection.findOne().exec().then(tempdoc => {
-      tempdoc.atomicSet(prop, value).then(result => {
-        if (result) {
-          if (this.isObserved) {
-            runInAction(() => { this._mobx = result.toJSON(); }); // pre-sync to be fast (dont wait for subscribeToCollection-sync)
-          } else {
-            this._data = result.toJSON(); // pre-sync to be fast (dont wait for subscribeToCollection-sync)
-          };
-          //global.log("setProp:: ", this._data)
-          this._unsavedChanges = true;
-          return true;
-        } else {
-          return false;
-        }
-      });
-    });
-    */
   }
-
-
-  // ===============================================
-  // rxjs / mobx sync-operations
-  // ===============================================
-  syncMemoryToRxdb = async () => {
-    await this.createupdateDocument(this.memory2json, true);
-  };
-
-  syncRxdbToMemory = async () => {
-    const doc = (!this.collection) ? null : await this.collection.findOne().exec();
-    if (this.isObserved) {
-      runInAction(() => { this._mobx = (doc) ? doc.toJSON() : deepCopy(this._memorySchema) || { }; });
-    } else {
-      this._data = (doc) ? doc.toJSON() : deepCopy(this._memorySchema) || { };
-    }
-  };
 
 
   // ===============================================
@@ -148,6 +140,13 @@ class RxdbCollectionMobxPrototype {
   }
 
   async subscribeToCollection() { // sync any changes of the local rxbd-database to mobx
+    const docs = this.collection.find();
+    this._sub = docs.$.subscribe(async (newdocORnewdocArray) => {
+      global.log("+++++++++subscribeToCollection:: ", docs, newdocORnewdocArray);
+      await this.syncRxdbToMemory();
+    });
+
+    /*
     // find the document (its by design always only one)
     const doc = this.collection.findOne();
     // subscribe to all changes of the rxdb-document
@@ -166,6 +165,7 @@ class RxdbCollectionMobxPrototype {
         };
       };
     });
+    */
   }
 
   /*
@@ -220,6 +220,11 @@ class RxdbCollectionMobxPrototype {
 
   async removeCollection() {
     return (!this.collection) ? null : await this.collection.remove();
+  }
+
+  async documents2json() { // export collection to json
+    const cdump = (!this.collection) ? null : await this.collection2json();
+    return (cdump && cdump.hasOwnProperty("docs")) ? cdump.docs : [];
   }
 
   async collection2json() { // export collection to json

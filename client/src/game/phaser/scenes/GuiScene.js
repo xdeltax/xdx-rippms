@@ -122,7 +122,7 @@ const SceneClass = class Gui extends Phaser.Scene { // https://github.com/photon
 
       if (iso1)
       this.xdx.textDebug2.setText([
-      	`tilemap ${iso1.tilemapConfig.width} x ${iso1.tilemapConfig.height} = ${iso1.tilemapConfig.height*iso1.tilemapConfig.width}; w / h = ${iso1.width} x ${iso1.height}`,
+      	`tilemap ${iso1.mapWidth} x ${iso1.mapHeight} = ${iso1.mapHeight*iso1.mapWidth}; w / h = ${iso1.width} x ${iso1.height}`,
       	`childs: ${iso1.children.length}; cullList: ${iso1.cullList.length}; renderList: ${iso1.renderList.length};`,
       	`cull time: ${iso1.timeInMS_cullViewport.toFixed(0)} ms; sort time: ${iso1.sortChildrenFlag ? iso1.timeInMS_sortList.toFixed(0) :"no sort"}; load time: ${iso1.timeInMS_setMap.toFixed(0)} ms`,
       ]);

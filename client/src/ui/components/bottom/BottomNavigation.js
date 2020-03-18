@@ -13,7 +13,7 @@ import RestoreIcon from '@material-ui/icons/Restore';
 import BottomNavigation from '@material-ui/core/BottomNavigation';
 import BottomNavigationAction from '@material-ui/core/BottomNavigationAction';
 
-import store from 'store';
+import rxdbStore from 'rxdbStore'; // rxdb-database
 
 const styles = theme => ({
   appbar: {
@@ -23,12 +23,12 @@ const styles = theme => ({
 
     left:0,
     width: '100%',
-    height: store.appState.app.bottomNavigation.height || 50,
-    minWidth: store.appState.app.size.minWidth || null,
-    maxWidth: store.appState.app.size.maxWidth || null,
+    height: rxdbStore.app.getProp.state.bottomNavigation.height || 50,
+    minWidth: rxdbStore.app.getProp.config.size.minWidth || null,
+    maxWidth: rxdbStore.app.getProp.config.size.maxWidth || null,
 
-    color: store.appState.colors.navigation.text,
-    background: store.appState.colors.navigation.background,
+    color: rxdbStore.app.getProp.config.color.navigation.text,
+    background: rxdbStore.app.getProp.config.color.navigation.background,
   },
   toolbar: {
     margin: 0,
@@ -44,9 +44,9 @@ const styles = theme => ({
   navigationtabaction: {
     minWidth: 40,
     padding: '6px 0px 0px', // padding: '6px 12px 8px'
-    color: store.appState.colors.navigation.text,
+    color: rxdbStore.app.getProp.config.color.navigation.text,
     "&$selected": {
-      color: store.appState.colors.navigation.selected,
+      color: rxdbStore.app.getProp.config.color.navigation.selected,
     }
   },
   // This is required for the '&$selected' selector to work

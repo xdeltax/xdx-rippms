@@ -14,7 +14,6 @@ import socketio from 'api/socket'; // socket
 import store from 'store';
 import rxdbStore from 'rxdbStore'; // rxdb-database
 
-import * as localDatabase from "localDatabase/index.js";
 import * as serverAPI from "api/serverAPI.js";
 
 // assets
@@ -80,8 +79,8 @@ export default ( withStyles(styles)( observer( class extends React.Component {
         overflow: "auto",
         height: "100%",
         width: "100%",
-        color: store.appState.colors.login.text,
-        background: store.appState.colors.login.background,
+        color: rxdbStore.app.getProp.config.color.login.text,
+        background: rxdbStore.app.getProp.config.color.login.background,
       }}>
         <div style={{ position: "relative", top: 0, height: "30vh", minHeight: "150px", backgroundColor:"transparent" }}>
           <Typography className={classes.fontIndieItalic} align="center" noWrap style={{fontSize: 72, }}>xdx</Typography>
@@ -116,7 +115,6 @@ export default ( withStyles(styles)( observer( class extends React.Component {
         </div>
 
         <div>
-          <Button variant="outlined" onClick={()=> localDatabase.saveAppData(true) }>saveToPersistentDatabase</Button>
           <Button variant="outlined" onClick={()=> { store.appActions.showSpinner("test the spinner", 5000) }}>show Spinner</Button>
 
           <Button variant="outlined" onClick={()=> serverAPI.testServerResponse("hello from button") }>test server response</Button>
@@ -137,7 +135,7 @@ export default ( withStyles(styles)( observer( class extends React.Component {
           <Button variant="outlined" onClick={async () => {
             const rnd = global.random(100);
             global.log("SET:: ", rnd)
-            const x = await rxdbStore.user.setProp("updatedAt", rnd);
+            /*const x = */await rxdbStore.user.setProp("updatedAt", rnd);
 
             //const x = await rxdbStore.user.setProp("card.test2", global.random(100) );
             //global.log("COUNT:: ", await rxdbStore.user.count());

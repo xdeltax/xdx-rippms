@@ -1,19 +1,23 @@
-import store from 'store'; // mobx-store
+//import {runInAction} from 'mobx';
+//import rxdbStore from 'rxdbStore'; // rxdb-database
 
-const updateStatus = () => {
+const updateStatus = (event, callback) => {
   const orientation = window.screen.orientation;
-
-  store.appState.set("app.watchers.orientation.type", orientation.type);
-  store.appState.set("app.watchers.orientation.angle", orientation.angle);
-
-  global.log("watcher/orientation:: orientationchange:: ", orientation);
+  /*
+  runInAction(()=>{
+    rxdbStore.app.setProp("watcher.orientation.type", orientation.type);
+    rxdbStore.app.setProp("watcher.orientation.angle", orientation.angle);
+  });
+  */
+  //global.log("watcher/orientation:: orientationchange:: ", orientation);
+  callback && callback(orientation.type, orientation.angle);
 }
 
 // AppLandingPage:: componentDidMount
-export const watchOrientationStatus = () => {
+export const watchOrientationStatus = (callback) => {
   global.log("watcher/connection:: addEventListener", );
-  updateStatus();
-  window.addEventListener("orientationchange", updateStatus);
+  updateStatus(null, callback);
+  window.addEventListener("orientationchange", (event) => updateStatus(event, callback));
 }
 
 export const unwatchOrientationStatus = () => {

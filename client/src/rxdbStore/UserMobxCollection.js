@@ -1,7 +1,7 @@
 import RxdbCollectionMobxPrototype from "./RxdbCollectionMobxPrototype";
 import {autorun,  } from 'mobx';
 import {unixtime} from "tools/datetime";
-import * as userAPI from "api/userAPI.js";
+
 
 // ===============================================
 // collection-schema
@@ -18,16 +18,16 @@ const rxdbSchema = {
     card:       { type: "object", },
     data:       { type: "object", },
     updatedAt:  { type: "number", },
-    //createdAt:  { type: "number", },
+    //createdAt:{ type: "number", },
   },
-  required: ["updatedAt"], // required for every document
+  required: ["auth", "card", "data", "updatedAt"], // required for every document
   //attachments: { "encrypted": false }, // allow attachments (binaries); optional: encrypt with password
 };
 
 // ===============================================
 // mobx-observables
 // ===============================================
-const mobxSchema = {
+const memorySchema = {
   _id: "client",
   auth: { },
   card: { },
@@ -44,11 +44,18 @@ const migrationStrategies = null;
 
 export default class RXDBUserCollection extends RxdbCollectionMobxPrototype {
   constructor(database, collectionName) {
-    super(database, collectionName || "user", rxdbSchema, mobxSchema, migrationStrategies); // open/create database and create/connect collection
+    const cName = "user";  // only lowercase allowed
+    const isObserved = true;
+    super(isObserved, database, collectionName || cName, rxdbSchema, memorySchema, migrationStrategies); // open/create database and create/connect collection
+    this._serverIsMaster = false;
   }
 
   async initCollection() {
+    // 1) create or open collection
+    // 2) if collection is empty -> create database-document from mobx-data
+    // 3) make collection reactive to changes in database --> if collection changes, update mobx/data-data
     await super.initCollection(true); // true = subscribeToCollection = collection is reactive and synced to mobx
+    // 4) start mobx-autorun -> watch mobx-data and do something if mobx-data changes
     this.initMobxAutorun();
   }
   /*
@@ -62,6 +69,7 @@ export default class RXDBUserCollection extends RxdbCollectionMobxPrototype {
     this.createupdateDocument(rxdbSchemaDocument)  rxdbSchemaDocument must validate rxdbSchema
     this.db                   lowlevel-access database
     this.collection           lowlevel-access collection
+    this.socket               lowlevel-access server-socketio-api
 
     this.collectionName       name of collection in database
     this.removeAllDocuments() remove all documents from collection
@@ -80,21 +88,25 @@ export default class RXDBUserCollection extends RxdbCollectionMobxPrototype {
   */
 
   // ===============================================
+  //
   // mobx-observable-operations
+  //
   // ===============================================
   initMobxAutorun = () => { autorun(() => { // toJS required for detecting changes
     if (!this.getProp._id) return;
-    global.log("AUTORUN:: ", this.mobx2json);
+    global.log("AUTORUN:: ", this.collectionName, this.mobx2json);
   }, { delay: 0 });}
 
 
   // ===============================================
+  //
   // rxdb-database-operations
+  //
   // ===============================================
   async setProp(prop, value, serverIsMaster) { // const x = await rxdbStore.user.setProp("card.test", 111 ); -> set _mobx: { card: {test:111} }
     // workflow:: send new value for property to server -> return updated prop from server-database -> change prop with data from server in local database -> sync to mobx
-    const {err, res} = (serverIsMaster)
-      ? await userAPI.sendPropToServer(prop, value, this.getProp.auth.userid, this.getProp.auth.servertoken)
+    const {err, res} = (serverIsMaster || this._serverIsMaster)
+      ? await this.servercall_sendPropToServer(prop, value, this.getProp.auth.userid, this.getProp.auth.servertoken)
       : { err: null, res: { prop: prop, value: value }};
 
     if (!err && res.prop === prop) { // set prop in local database (and mobx) with feedback from server
@@ -110,7 +122,9 @@ export default class RXDBUserCollection extends RxdbCollectionMobxPrototype {
 
 
   // ===============================================
+  //
   // client-operations
+  //
   // ===============================================
 
   // user-validation
@@ -126,13 +140,18 @@ export default class RXDBUserCollection extends RxdbCollectionMobxPrototype {
     return (global.DEBUG_AUTH_FAKE_ISVALIDUSER) ? true : Boolean(true);
   }
 
+
   // ===============================================
+  // ===============================================
+  //
   // server-API-operations
+  //
+  // ===============================================
   // ===============================================
   doAuthLogout = async () => {
     try {
       // send logout signal to server
-      await userAPI.logoutUserFromServer(this.userid, this.servertoken);
+      await this.servercall_logoutUserFromServer(this.userid, this.servertoken);
     } catch (error) {
     } finally {
       // clear local persistent store
@@ -200,7 +219,7 @@ export default class RXDBUserCollection extends RxdbCollectionMobxPrototype {
     const servertoken = this.getProp.auth.servertoken;
     if (!userid || !servertoken || !targetuserid) return null;
 
-    return await userAPI.getUserStoreFromServer(targetuserid, userid, servertoken);
+    return await this.servercall_getUserStoreFromServer(targetuserid, userid, servertoken);
   }
 
   saveOwnUserDataToServer = async () => {
@@ -212,7 +231,7 @@ export default class RXDBUserCollection extends RxdbCollectionMobxPrototype {
     const servertoken = this.getProp.auth.servertoken;
     if (!userid || !servertoken) return null;
 
-    const {err, res} = await this.getAnyUserDataFromServer(userid);
+    const {err, res} = await this.servercall_getAnyUserDataFromServer(userid);
     if (!err) {
 	  	const {
         //userid,
@@ -240,9 +259,90 @@ export default class RXDBUserCollection extends RxdbCollectionMobxPrototype {
 
     const userid = this.getProp.auth.userid;
     const servertoken = this.getProp.auth.servertoken;
-    const {err, res} = userAPI.getUserStoreFromServer(userid, userid, servertoken);
+    const {err, res} = this.servercall_getUserStoreFromServer(userid, userid, servertoken);
     if (!err) this._unsavedChanges = false;
     return (err) ? null : res;
   }
+
+
+  // ===============================================
+  // ===============================================
+  //
+  // socket connection to server
+  //
+  // ===============================================
+  // ===============================================
+  servercall_logoutUserFromServer = async (userid, servertoken) => {
+    let res = null;
+    let err = null;
+    try {
+      if (!userid || !servertoken) throw new Error ("no valid auth");
+      const ioRoute = "auth/user/logout";
+      const req = {
+        targetuserid: userid,
+        userid: userid,
+        servertoken: servertoken,
+      }
+
+      res = await this.socketio.emitWithTimeout(ioRoute, req,);
+      // res = { result: true / false, _callstats: {xxx}, }
+    } catch (error) {
+      err = error;
+    } finally {
+      global.log("UserCollection:: servercall_logoutUserFromServer:: ", userid, err, res)
+      return { err: err, res: res };
+    }
+  };
+
+  servercall_sendPropToServer = async (prop, value, userid, servertoken) => {
+		let res = null;
+		let err = null;
+		try {
+      if (!userid || !servertoken) throw new Error ("no valid auth");
+			const ioRoute = "auth/store/user/props/set";
+			const req = {
+				targetuserid: userid,
+				userid: userid,
+				servertoken: servertoken,
+				prop: prop,
+        value: value,
+			};
+    	res = await this.socketio.emitWithTimeout(ioRoute, req,);
+      // res = { prop: prop, value: value, _callstats: {xxx}, }
+		} catch (error) {
+    	err = error;
+		} finally {
+			global.log("UserCollection:: servercall_sendPropToServer:: ", userid, err, res)
+	  	return { err: err, res: res };
+		}
+  };
+
+  servercall_getUserStoreFromServer = async (targetuserid, userid, servertoken) => {
+  	if (!userid || !servertoken) return;
+
+		let res = null;
+		let err = null;
+		try {
+			const ioRoute = "auth/user/userstore/get";
+			const req = {
+				targetuserid: targetuserid,
+				userid: userid,
+				servertoken: servertoken,
+			}
+	  	//global.log("*** getUserStoreFromServer:: ", req, socketio.socketID)
+    	res = await this.socketio.emitWithTimeout(ioRoute, req,);
+      // res = { user: {xxx}, usercard: {xxx}, _callstats: {xxx}, }
+      //global.log("***!!!!!!!!!!!!!! getUserStoreFromServer:: ", res, )
+		} catch (error) {
+    	err = error;
+		} finally {
+			global.log("store.user:: getUserStoreFromServer:: ", targetuserid, err, res)
+	  	return { err: err, res: res };
+		}
+  };
+
+  servercall_getAnyUserDataFromServer = async (targetuserid) => {
+
+  };
 
 };

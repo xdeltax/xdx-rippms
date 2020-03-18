@@ -1,7 +1,7 @@
 import io from "socket.io-client";
 import {unixtime} from "tools/datetime";
 
-import store from 'store'; // mobx-store
+import rxdbStore from 'rxdbStore'; // rxdb-database
 
 class SocketIO {
   _socket = null;
@@ -22,7 +22,7 @@ class SocketIO {
   get isConnected()  { return this._isConnected }
   set isConnected(v) {
     this._isConnected = v;
-    store.appState.set("app.watchers.socket.isConnected", v);
+    rxdbStore.app.setProp("watcher.socket.isConnected", v)
   }
 
   get socketID()  { return (this.socket) ? this.socket.id : null }
@@ -142,7 +142,7 @@ class SocketIO {
 
     this.socket.on("pong", (ms) => { // responsetime
       //global.log("socket:: event:: pong:: ", ms, this.socket.id, this.socket.connected, );
-      store.appState.set("app.watchers.socket.pongMS", ms);
+      rxdbStore.app.setProp("watcher.socket.pongMS", ms)
       this.onSocketPong && this.onSocketPong(this.socket, ms);
     });
   };
@@ -183,7 +183,7 @@ class SocketIO {
             res._callstats.client2server = 1000 * (res._callstats.timeserverin - res._callstats.timeclientout);
             res._callstats.server2server = 1000 * (res._callstats.timeserverout - res._callstats.timeserverin);
             res._callstats.server2client = 1000 * (res._callstats.timeclientin - res._callstats.timeserverout);
-            store.appState.set("app.watchers.socket._callstats", res._callstats);
+            rxdbStore.app.setProp("watcher.socket._callstats", res._callstats)
           }
 
           resolve(res);

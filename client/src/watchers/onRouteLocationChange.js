@@ -1,4 +1,4 @@
-import store from 'store'; // mobx-store
+//import rxdbStore from 'rxdbStore'; // rxdb-database
 
 /*
 / AppRouter.js::
@@ -7,10 +7,24 @@ import store from 'store'; // mobx-store
 /    	return null; // return snapshot
 /   }
 */
+let callback;
+
 export const updateRouteLocation = (newPathname, oldPathname) => {
   if (newPathname !== oldPathname) { // on every url-change
-    store.appState.set("app.watchers.route.pathname", newPathname);
+    //rxdbStore.app.setProp("watcher.route.pathname", newPathname);
+
+    callback && callback(oldPathname, newPathname);
 
     global.log("watcher:: routeLocation:: new pathname:: ", newPathname, );
   }
+}
+
+export const watchRouteLocation = (_callback) => {
+  global.log("watcher/routeLocation:: addCallback", );
+  callback = _callback;
+}
+
+export const unwatchRouteLocation = () => {
+  global.log("watcher/routeLocation:: removeCallback", );
+  callback = null;
 }

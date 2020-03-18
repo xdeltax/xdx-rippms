@@ -37,7 +37,6 @@ import GameContainerPhaser from 'game/phaser/GameContainer';
 
 import { updateRouteLocation } from "watchers/onRouteLocationChange";
 
-import store from 'store'; // mobx-store
 import rxdbStore from 'rxdbStore'; // rxdb-database
 
 
@@ -94,16 +93,16 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
       // display a button to click -> unhide top-toolbar (and navigation if auth-path)
       <div style={{ position: "fixed", right: 0, top: 0, }}>
         <IconButton color="inherit" style={{ flexGrow: 0, }}  onClick={(event) => {
-          store.appState.set("app.header.visible", true);
-          store.appState.set("app.bottomNavigation.visible", true);
+          rxdbStore.app.setProp("state.header.visible", true);
+          rxdbStore.app.setProp("state.bottomNavigation.visible", true);
         }}>
           <KeyboardArrowDownICON />
         </IconButton>
       </div>
     );
 
-    const phaserGameVisible = Boolean(location.pathname === "/game/phaser") /*store.appState.app.game.visible*/
-    //const pixiGameVisible = Boolean(location.pathname === "/game/pixi") /*store.appState.app.game.visible*/
+    const phaserGameVisible = Boolean(location.pathname === "/game/phaser")
+    //const pixiGameVisible = Boolean(location.pathname === "/game/pixi")
 
     global.log("AppRouter:: render:: location.pathname:: ", location.pathname, );
 
@@ -114,8 +113,8 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
           height: "100%",
           width: "100%",
           textAlign: "center",
-          color: store.appState.colors.app.text,
-          background: store.appState.colors.app.background,
+          color: rxdbStore.app.getProp.config.color.app.text,
+          background: rxdbStore.app.getProp.config.color.app.background,
         }}>
           <ScrollToTop />
 
@@ -135,8 +134,8 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
           </Switch>
         </div>
 
-        {!store.appState.app.header.visible && <RenderAGetMyHiddenToolbarBackArrowDownIconButton />}
-        {rxdbStore.user.isAuthenticated && <BottomNavigation hide={!store.appState.app.bottomNavigation.visible} /> }
+        {!rxdbStore.app.getProp.state.header.visible && <RenderAGetMyHiddenToolbarBackArrowDownIconButton />}
+        {rxdbStore.user.isAuthenticated && <BottomNavigation hide={!rxdbStore.app.getProp.state.bottomNavigation.visible} /> }
 
         <Modal id="phasergame" keepMounted // modal container for the game (stays mounted all the time)
           open={phaserGameVisible} disableEscapeKeyDown={true} disablePortal={true} disableScrollLock={true} hideBackdrop={true}
@@ -145,8 +144,8 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
           <Fade timeout={0} mountOnEnter exit={true} in={phaserGameVisible} direction={phaserGameVisible ? "up" : "right"} >
 					 <React.Fragment>
               <GameContainerPhaser gameVisible={phaserGameVisible} style={{ backgroundColor: "transparent", padding:0, margin:0, height:"100%", }} />
-              {!store.appState.app.header.visible && <RenderAGetMyHiddenToolbarBackArrowDownIconButton />}
-              {store.user.isAuthenticated && <BottomNavigation hide={!store.appState.app.bottomNavigation.visible} /> }
+              {!rxdbStore.app.getProp.state.header.visible && <RenderAGetMyHiddenToolbarBackArrowDownIconButton />}
+              {rxdbStore.user.isAuthenticated && <BottomNavigation hide={!rxdbStore.app.getProp.state.bottomNavigation.visible} /> }
  						</React.Fragment>
           </Fade>
         </Modal>

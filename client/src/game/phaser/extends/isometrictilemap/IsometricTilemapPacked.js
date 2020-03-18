@@ -1,4 +1,9 @@
 //https://www.monterail.com/blog/pwa-offline-dynamic-data
+//this.map = map;
+//this.map = {...layer}
+//this.map = Object.assign( {}, layer);
+//this.map = Object.assign( Object.create( Object.getPrototypeOf(layer)), layer);
+
 
 /**
  * @author       xdeltax <github.com/xdeltax>
@@ -15,15 +20,17 @@ import IsoCanvasRenderer from "./IsoCanvasRenderer";
 
 import * as bytebuffer4Tilemap from "game/tools/bytebuffer4Tilemap";
 
+import rxdbStore from 'rxdbStore'; // rxdb-database
+
 export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // based on blitter
   initDone = false;
 
   constructor (scene, x, y, tilemapConfig) {
     if (!isNaN(x)) x = 0;
     if (!isNaN(y)) y = 0;
-    if (!tilemapConfig) tilemapConfig = { width:1, height:1, tileWidth : 64, tileHeight: 32, paddingBottom: 0, assetKeys: [], };
+    if (!tilemapConfig) tilemapConfig = { width:1, height:1, buffer: null, bufferbytes: 1, tileWidth : 64, tileHeight: 32, paddingBottom: 0, assetKeys: [], };
 
-    super(scene, x, y, );
+    super(scene, x, y);
     /*
       super(...)
         Blitter(scene, x, y, texture, frame)
@@ -42,9 +49,6 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
     */
 
     this.scene.add.existing(this); // add this GameObject to scene
-
-    //this.data2DFull = [];
-    this.destroyDataBuffer();
 
     this.children = []; // *** unused *** // new Phaser.Structs.List();
     this.cullList = [];
@@ -80,8 +84,6 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
     this.renderList = [];
 
     this.assetIDs = [];
-
-    this.destroyDataBuffer();
   }
 
 
@@ -90,22 +92,16 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
 
     const now = new Date();
 
-    this.tilemapConfig = tilemapConfig;
-    //this.map = map;
-    //this.map = {...layer}
-    //this.map = Object.assign( {}, layer);
-    //this.map = Object.assign( Object.create( Object.getPrototypeOf(layer)), layer);
-
     this.tilePaddingBottom= tilemapConfig.hasOwnProperty("paddingBottom") ? tilemapConfig.paddingBottom : 0; // y-position of bottom-spike in pixels, messured from bottom
 
     this.tileWidth  = tilemapConfig.tileWidth;
     this.tileHeight = tilemapConfig.tileHeight;
-
     this.tileWidth2  = this.tileWidth  / 2;
     this.tileHeight2 = this.tileHeight / 2;
 
     // calculate width and height of surrounding rectangle (left-spike to right-spike / top-spike to bottom-spike)
-    const sumWidthHeight = this.tilemapConfig.width + this.tilemapConfig.height;
+    /*
+    const sumWidthHeight = this.mapWidth + this.mapHeight;
     this.width  = sumWidthHeight * this.tileWidth2;
     this.height = sumWidthHeight * this.tileHeight2;
     if (sumWidthHeight === 1) { // special case for mapWidth = mapHeight = 1
@@ -115,11 +111,10 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
 
     this.width2 = this.width / 2
     this.height2= this.height / 2;
+    */
 
     this.timeInMS_setMap = new Date() - now;
     this.isDebug && global.log("isometricTilemap:: setTilemapLayer:: time (in ms):: ", this.timeInMS_setMap, );
-
-    //this.allocateDataBuffer()
 
     this.triggerRender(); // trigger new render
     return this;
@@ -132,47 +127,39 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
   ///
   ///////////////////////////////////////////////////////////
 
-  destroyDataBuffer = () => {
-    this.bufferview = null;
-    this.dataview = null;
-    this.buffer = null;
-  }
+  // EXTERNAL DATA FROM GameMobxCollection.js
+  checkBufferWasUpdated = () => {
+    if (rxdbStore.gameMobx.bufferWasUpdated) {
+      //global.log("ISOTILEMAP:: checkBufferWasUpdated:: rxdbStore.gameMobx.data.bufferUpdate:: ", rxdbStore.gameMobx.data.bufferWasUpdated)
+      this.setBufferWasUpdated();
+      this.triggerRender();
+    }
+  };
 
-  linkDataview = (dataview, bytes) => {
-    //this.buffer = dataview.buffer;
-    this.bufferbytes = bytes || 2;
-    this.dataview = dataview;
-    return this;
-  }
+  setBufferWasUpdated = (val) => { rxdbStore.gameMobx.bufferWasUpdated = val || false; }
 
-  /*
-  allocateDataBuffer = (buffer, bytes) => {
-    this.bufferbytes = bytes || 2;
+  //get bufferWasUpdated() { return rxdbStore.gameMobx.bufferWasUpdated || false; }
+  //set bufferWasUpdated(v){ rxdbStore.gameMobx.bufferWasUpdated = v; }  
 
-    this.buffer = buffer || new ArrayBuffer(this.bufferbytes * this.tilemapConfig.width * this.tilemapConfig.height); // this.buffer.length
-    this.dataview = new DataView(this.buffer);
+  get mapWidth() { return rxdbStore.gameMobx.data.width || 2; }
+  get mapHeight(){ return rxdbStore.gameMobx.data.height|| 2; }
 
-    //switch (bytes) {
-    //  default: this.bufferview = new Uint8Array(this.buffer); break; // this.bufferview.byteLength
-    //  case 2: this.bufferview = new Uint16Array(this.buffer); break;
-    //  case 4: this.bufferview = new Uint32Array(this.buffer); break;
-    //}
+  get bufferbytes() { return rxdbStore.gameMobx.bufferbytes || 1; }
 
-    // bytes = 1;
-    // map 5'000 x 5'000 = 23mb
-    // map 10'000 x 10'000 = 95mb
-    // map 15'000 x 15'000 = 215mb
-    // map 20'000 x 20'000 = 382mb
-    // map 25'000 x 25'000 = 596mb
+  get bufferString() { return rxdbStore.gameMobx.bufferString; }
+  set bufferString(v){ rxdbStore.gameMobx.bufferString = v; }
+  //get buffer() { return rxdbStore.gameMobx.buffer }
+  //set buffer(v){ rxdbStore.gameMobx.buffer = v; }
 
-    // bytes = 2;
-    // map 5'000 x 5'000 = 46mb
-    // map 10'000 x 10'000 = 190mb
-    // map 15'000 x 15'000 = 429mb
+  getBufferString(idx) { return this.bufferString.charCodeAt(idx) }
+  setBufferString(idx, v){ this.bufferString[idx] = String.fromCharCode(v); }
 
-    return this;
-  }
-  */
+  get sumWidthHeight() { return this.mapWidth + this.mapHeight; }
+  get width()  { return (this.sumWidthHeight === 1) ? this.tileWidth : this.sumWidthHeight * this.tileWidth2; }
+  get height() { return (this.sumWidthHeight === 1) ? this.tileHeight: this.sumWidthHeight * this.tileHeight2;}
+  get width2() { return this.width / 2 }
+  get height2(){ return this.height/ 2 }
+
 
   setDataProperty = (tileX, tileY, prop, value) => {
     const obj = this.getDataObject(tileX, tileY);
@@ -182,12 +169,25 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
   }
 
   setDataObject = (tileX, tileY, obj) => {
-    if (!this.dataview) return; //if (!this.bufferview) return;
+    if (!this.bufferString || this.bufferString.length < 1) return;
+    //if (!this.buffer) return;
+    //if (!rxdbStore || !rxdbStore.hasOwnProperty("gameMobx") || !rxdbStore.gameMobx.hasOwnProperty("data") || !!rxdbStore.gameMobx.data.buffer ) return;
     try {
       switch (this.bufferbytes) {
-        //arraybuffer:: case 2: this.dataview.setUint16(this.bufferbytes * (tileX + tileY * this.tilemapConfig.width), bytebuffer4Tilemap.groundlayer_objectToUint16(obj)); break; // setUint16 uses always big-endian
-        //arraybuffer:: default:this.dataview.setUint8(this.bufferbytes * (tileX + tileY * this.tilemapConfig.width), bytebuffer4Tilemap.groundlayer_objectToUint8(obj)); break;
-        default:this.dataview[this.bufferbytes * (tileX + tileY * this.tilemapConfig.width)] = bytebuffer4Tilemap.groundlayer_objectToUint8(obj); break;
+        //arraybuffer:: case 2: this.dataview.setUint16(this.bufferbytes * (tileX + tileY * this.mapWidth), bytebuffer4Tilemap.groundlayer_objectToUint16(obj)); break; // setUint16 uses always big-endian
+        //arraybuffer:: default:this.dataview.setUint8(this.bufferbytes * (tileX + tileY * this.mapWidth), bytebuffer4Tilemap.groundlayer_objectToUint8(obj)); break;
+        default:
+          const tileXTransformed = tileX; // map virtual tile-map-coords to a smaller buffer
+          const tileYTransformed = tileY;
+          const bufferIndex = this.bufferbytes * (tileXTransformed + tileYTransformed * this.mapWidth);
+
+          this.setBufferString(bufferIndex, bytebuffer4Tilemap.groundlayer_objectToUint8(obj));
+          //this.buffer[bufferIndex] = bytebuffer4Tilemap.groundlayer_objectToUint8(obj);
+
+          //this.dataview[bufferIndex] = bytebuffer4Tilemap.groundlayer_objectToUint8(obj);
+          //rxdbStore.gameMobx.data.buffer[bufferIndex] = bytebuffer4Tilemap.groundlayer_objectToUint8(obj);
+
+          this.setBufferWasUpdated(true);
       }
     } catch(error) {
       // fail silently
@@ -196,15 +196,22 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
 
   getDataObject = (tileX, tileY) => {
     try {
-      if (!this.dataview || tileX < 0 || tileY < 0 || tileX >= this.tilemapConfig.width || tileY >= this.tilemapConfig.height) return null; //if (!this.bufferview) return null;
+      //if (!this.dataview) return null;
+      //if (!rxdbStore || !rxdbStore.hasOwnProperty("gameMobx") || !rxdbStore.gameMobx.hasOwnProperty("data") || !!rxdbStore.gameMobx.data.buffer ) return null;
+      if (!this.bufferString || this.bufferString.length < 1) return;
+      if (tileX < 0 || tileY < 0 || tileX >= this.mapWidth || tileY >= this.mapHeight) return null;
       switch (this.bufferbytes) {
-        //arraybuffer:: case 2: return bytebuffer4Tilemap.groundlayer_uint16ToObject(tileX, tileY, this.dataview.getUint16(this.bufferbytes * (tileX + tileY * this.tilemapConfig.width))); break;
-        //arraybuffer:: default:return bytebuffer4Tilemap.groundlayer_uint8ToObject(tileX, tileY, this.dataview.getUint8(this.bufferbytes * (tileX + tileY * this.tilemapConfig.width))); break;
+        //arraybuffer:: case 2: return bytebuffer4Tilemap.groundlayer_uint16ToObject(tileX, tileY, this.dataview.getUint16(this.bufferbytes * (tileX + tileY * this.mapWidth))); break;
+        //arraybuffer:: default:return bytebuffer4Tilemap.groundlayer_uint8ToObject(tileX, tileY, this.dataview.getUint8(this.bufferbytes * (tileX + tileY * this.mapWidth))); break;
 
-        //case 2 :return bytebuffer4Tilemap.groundlayer_uint16ToObject(tileX, tileY, this.dataview.readUInt16LE(this.bufferbytes * (tileX + tileY * this.tilemapConfig.width))); break;
-        //default:return bytebuffer4Tilemap.groundlayer_uint8ToObject(tileX, tileY, this.dataview.readUInt8(this.bufferbytes * (tileX + tileY * this.tilemapConfig.width))); break;
+        //case 2 :return bytebuffer4Tilemap.groundlayer_uint16ToObject(tileX, tileY, this.dataview.readUInt16LE(this.bufferbytes * (tileX + tileY * this.mapWidth))); break;
+        //default:return bytebuffer4Tilemap.groundlayer_uint8ToObject(tileX, tileY, this.dataview.readUInt8(this.bufferbytes * (tileX + tileY * this.mapWidth))); break;
 
-        default: bytebuffer4Tilemap.groundlayer_uint8ToObject(tileX, tileY, this.dataview[this.bufferbytes * (tileX + tileY * this.tilemapConfig.width)]); break;
+        default: return bytebuffer4Tilemap.groundlayer_uint8ToObject(tileX, tileY, this.getBufferString(this.bufferbytes * (tileX + tileY * this.mapWidth)));
+        //default: return bytebuffer4Tilemap.groundlayer_uint8ToObject(tileX, tileY, this.buffer[this.bufferbytes * (tileX + tileY * this.mapWidth)]);
+
+        //default: return bytebuffer4Tilemap.groundlayer_uint8ToObject(tileX, tileY, this.dataview[this.bufferbytes * (tileX + tileY * this.mapWidth)]);
+        //default: return bytebuffer4Tilemap.groundlayer_uint8ToObject(tileX, tileY, this.link2data.buffer[this.bufferbytes * (tileX + tileY * this.mapWidth)]);
       }
     } catch(error) {
       return null;
@@ -219,7 +226,7 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
   ///////////////////////////////////////////////////////////
 
   isValidTileCoords = (tileX, tileY) => {
-    return Boolean(!isNaN(tileX) && !isNaN(tileY) && tileX >= 0 && tileY >= 0 && tileX < this.tilemapConfig.width && tileY < this.tilemapConfig.height);
+    return Boolean(!isNaN(tileX) && !isNaN(tileY) && tileX >= 0 && tileY >= 0 && tileX < this.mapWidth && tileY < this.mapHeight);
   }
 
   getTileByTileCoords = (tileX, tileY) => {
@@ -343,7 +350,7 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
   localCoordsToTileCoords = (localX, localY, ) => { // local-coords === world-coords without isoMap.setPosition
     if (isNaN(localY) && (localX instanceof Object) && localX.hasOwnProperty("x") && localX.hasOwnProperty("y")) { localY = localX.y; localX = localX.x; }
 
-    const coordsystemShiftX = (this.tilemapConfig.height - 1) * this.tileWidth2;
+    const coordsystemShiftX = (this.mapHeight - 1) * this.tileWidth2;
 
     // undo coordinate-system shift
     const pixelX = localX - coordsystemShiftX;
@@ -424,7 +431,7 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
     // normalize map-position in world::
     // before shift: left spike of tile(0, 0) is at position this.x = 0
     // after shift: left spike of left-most tile === tile(0, maxY) === left spike of map  is at position this.x = 0
-    const coordsystemShiftX = (this.tilemapConfig.height - 1) * this.tileWidth2;
+    const coordsystemShiftX = (this.mapHeight - 1) * this.tileWidth2;
     //const coordsystemShiftY = 0;
 
     const frameXLeft = pixelXTopSpike - /*go from top-spike of tile to left of frame*/pixelPaddingX + /*shift coordinate-system*/coordsystemShiftX;
@@ -495,23 +502,23 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
   cullByViewport = (camera) => { // called by render function via this.getRenderList() -> high performance cull -> dont search complete childrenlist -> only search for tiles in viewport
     if (!camera) camera = this.camera; // camera (worldview) to use culling-function against
 
-    this.sortChildrenFlag   = false; // if one (or more) items has a .depth > 0 -> trigger sort on every rerender
+    this.sortChildrenFlag = false; // if one (or more) items has a .depth > 0 -> trigger sort on every rerender
 
     const now = new Date();
 
     let cullList = [];
 
-    // bounds in pixel-coords
+    // camera-bounds in pixel-coords
     let locTL = this.worldCoordsToLocalCoords(camera.worldView.left, camera.worldView.top); // top/left
     let locTR = this.worldCoordsToLocalCoords(camera.worldView.right, camera.worldView.top); // top/left
     let locBL = this.worldCoordsToLocalCoords(camera.worldView.left, camera.worldView.bottom); // bottom/right
     let locBR = this.worldCoordsToLocalCoords(camera.worldView.right, camera.worldView.bottom); // bottom/right
 
-    // add some extra tiles to top/left
+    // add some extra tiles to top/left (in pixels)
     locTL.x = locTL.x - this.extraTilesToCull * this.tileWidth;
     locTL.y = locTL.y - (this.extraTilesToCull + 1) * this.tileHeight; // add another one because item.height could be greater than tileHeight for 3d-tiles
 
-    // pixel-coords to tile-coords
+    // convert pixel-coords to tile-coords
     const tileTL = this.localCoordsToTileCoords(locTL.x, locTL.y);
     const tileBR = this.localCoordsToTileCoords(locBR.x, locBR.y);
     const tileTR = this.localCoordsToTileCoords(locTR.x, locTR.y);
@@ -528,7 +535,7 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
     // a very excact and crazy fast culling (independant from map-size)
     for (let tileY = minY; tileY <= maxY; tileY++) {
       for (let tileX = minX; tileX <= maxX; tileX++) {
-        if (tileX >= 0 && tileY >= 0 && tileX < this.tilemapConfig.width && tileY < this.tilemapConfig.height) {
+        if (tileX >= 0 && tileY >= 0 && tileX < this.mapWidth && tileY < this.mapHeight) {
 
           const item = this.getDataObject(tileX, tileY); // (this.data2D[tileY] || [])[tileX] || null;
 
@@ -676,6 +683,8 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
         this.dirty = true; // trigger new cull
       }
 
+      this.checkBufferWasUpdated();
+
       if (this.dirty) { // refresh renderList on dirty
         this.sortChildrenFlag = false;
 
@@ -739,9 +748,9 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
     if (items) items.forEach(item => {
       if (
         //   (item.tileX===0 && item.tileY===0)                                 // top spike
-        //|| (item.tileX===0 && item.tileY===this.tilemapConfig.height-1)                 // left spike
-        //|| (item.tileX===this.tilemapConfig.width-1 && item.tileY===0)                  // right spike
-         (item.tileX===this.tilemapConfig.width-1 && item.tileY===this.tilemapConfig.height-1)  // bottom spike
+        //|| (item.tileX===0 && item.tileY===this.mapHeight-1)                 // left spike
+        //|| (item.tileX===this.mapWidth-1 && item.tileY===0)                  // right spike
+         (item.tileX===this.mapWidth-1 && item.tileY===this.mapHeight-1)  // bottom spike
       ) { // render only at the spikes
         let w;
 

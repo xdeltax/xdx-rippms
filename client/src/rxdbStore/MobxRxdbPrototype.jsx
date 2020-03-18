@@ -1,83 +1,119 @@
 import {decorate, /*computed, action, autorun, */ runInAction, observable, toJS, } from 'mobx';
-import socketio from 'api/socket'; // socket
 import deepCopy from 'tools/deepCopyObject';
 //import deepMerge from 'tools/deepMergeObject';
 
 class RxdbCollectionMobxPrototype {
+  _mobx;
+  _data = null;
   get collectionName(){ return this._collectionName; }
   get isObserved() { return this._isObserved; }
+  get db() { return this._db; }
+  get collection() { return this._collection }
 
-  constructor(isObserved, database, collectionName, rxdbSchema, memorySchema, migrationStrategies) {
-    this._unsavedChanges = false;
+  constructor(isObserved, database, collectionName, documentSchemaRxdb, documentSchemaMobx, documentSchemaData, migrationStrategies) {
+    this._isObserved = isObserved;
 
-    this._isObserved = isObserved || true;
     this._db = database || null;
     this._collectionName = collectionName || null;
-    this._rxdbSchema = rxdbSchema || { };
-    this._memorySchema = memorySchema || { };
+
+    this._documentSchemaRxdb = documentSchemaRxdb || { };
+    this._documentSchemaMobx = documentSchemaMobx || { };
+    this._documentSchemaData = documentSchemaData || { };
+
     this._migrationStrategies = migrationStrategies || null;
+
     this._collection = null;
-
-    this._socket = socketio;
-
     this._serverIsMaster = false;
-
-    // init mobx-observable with default-data from memorySchema
-    this.syncRxdbToMemory(); //if (isObserved) { runInAction(() => { this._mobx = deepCopy(memorySchema) || { }; }); } else { this._data = deepCopy(memorySchema) || { }; }
 
     return this; // return collection
   }
 
-  async initCollection(isReactive) {
+  async initCollection() {
     // 1) create or open collection
-    await this.createCollection(this._rxdbSchema, this._migrationStrategies);
+    this._collection = await this.createCollection(this._documentSchemaRxdb, this._migrationStrategies);
+
     // 2) if collection is empty -> create database-document from mobx-data
-    if (await this.count() < 1) await this.createupdateDocument(this.memory2json, true); // if database is empty -> create database-document from mobx
+    //await this.syncRxdbToMemory(); //if (isObserved) { runInAction(() => { this._mobx = deepCopy(memorySchema) || { }; }); } else { this._data = deepCopy(memorySchema) || { }; }
+    // if (await this.count() < 1) await this.upsertDocument(this.memory2json, true); // if database is empty -> create database-document from mobx
     // 3) make collection reactive to changes in database --> if collection changes, update mobx/data-data
-    if (isReactive) await this.subscribeToCollection(); // make collection changes reactive -> send to mobx on collection-data-change
+    //if (isReactive) await this.subscribeToCollection(); // make collection changes reactive -> send to mobx on collection-data-change
     //await this.subscribeToProperties("updatedAt");
+
+    return this;
   }
 
   destroy() {
-    this.unsubscribeFromCollection();
+    //this.unsubscribeFromCollection();
   }
+
+
+  // ===============================================
+  // rxjs / mobx sync-operations
+  // ===============================================
+  /*
+  async syncMemoryToRxdb() {
+    await this.upsertDocument(this.memory2json, true);
+  };
+  */
+
+  /*
+  async syncRxdbToMemory(docArray) {
+    if (!docArray) docArray = await this.documents2json();
+    if (this.isObserved) {
+      runInAction(() => { this._mobx = deepCopy(docArray) });
+    } else {
+      this._data = deepCopy(docArray);
+    }
+    global.log("*** syncRxdbToMemory:: ", docArray, deepCopy(docArray), this.isObserved, this._data, this.getall)
+    //global.log("XXXXXXXXX2:: syncRxdbToMemory:: ", dump, dump.docs, docArray, this._data, toJS(this._mobx) )
+  };
+*/
 
   // ===============================================
   // mobx-observable-operations (READ-Operations)
   // ===============================================
-  get mobx()      { return this._mobx; }  // mobx readonly -> all write operations only to database
-  get mobx2json() { return toJS(this._mobx); }  // mobx readonly -> all write operations only to database
-	//set mobx(v) { runInAction(() => { this._mobx = v; }) }
+  get getallmobx() { return toJS(this._mobx) };
+  getAllMobx = () => this.getallmobx;
 
-  get data()      { return this._data; }  // data readonly -> all write operations only to database
-  get data2json() { return deepCopy(this._data) || { }; }  // data readonly -> all write operations only to database
+  get getalldata() { return this._data };
+  getAllData = () => this.getalldata;
 
+  get mobx()        { return this._mobx; }  // mobx readonly -> all write operations only to database
+  get mobx2json()   { return toJS(this._mobx); }  // mobx readonly -> all write operations only to database
+
+  get data()        { return this._data; }  // data readonly -> all write operations only to database
+  get data2json()   { return deepCopy(this._data) || { }; }  // data readonly -> all write operations only to database
+
+
+
+  /*
   // same as this.getProp but without failsafe!  this.getProp.unknownprop will fail!!!
   get memory()      { return (this.isObserved) ? this._mobx : this._data; }  // data readonly -> all write operations only to database
   get memory2json() { return (this.isObserved) ? toJS(this._mobx) : deepCopy(this._data) || { }; }  // data readonly -> all write operations only to database
 
   // same as this.memory but with failsafe!  this.getProp.unknownprop will not fail
-  get getProps()  { return this.getProp }
-  get getProp()   { return this.memory || { }; }
+  get getProp()     { return this.memory || { }; }
+  get getProps()    { return this.getProp }
 
-  get getall() { return (this.isObserved) ? toJS(this._mobx) : this._data };
-  getAll() { return this.getall };
+  get getDefault()  { return this._memorySchema }
+  */
 
   // ===============================================
   // rxdb-collection-operations (WRITE-Operations)
   // ===============================================
-  get db() { return this._db; }
-  //set db(v){ this._db = v; }
-
-  get collection() { return this._collection }
-  //set collection(v){ this._collection = v}
-
-  get socket() { return this._socketio }
-
-  async createupdateDocument(doc, ignore) {
-    await this.collection.upsert(doc); // create or replace database-document
-    if (!ignore) this._unsavedChanges = true;
+  /*
+  async upsertDocument(doc, noSync) { // create or overwrite document
+    const newdoc = await this.collection.upsert(doc); // create or replace database-document
+    if (!noSync) await this.syncRxdbToMemory();
+    return newdoc;
   }
+
+  async setPropInDocs(prop, value, docArray) {
+    if (!Array.isArray(docArray) || docArray.length < 1) return null;
+    await docArray.forEach(async (tempdoc) => { await tempdoc.atomicSet(prop, value) });
+    await this.syncRxdbToMemory();
+  }
+
 
   async setProps(prop, value) { return await this.setProp(prop, value) }
   async setProp(prop, value) { // const x = await rxdbStore.user.setProp("card.test", 111 ); -> set _mobx: { card: {test:111} }
@@ -93,7 +129,6 @@ class RxdbCollectionMobxPrototype {
           this._data = resultDocJSON; // pre-sync to be fast (dont wait for subscribeToCollection-sync)
         };
         //global.log("setProp:: ", this._data)
-        this._unsavedChanges = true;
         return resultDocJSON;
       } else {
         return null;
@@ -101,44 +136,8 @@ class RxdbCollectionMobxPrototype {
     } catch (error) {
       return null;
     }
-    /*
-    //optimistic fast-sync:: runInAction(() => { this._mobx[prop] = val; });
-    this.collection.findOne().exec().then(tempdoc => {
-      tempdoc.atomicSet(prop, value).then(result => {
-        if (result) {
-          if (this.isObserved) {
-            runInAction(() => { this._mobx = result.toJSON(); }); // pre-sync to be fast (dont wait for subscribeToCollection-sync)
-          } else {
-            this._data = result.toJSON(); // pre-sync to be fast (dont wait for subscribeToCollection-sync)
-          };
-          //global.log("setProp:: ", this._data)
-          this._unsavedChanges = true;
-          return true;
-        } else {
-          return false;
-        }
-      });
-    });
-    */
   }
-
-
-  // ===============================================
-  // rxjs / mobx sync-operations
-  // ===============================================
-  syncMemoryToRxdb = async () => {
-    await this.createupdateDocument(this.memory2json, true);
-  };
-
-  syncRxdbToMemory = async () => {
-    const doc = (!this.collection) ? null : await this.collection.findOne().exec();
-    if (this.isObserved) {
-      runInAction(() => { this._mobx = (doc) ? doc.toJSON() : deepCopy(this._memorySchema) || { }; });
-    } else {
-      this._data = (doc) ? doc.toJSON() : deepCopy(this._memorySchema) || { };
-    }
-  };
-
+  */
 
   // ===============================================
   // rxjs-observable-operations
@@ -148,6 +147,13 @@ class RxdbCollectionMobxPrototype {
   }
 
   async subscribeToCollection() { // sync any changes of the local rxbd-database to mobx
+    const docs = this.collection.find();
+    this._sub = docs.$.subscribe(async (newdocORnewdocArray) => {
+      global.log("+++++++++subscribeToCollection:: ", docs, newdocORnewdocArray);
+      //await this.syncRxdbToMemory();
+    });
+
+    /*
     // find the document (its by design always only one)
     const doc = this.collection.findOne();
     // subscribe to all changes of the rxdb-document
@@ -166,6 +172,7 @@ class RxdbCollectionMobxPrototype {
         };
       };
     });
+    */
   }
 
   /*
@@ -178,56 +185,22 @@ class RxdbCollectionMobxPrototype {
   */
 
 
-  // ===============================================
-  // rxjs-collection-operations
-  // ===============================================
-  async syncCollectionWithServer(syncURL, dbName) {
-    //this._collection.sync({ remote: syncURL + dbName + '/' });     // enable replication
-  }
-
-  async createCollection(schema, migrationStrategies) {
-    this._collection = await this.db.collection({
-      name: this.collectionName,
-      schema: schema,
-      pouchSettings: {}, // (optional)
-      statics: {}, // (optional) // ORM-functions for this collection
-      methods: {}, // (optional) ORM-functions for documents
-      attachments: {}, // (optional) ORM-functions for attachments
-      options: {}, // (optional) Custom paramters that might be used in plugins
-      migrationStrategies: migrationStrategies || {}, // (optional)
-      autoMigrate: true, // (optional)
-    });
-    //console.dir(this.collection);
-
-    return true;
-  }
-
-  async removeAllDocuments() {
-    if (!this.collection) return null;
-    const query = this.collection.find();
-    const removedDocs = await query.remove();
-    await this.syncRxdbToDatabase();
-    return (Array.isArray(removedDocs)) ? removedDocs.length : 0;
-  }
-
 
   // ===============================================
-  // collection-api
+  // documents
   // ===============================================
-  async getCollectionByName(collectionName) {
-    return this.db[collectionName || this.collectionName];
+  get findDocs() { return this.collection.find(); }
+  get findDoc()  { return this.collection.findOne(); }
+
+  async getDocuments() {
+    return await this.findDocs.exec();
+    //return [RxDocumentConstructor, RxDocumentConstructor, ...]
   }
 
-  async removeCollection() {
-    return (!this.collection) ? null : await this.collection.remove();
-  }
-
-  async collection2json() { // export collection to json
-    return (!this.collection) ? null : await this.collection.dump(true);
-  }
-
-  async json2collection(json) {  // import json to collection
-    if (this.collection) await this.collection.importDump(json);
+  async getDocumentsAsJson() { // export collection to json
+    const cdump = (!this.collection) ? null : await this.getCollectionAsJson();
+    return (cdump && cdump.hasOwnProperty("docs")) ? cdump.docs : [];
+    // return [{object}, ...]
   }
 
   async count() {
@@ -244,6 +217,94 @@ class RxdbCollectionMobxPrototype {
 
   async findOne(obj) {  // import json to collection
     return (!this.collection) ? null : await this.collection.findOne(obj).exec(); // return object
+  }
+
+
+  // ===============================================
+  // document-attachments
+  // ===============================================
+  async addAttachment(buf, name = "default") {
+    const myDocument = await this.collection.findOne().exec();
+    const attachment = await myDocument.putAttachment({ id: name, data: buf, type: "text/plain" });
+      //id,     // string, name of the attachment like 'cat.jpg'
+      //data,   // (string|Blob|Buffer) data of the attachment
+      //type    // (string) type of the attachment-data like 'image/jpeg'
+    return attachment;
+  }
+
+  async deleteAttachment(name = "default") {
+    const myDocument = await this.collection.findOne().exec();
+    const attachment = myDocument.getAttachment(name);
+    await attachment.remove();
+  }
+
+  async getAttachment(name = "default") {
+    const myDocument = await this.collection.findOne().exec();
+    const attachment = myDocument.getAttachment(name);
+    return attachment;
+  }
+
+  async getAttachmentAsString(name = "default") {
+    const myDocument = await this.collection.findOne().exec();
+    const attachment = myDocument.getAttachment(name);
+    return await attachment.getStringData();
+  }
+
+  async getAttachmentAsBuffer(name = "default") {
+    const myDocument = await this.collection.findOne().exec();
+    const attachment = myDocument.getAttachment(name);
+    return await attachment.getData();
+  }
+
+
+  // ===============================================
+  // collection
+  // ===============================================
+  async getCollectionByName(collectionName) {
+    return this.db[collectionName || this.collectionName];
+  }
+
+  async removeCollection() {
+    return (!this.collection) ? null : await this.collection.remove();
+  }
+
+  async getCollectionAsJson() { // export collection to json
+    return (!this.collection) ? null : await this.collection.dump(true);
+    // return {name: xxx, docs: [{object}, ...], ...}
+  }
+
+  async json2collection(json) {  // import json to collection
+    if (this.collection) await this.collection.importDump(json);
+  }
+
+
+  // ===============================================
+  // rxjs-collection-operations
+  // ===============================================
+  async syncCollectionWithServer(syncURL, dbName) {
+    //this._collection.sync({ remote: syncURL + dbName + '/' });     // enable replication
+  }
+
+  async createCollection(schema, migrationStrategies) {
+    return await this.db.collection({
+      name: this.collectionName,
+      schema: schema,
+      pouchSettings: {}, // (optional)
+      statics: {}, // (optional) // ORM-functions for this collection
+      methods: {}, // (optional) ORM-functions for documents
+      attachments: {}, // (optional) ORM-functions for attachments
+      options: {}, // (optional) Custom paramters that might be used in plugins
+      migrationStrategies: migrationStrategies || {}, // (optional)
+      autoMigrate: true, // (optional)
+    });
+  }
+
+  async removeAllDocuments() {
+    if (!this.collection) return null;
+    const query = this.collection.find();
+    const removedDocs = await query.remove();
+    //await this.syncRxdbToDatabase();
+    return (Array.isArray(removedDocs)) ? removedDocs.length : 0;
   }
 
   /*

@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser'
-import store from 'store'; // mobx-store
-import indexedDB from "localDatabase/indexedDB.js";
+
+import rxdbStore from 'rxdbStore'; // rxdb-database
 
 import IsometricTilemap from "../extends/isometrictilemap/IsometricTilemapPacked";
 
@@ -18,7 +18,7 @@ import Asset_watchtower_lvl2_512x512  from "../assets/Tilemap/objects/watchtower
 import Asset_isometric_house_1024x868  from "../assets/Tilemap/objects/isometric_house_1024x868.png";
 
 
-const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/photonstorm/phaser/blob/v3.20.0/src/scene/Scene.js
+const SceneClass = class TilemapScene extends Phaser.Scene { // https://github.com/photonstorm/phaser/blob/v3.20.0/src/scene/Scene.js
   xdx = { }
 
   constructor() {
@@ -110,9 +110,13 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
 
 
 
+
+
     const tilemapConfig = {
-      width : store.gameMap.tilemap.width, //10,
-      height: store.gameMap.tilemap.height, //10,
+      //width : rxdbStore.gameMobx.data.width,  // 10,
+      //height: rxdbStore.gameMobx.data.height, // 10,
+      //bufferbytes: rxdbStore.gameMobx.data.bufferbytes, // 1 // this.game.react.gameData.tilemap.bufferBytes
+      //buffer: direct access to buffer in rxdbStore in IsoTilemap, //rxdbStore.gameMobx.data.buffer, // bytebuffer4Tilemap.createBuffer === arraybuffer
 
       tileWidth : 512, // 256,
       tileHeight: 256, // 128,
@@ -142,7 +146,6 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       .setExtraTilesToCull(1)             // 1 for ISO60°, 3 for ISO75°
       //.setPosition(this.cameras.main.centerX, this.cameras.main.centerY) // center map-object in viewport
       .setPosition(this.cameras.main.centerX - this.xdx.isoMap.width2, this.cameras.main.centerY - this.xdx.isoMap.height2) // center map-object in viewport
-      .linkDataview(store.gameMap.tilemap.dataview, store.gameMap.tilemap.bufferBytes)
       /*
       .addTimer({ name: "moveZ@10fps", fps: 10 }, (timerTicker, preUpdateTicker, preUpdateTime, childList, renderList, animList) => {  // set a periodic timer
         //animList && animList.forEach(item => item.z = tilemapConfig.paddingBottom * Math.sin(2 * Math.PI * ((timerTicker + (item.tileX + item.tileY) * 100) % 500) / 500)); // move z-axis in a sinus-wave by time
@@ -164,10 +167,9 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       */
 
 
+      /*
       const map = this.xdx.isoMap;
-      //map.data2D = new Array(map.tilemapConfig.height);
       for (let tileY = 0; tileY < map.tilemapConfig.height; tileY++) {
-        //map.data2D[tileY] = new Array(map.tilemapConfig.width);
         for (let tileX = 0; tileX < map.tilemapConfig.width; tileX++) {
           map.setDataObject(tileX, tileY, { // compact object-data to 2 bytes (16 bit)
             assetID: map.tilemapConfig.assetKeys.indexOf("Asset_ISO60_Texturepack"),  // 8bit = 0..3; 16bit = 0..63; index of texture to use for frameselection
@@ -195,7 +197,7 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
       } // of for Y
 
       //global.log(">>>>>>>>>>>>>>>>>>>>", map.buffer.byteLength, map.bufferview[0]);
-
+      */
     await this.initIteractions();
 
     this.initTimedUpdate(10);
@@ -203,6 +205,53 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
     this.updateRunning= true; // start step 4 (periodic updating)
   } // of create
 
+
+
+  ///////////////////////////////////////////////////////////////////////////
+
+  initTimedUpdate = (targetFPS = 10) => { // frames per second
+    // add timer
+    // delay:: for 60 fps -> 1000 m2 / 60 fps = 16.6 ms
+    // delay:: for 30 fps -> 1000 m2 / 30 fps = 33.3 ms
+    // delay:: for 10 fps -> 1000 m2 / 10 fps = 100 ms
+    this.timedEvent = this.time.addEvent({ delay: 1000 / targetFPS, loop: true, paused: false, callbackScope: this, callback: this.timedUpdate });
+  } // remove timer: this.timedEvent.remove(false);
+
+  ///////////////////////////////////////////////////////////////////////////
+
+  timedUpdate = (...params) => {
+    //global.log(time, delta)
+    if (!this.updateRunning) return;
+    if (this.load.isLoading()) return;
+
+      // do something time-based here
+      this.xdx.textStatus.angle += 1;
+      this.xdx.textStatus.setText(`X`);
+  } // of update
+
+  ///////////////////////////////////////////////////////////////////////////
+
+  // scene step 4 (repeat)
+  //  The update function is passed 2 values:
+  //  The current time (in ms)
+  //  And the delta time, which is derived from the elapsed time since the last frame, with some smoothing and range clamping applied
+  update = (time, delta) => { // bullet1.x += speed1 * delta;
+    //global.log(time, delta)
+    if (!this.updateRunning || this.load.isLoading()) return;
+    this.updateTicker++;
+
+    if (this.updateTicker % 20 === 0) { // do something frame based here
+      global.log(">>TilemapScene:: ", rxdbStore.gameMobx.bufferString.length, rxdbStore.gameMobx.bufferString.charAt(0), rxdbStore.gameMobx.bufferString.charCodeAt(0), Buffer.from(rxdbStore.gameMobx.bufferString, "binary"))
+      const phaserGameVisible = Boolean(this.game.react.props.location.pathname === "/game/phaser"); // check if game-modal is visible
+      this.input.enabled = phaserGameVisible; // enable / disable pointer/touch-events
+      this.input.keyboard.enabled = phaserGameVisible; // enable / disable keyboard-events
+    }
+
+    // touch-actions
+    this.handleInteractions(time, this.cameras.main, this.input.pointer1, this.input.pointer2);
+
+    //this.updatePointerEvents(time, this.cameras.main, this.input.pointer1, this.input.pointer2, );
+  } // of update
 
   ///////////////////////////////////////////////////////////////////////////
 
@@ -354,6 +403,7 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
         case "ArrowDown":   camera.scrollY += 10; break;
         case "+":           camera.setZoom(2 * camera.zoom); camera.dirty = true; break;
         case "-":           camera.setZoom(0.5 * camera.zoom); camera.dirty = true; break;
+        case "r":           this.xdx.isoMap.triggerRender(); global.log("trigger render:: ", this.xdx.isoMap.dataview); break;
         case " ":           global.log("MAP DEBUG:: scene, cameras, cameras.main:: ", this, this.cameras, this.cameras.main); break;
         //case "a":           this.xdx.isoMap.map.data2DFull.forEach(arr => arr.forEach(item => item.isRunning = !item.isRunning)); break;
         //case "s":           this.xdx.isoMap.removeTimer(); break;
@@ -433,53 +483,6 @@ const SceneClass = class Tilemap extends Phaser.Scene { // https://github.com/ph
     }
   }
 
-
-  ///////////////////////////////////////////////////////////////////////////
-
-  initTimedUpdate = (targetFPS = 10) => { // frames per second
-    // add timer
-    // delay:: for 60 fps -> 1000 m2 / 60 fps = 16.6 ms
-    // delay:: for 30 fps -> 1000 m2 / 30 fps = 33.3 ms
-    // delay:: for 10 fps -> 1000 m2 / 10 fps = 100 ms
-    this.timedEvent = this.time.addEvent({ delay: 1000 / targetFPS, loop: true, paused: false, callbackScope: this, callback: this.timedUpdate });
-  } // remove timer: this.timedEvent.remove(false);
-
-  ///////////////////////////////////////////////////////////////////////////
-
-  timedUpdate = (...params) => {
-    //global.log(time, delta)
-    if (!this.updateRunning) return;
-    if (this.load.isLoading()) return;
-
-      // do something time-based here
-      this.xdx.textStatus.angle += 1;
-      this.xdx.textStatus.setText(`X`);
-  } // of update
-
-  ///////////////////////////////////////////////////////////////////////////
-
-  // scene step 4 (repeat)
-  //  The update function is passed 2 values:
-  //  The current time (in ms)
-  //  And the delta time, which is derived from the elapsed time since the last frame, with some smoothing and range clamping applied
-  update = (time, delta) => { // bullet1.x += speed1 * delta;
-    //global.log(time, delta)
-    if (!this.updateRunning || this.load.isLoading()) return;
-    this.updateTicker++;
-
-
-    if (this.updateTicker % 10 === 0) { // do something frame based here
-      const phaserGameVisible = Boolean(store.appState.app.watchers.route.pathname === "/game/phaser"); // check if game-modal is visible
-      this.input.enabled = phaserGameVisible; // enable / disable pointer/touch-events
-      this.input.keyboard.enabled = phaserGameVisible; // enable / disable keyboard-events
-    }
-
-    // touch-actions
-    this.handleInteractions(time, this.cameras.main, this.input.pointer1, this.input.pointer2);
-
-
-    //this.updatePointerEvents(time, this.cameras.main, this.input.pointer1, this.input.pointer2, );
-  } // of update
 
 } // of class
 

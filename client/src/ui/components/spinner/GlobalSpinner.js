@@ -11,6 +11,7 @@ import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
 
 import store from 'store'; // mobx-store
+import rxdbStore from 'rxdbStore'; // rxdb-database
 
 export default class Spinner extends React.Component {
   handleClose = () => {
@@ -43,7 +44,7 @@ export default class Spinner extends React.Component {
             top: 0,
             width: "100%",
             height:"100%",
-            background: store.appState.colors.overlay.background, //"rgba(255,255,255,0.8)",
+            background: rxdbStore.app.getProp.config.color.overlay.background, //"rgba(255,255,255,0.8)",
           }} />
         </Fade>
 
@@ -55,7 +56,7 @@ export default class Spinner extends React.Component {
           top:0,
           left:0,
           width: "100%",
-          color: store.appState.colors.overlay.text, // "rgba(130, 130, 130, 0.5)"
+          color: rxdbStore.app.getProp.config.color.overlay.text, // "rgba(130, 130, 130, 0.5)"
         }}
         >
           <Logger list={toJS(store.appActions.logger.game)} style={{ backgroundColor: "red", overflow: 'auto', height: 100, }}/>
@@ -69,7 +70,7 @@ export default class Spinner extends React.Component {
           top:"50%",
           left:"50%",
           transform: "translate(-50%, -50%)", // relative to element itself
-          color: store.appState.colors.overlay.text, // "rgba(130, 130, 130, 0.5)"
+          color: rxdbStore.app.getProp.config.color.overlay.text, // "rgba(130, 130, 130, 0.5)"
         }}
         >
           <CircularProgress /*size={20} thickness={5.6}*/ fontSize="large" color="inherit" />
@@ -81,7 +82,7 @@ export default class Spinner extends React.Component {
           top:"75%",
           left:"50%",
           transform: "translateX(-50%)", // relative to element itself
-          color: store.appState.colors.overlay.text, // "rgba(130, 130, 130, 0.5)"
+          color: rxdbStore.app.getProp.config.color.overlay.text, // "rgba(130, 130, 130, 0.5)"
         }}
         >
           <Slide in={show} direction="up">

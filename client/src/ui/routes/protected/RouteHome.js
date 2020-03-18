@@ -13,8 +13,6 @@ import AllInclusiveICON from '@material-ui/icons/AllInclusive';
 
 import HeaderNavigationToolbar from "ui/components/header/HeaderNavigationToolbar";
 
-import * as localDatabase from "localDatabase/index.js";
-
 import store from 'store';
 import rxdbStore from 'rxdbStore'; // rxdb-database
 
@@ -57,14 +55,14 @@ export default ( withStyles(styles)( observer( class extends React.Component {
         overflow: "auto",
         height: "100%",
         width: "100%",
-        color: store.appState.colors.auth.text,
-        background: store.appState.colors.auth.background,
+        color: rxdbStore.app.getProp.config.color.auth.text,
+        background: rxdbStore.app.getProp.config.color.auth.background,
       }}>
-        <HeaderNavigationToolbar label="Home" hide={!store.appState.app.header.visible}
+        <HeaderNavigationToolbar label="Home" hide={!rxdbStore.app.getProp.state.header.visible}
           backButtonIcon={<LogoutICON style={{ transform: "scaleX(-1)" }} />}
           onBackButtonClick={ () => history.push("/logout") }
         />
-        {store.appState.app.header.visible && (<Toolbar disableGutters variant="dense" />) /* extra padding for content below HeaderNavigationToolbar */ }
+        {rxdbStore.app.getProp.state.header.visible && (<Toolbar disableGutters variant="dense" />) /* extra padding for content below HeaderNavigationToolbar */ }
 
         <Alert />
         <Modal />
@@ -147,7 +145,7 @@ export default ( withStyles(styles)( observer( class extends React.Component {
           </Button>
 	      </div>
 
-        {store.appState.app.bottomNavigation.visible && (<Toolbar disableGutters style={{ marginBottom: 25, }} />) /* extra padding for content below HeaderNavigationToolbar */ }
+        {rxdbStore.app.getProp.state.bottomNavigation.visible && (<Toolbar disableGutters style={{ marginBottom: 25, }} />) /* extra padding for content below HeaderNavigationToolbar */ }
       </div>
     );
   }

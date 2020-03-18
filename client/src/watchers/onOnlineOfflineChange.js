@@ -1,27 +1,43 @@
-import store from 'store'; // mobx-store
+//import {runInAction} from 'mobx';
+//import rxdbStore from 'rxdbStore'; // rxdb-database
 
-const updateStatus = (event) => {
-  global.log("watcher/online::", event.type);
+let wentOffline = 0;
+let wentOnline = 0;
+let lastDiff = 0;
+
+const updateStatus = (event, callback) => {
+  //global.log("************** watcher/online::", event.type, callback);
   if (event.type === "offline"){
-    store.appState.set("app.watchers.connection.isOnline", false);
-    store.appState.set("app.watchers.connection.wentOffline", global.now());
-
+    wentOffline = global.nowUnix();
+    lastDiff = (wentOnline === 0) ? 0 : wentOffline - wentOnline;
+    /*
+    runInAction(()=>{
+      rxdbStore.app.setProp("watcher.connection.isOnline", false);
+      rxdbStore.app.setProp("watcher.connection.wentOffline", global.now());
+    });
+    */
     //this.props.onWentOffline && this.props.onWentOffline(store.navigator.wasSince);
   } else
   if (event.type === "online"){
-    store.appState.set("app.watchers.connection.isOnline", true);
-    store.appState.set("app.watchers.connection.wentOnline", global.now());
-
+    wentOnline = global.nowUnix();
+    lastDiff = (wentOffline === 0) ? 0 : wentOnline - wentOffline;
+    /*
+    runInAction(()=>{
+      rxdbStore.app.setProp("watcher.connection.isOnline", true);
+      rxdbStore.app.setProp("watcher.connection.wentOnline", global.now());
+    });
+    */
     //this.props.onWentOnline && this.props.onWentOnline(store.navigator.wasSince);
   }
+  callback && callback(event.type, wentOnline, wentOffline, lastDiff) // "online" / "offline"
 }
 
 // AppLandingPage:: componentDidMount
-export const watchOnlineOfflineStatus = () => {
+export const watchOnlineOfflineStatus = (callback) => {
   global.log("watcher/online:: addEventListener", );
-  updateStatus({type: (navigator.onLine || null) ? "online" : "offline"})
-  window.addEventListener('online', updateStatus);
-  window.addEventListener('offline', updateStatus);
+  updateStatus({type: (navigator.onLine || null) ? "online" : "offline"}, callback)
+  window.addEventListener('online', (event) => updateStatus(event, callback));
+  window.addEventListener('offline',(event) => updateStatus(event, callback));
 }
 
 export const unwatchOnlineOfflineStatus = () => {

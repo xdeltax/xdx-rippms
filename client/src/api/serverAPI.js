@@ -2,7 +2,6 @@
 import socketio from 'api/socket'; // socket
 import {unixtime} from "tools/datetime";
 
-// called by store.user.doAuthLogout();
 export const testServerResponse = async (text, userid, servertoken) => {
   let res = null;
   let err = null;

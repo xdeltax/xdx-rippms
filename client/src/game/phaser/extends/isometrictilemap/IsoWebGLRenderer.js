@@ -23,7 +23,7 @@ var Utils = Phaser.Renderer.WebGL.Utils; // XDX-MOD:: require('../../renderer/we
  * @param {Phaser.GameObjects.Components.TransformMatrix} parentMatrix - This transform matrix is defined if the game object is nested
  */
 export default (renderer, src, interpolationPercentage, camera, parentMatrix) => {
-		const now = new Date();
+		//const now = new Date();
 
     var list = src.getRenderList();
 

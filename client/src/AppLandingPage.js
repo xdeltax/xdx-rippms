@@ -8,7 +8,6 @@ import CssBaseline from '@material-ui/core/CssBaseline';
 import Typography from '@material-ui/core/Typography';
 
 import * as watchers from "watchers/index.js";
-import * as localDatabase from "localDatabase/index.js";
 
 import ErrorBoundary from "ui/components/errorhandler/ErrorBoundary";
 import GlobalSpinner from "ui/components/spinner/GlobalSpinner";
@@ -48,9 +47,9 @@ export default ( observer( class extends React.Component {
 		  // ===============================================
 		  // load store-data from client-storage
 		  // ===============================================
-	    this.setState({ statusText: "load persistent app-states" })
-	    global.log("AppLandingPage:: onAppLoadEvent:: load app-state from persistent", );
-      await localDatabase.loadAppData();	    //todo: await loadFromPersistentDatabase(); // save is on onUnloadEvent
+	    //this.setState({ statusText: "load persistent app-states" })
+	    //global.log("AppLandingPage:: onAppLoadEvent:: load app-state from persistent", );
+      //await localDatabase.loadAppData();	    //todo: await loadFromPersistentDatabase(); // save is on onUnloadEvent
 
 
 		  // ===============================================
@@ -59,7 +58,12 @@ export default ( observer( class extends React.Component {
       // Event listeners are only safe to add *after* mount, so they won't leak if mount is interrupted or errors.
       global.log("AppLandingPage:: componentDidMount:: register event-listeners", );
       this.setState({ statusText: "register event-listeners" })
-      watchers.start();
+      const connectionCallback      = (connection_type, connection_downLink)              => global.log("WATCHER:: CONNECTION:: ", connection_type, connection_downLink);
+      const onlineOfflineCallback   = (event_type, wentOnline, wentOffline, lastDiffInSec)=> global.log("WATCHER:: ONLINE-OFFLINE:: ", event_type, wentOnline, wentOffline, lastDiffInSec);
+      const orientationCallback     = (orientation_type, orientation_angle)               => global.log("WATCHER:: ORIENTATION:: ", orientation_type, orientation_angle);
+      const visibilityStateCallback = (visibilityState)                                   => global.log("WATCHER:: VISIBILITY:: ", visibilityState);
+      const routeLocationCallback   = (oldPathname, newPathname)                          => global.log("WATCHER:: ROUTE-LOCATION:: ", oldPathname, newPathname);
+      watchers.start(connectionCallback, onlineOfflineCallback, orientationCallback, visibilityStateCallback, routeLocationCallback);
 
       window.addEventListener('beforeunload', this.handleLeavePageMessage, {once: true});
 
@@ -118,14 +122,14 @@ export default ( observer( class extends React.Component {
 	  // ===============================================
 	  // save store-data to client-storage
 	  // ===============================================
-    global.log("AppLandingPage:: onAppUnloadEvent:: saveToPersistentDatabase", )
-    await localDatabase.saveAppData(); //todo: saveToPersistentDatabase();
+    //global.log("AppLandingPage:: onAppUnloadEvent:: saveToPersistentDatabase", )
+    //await localDatabase.saveAppData(); //todo: saveToPersistentDatabase();
 
 	  // ===============================================
 	  // save store-data to server-database
 	  // ===============================================
-    const syncResult = await rxdbStore.user.syncUserDataToServer();
-    global.log("AppLandingPage:: onAppUnloadEvent:: syncUserDataToServer:: ", syncResult)
+    //const syncResult = await rxdbStore.user.syncUserDataToServer();
+    //global.log("AppLandingPage:: onAppUnloadEvent:: syncUserDataToServer:: ", syncResult)
 
 	  // ===============================================
 	  // remove watchers
@@ -179,17 +183,17 @@ export default ( observer( class extends React.Component {
               width: "100%",
               margin: 0,
               padding: 0,
-              //minWidth: store.appState.app.size.minWidth,
-              //minHeight: store.appState.app.size.minHeight,
-              //maxWidth: store.appState.app.size.maxWidth,
-              //maxHeight: store.appState.app.size.maxHeight,
-              color: store.get("appstate.colors.app.text", "black"), //store.appState.colors.app.text,
-              background: store.get("appstate.colors.app.background", ), //store.appState.colors.app.background,
+              //minWidth: rxdbStore.app.getProp.config.size.minWidth,
+              //minHeight: rxdbStore.app.getProp.config.size.minHeight,
+              //maxWidth: rxdbStore.app.getProp.config.size.maxWidth,
+              //maxHeight: rxdbStore.app.getProp.config.size.maxHeight,
+              color: rxdbStore.app.getProp.config.color.app.text || "black",
+              background: rxdbStore.app.getProp.config.color.app.background || "white",
             }}>
               <CssBaseline />
               <ErrorBoundary>
                 <React.Suspense fallback={ <LoadingScreen /> }>
-                  <Router><AppRouter startRoute={ store.get("appstate.app.watchers.route.pathname", "") } /></Router>
+                  <Router><AppRouter /*startRoute={ rxdbStore.app.getProp.watcher.route.pathname || "" }*/ /></Router>
                 </React.Suspense>
               </ErrorBoundary>
             </div>
@@ -199,17 +203,17 @@ export default ( observer( class extends React.Component {
                 style={{ zIndex: '98765', /*minHeight: 32,*/ maxHeight: "75%", overflow: "auto", textAlign: "left", position: "absolute", top: "auto", bottom: 0, width: "100%", }}
                 title={[
                   "DEBUG", ` v01 ${process.env.REACT_APP_APPVERSION} ${Math.floor(99*Math.random())}`,
-                  " s:", `${store.appState.app.watchers.socket.isConnected?1:0}`,
+                  " s:", `${rxdbStore.app.getProp.watcher.socket.isConnected?1:0}`,
                   " l:", `${store.appActions.loadingNowStatus?1:0}`,
 
-                  " c:", `${store.appState.app.watchers.connection.isOnline?1:0}`,
+                  " c:", `${rxdbStore.app.getProp.watcher.connection.isOnline?1:0}`,
 
                   " a", `${rxdbStore.user.isAuthenticated ? 1 : 0}`,
                   "/", `${rxdbStore.user.isValidUser ? 1 : 0}`,
 
-                  " [o:", `${store.appState.app.watchers.orientation.angle}`,
-                  " t:", `${store.appState.app.watchers.connection.type}`,
-                  " l:", `${store.appState.app.watchers.route.pathname}`,
+                  " [o:", `${rxdbStore.app.getProp.watcher.orientation.angle}`,
+                  " t:", `${rxdbStore.app.getProp.watcher.connection.type}`,
+                  " l:", `${rxdbStore.app.getProp.watcher.route.pathname}`,
                   "]", ``,
                 ]}
                 titleColors={["white", "cyan", "yellow", "cyan", ]}
@@ -218,13 +222,12 @@ export default ( observer( class extends React.Component {
                 	appVersion: process.env.REACT_APP_APPVERSION,
                 	fingerprint: global.fingerprint.hash,
                   loadingNowStatus: store.appActions.loadingNowStatus,
-                  isSocketConnected: Boolean(store.appState.app.watchers.socket.isConnected),
+                  isSocketConnected: Boolean(rxdbStore.app.getProp.watcher.socket.isConnected),
 
                   _1: "___________________________________________",
                   userid: rxdbStore.user.getProp.auth.userid,
                   updatedAt: rxdbStore.user.getProp.auth.updatedAt,
-                  UserCollection_mobx: rxdbStore.user.getAll(),
-                  UserCollection_rxdb: rxdbStore.user.collection2json(),
+                  rxdbStore_UserCollection_mobx: rxdbStore.user.getAll(),
 
                   _2: "___________________________________________",
                   isAuthenticated: rxdbStore.user.isAuthenticated,
@@ -236,7 +239,7 @@ export default ( observer( class extends React.Component {
                   storegameMap: store.gameMap.get_all(),
 
                   _4: "___________________________________________",
-                  storeAppState: store.appState.get_all_observables(),
+                  rxdbStore_App_mobx: rxdbStore.app.getAll(),
                 }}
               />
             }
