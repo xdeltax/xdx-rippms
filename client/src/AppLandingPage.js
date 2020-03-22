@@ -235,8 +235,6 @@ export default ( observer( class extends React.Component {
                   isValidUsercard: rxdbStore.user.isValidUsercard,
 
                   _3: "___________________________________________",
-                  storeGame: store.game.get_all_observables(),
-                  storegameMap: store.gameMap.get_all(),
 
                   _4: "___________________________________________",
                   rxdbStore_App_mobx: rxdbStore.app.getAll(),

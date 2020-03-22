@@ -1,4 +1,5 @@
-import RxdbCollectionMobxPrototype from "./RxdbCollectionMobxPrototype";
+import PrototypeRxdbCollectionMobx from "./PrototypeRxdbCollectionMobx";
+
 import {autorun,  } from 'mobx';
 //import {unixtime} from "tools/datetime";
 
@@ -138,7 +139,7 @@ const migrationStrategies = null;
        }
   }*/
 
-export default class RXDBAppCollection extends RxdbCollectionMobxPrototype {
+export default class RXDBAppCollection extends PrototypeRxdbCollectionMobx {
   constructor(database, collectionName) {
     const cName = "appstate"; // only lowercase allowed
     const isObserved = true;

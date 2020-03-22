@@ -103,37 +103,10 @@ const GameContainer = withRouter( observer( class GameContainer extends React.Co
     // load / sync local-rxdb to memory for the first time (its not done on init-collection for app-starting speed)
     await rxdbStore.gameMobx.syncRxdbToMemory();
 
-    global.log("GameContainer:: rxdbStore.gameMobx.syncRxdbToMemory():: ", rxdbStore.gameMobx.data.buffer, rxdbStore.gameMobx.data.bufstr)
     store.appActions.showSpinner("tilemap: create buffer",);
 
 
     global.log("GameContainer:: create and fill Buffer ");
-    /*
-    const bufferBytes = 1;
-    this.gameData.tilemap.bufferBytes = rxdbStore.gameMobx.data.bufferBytes;
-    this.gameData.tilemap.buffer = rxdbStore.gameMobx.data.buffer; // bytebuffer4Tilemap.createBuffer(this.gameData.tilemap.bufferBytes, this.gameData.tilemap.width, this.gameData.tilemap.height);
-
-    store.appActions.showSpinner("tilemap: get data from server",);
-
-    // 5000 x 5000 = 1100 ms
-    for (let tileY = 0; tileY < this.gameData.tilemap.height; tileY++) {
-      for (let tileX = 0; tileX < this.gameData.tilemap.width; tileX++) {
-        const obj = {
-          assetID: 0,
-          frameID: 0,
-        };
-        switch (global.random(9)) {
-          case 0: obj.frameID = global.random(30); break; // animation state of boy (0 .. 30)
-          case 1: obj.frameID = 31; break; // boy, not animatable
-          default:obj.frameID = 32; // empty block
-        };
-        const idx = this.gameData.tilemap.bufferBytes * (tileX + tileY * this.gameData.tilemap.width);
-        this.gameData.tilemap.buffer[idx] = bytebuffer4Tilemap.groundlayer_objectToUint8(obj);
-        //global.log("obj", obj, idx, this.gameData.tilemap.buffer[idx])
-      }
-    }
-    global.log("GameContainer:: create and fill Buffer ");
-    */
 
     store.appActions.loggerAdd("game", "loading Assets", "FINISHED");
     global.log('GameContainer:: loadGameAssets:: finished!',);
@@ -193,16 +166,12 @@ const GameContainer = withRouter( observer( class GameContainer extends React.Co
 
 
   onResize = (event) => {
-  	const w = window.innerWidth
-    const h = window.innerHeight
+  	const w = window.innerWidth;
+    const h = window.innerHeight;
     global.log('GameContainer:: Event:: resize ', event, w, h);
   };
 
 
-  click_clearAll = (e) => {
-    store.game.clear();
-    global.log("GameContainer:: store.game.clear:: ", store.game);
-  };
 
   /*
   click_addLife = (e) => {
@@ -263,42 +232,10 @@ const GameContainer = withRouter( observer( class GameContainer extends React.Co
         <div id="reactOverlayScreen" style={{ zIndex:3, position: "absolute", top: 0, left: 0, width: "100%"}}>
         	GameContainer:
 
-          <Button variant="outlined" onClick={async () => {
-            const rnd = global.random(10);
-            const docDefault = rxdbStore.gameMap.getDefault;
-            const docs = await rxdbStore.gameMap.collection.find().where("linenr").eq(rnd).exec(); // []
-            let doc;
-            if (docs.length === 0) {
-              doc = {
-                linenr: rnd.toString(),
-                line: "test" + rnd.toString(),
-                updatedAt: unixtime(),
-              };
-            }
-            if (docs.length === 1) {
-              doc = docs[0];
-              doc.line =+ "-" + rnd.toString();
-            }
-            global.log("XXXXXXXXXXXXXXXXXXXXXXX", docs.length, doc);
-            const newdoc = await rxdbStore.gameMap.upsertDocument(doc);
-
-            const resMemory   = await rxdbStore.gameMap.getAll();
-            const resDatabase = await rxdbStore.gameMap.documents2json(); // = { name, docs: array[], ... }
-            global.log("********** GAMECONTAINER:: ", rnd, docDefault, docs, doc, newdoc, resMemory, resDatabase);
-          }}>add</Button>
 
           <Button variant="outlined" onClick={async () => {
-            const resMemory = await rxdbStore.gameMap.getall;
-            const resDatabase = await rxdbStore.gameMap.documents2json(); // = { name, docs: array[], ... }
-            global.log("********** GAMECONTAINER:: ", resMemory, resDatabase);
-          }}>get</Button>
-
-
-
-
-
-          <Button variant="outlined" onClick={async () => {
-            await rxdbStore.gameMobx.createTestData();
+            const rnd = global.random(7);
+            await rxdbStore.gameMobx.DEBUG_createTestData(rnd, rnd);
 
 
             const resMemoryMobx = await rxdbStore.gameMobx.getallmobx;

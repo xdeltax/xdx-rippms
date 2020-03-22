@@ -347,7 +347,7 @@ const SceneClass = class TilemapScene extends Phaser.Scene { // https://github.c
 
 
       const geohashDivider = 2; // 2 to 8
-      const geohashExponent = geohash.calcExponent(geohashDivider, this.xdx.isoMap.tilemapConfig.width, this.xdx.isoMap.tilemapConfig.height); // dimXY needs to be fit power(divider, x) with x is an integer
+      const geohashExponent = geohash.calcExponent(geohashDivider, this.xdx.isoMap.mapWidth, this.xdx.isoMap.mapHeight); // dimXY needs to be fit power(divider, x) with x is an integer
       const ghash = geohash.point2hash(tileXY.x, tileXY.y, geohashDivider, geohashExponent); // '2AAAAAAAAADAAD' => divider 2; exponent = length(hash) = 13 -> maxDimXY = power(divider, exponent) = 2^13 = 8192 => ALLOWED MAP = 8192 x 8192
       const grect = geohash.hash2rect(ghash, 0);
 

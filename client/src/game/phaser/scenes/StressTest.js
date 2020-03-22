@@ -14,7 +14,7 @@ const SceneClass = class StressTest extends Phaser.Scene { // https://github.com
         default: "arcade", // default: false  // no physics system enabled
         arcade: {
           gravity: { y: 200 },
-          //debug: store.game.debug || false,
+          //debug: false,
         },
       },
       input: {
@@ -120,7 +120,6 @@ const SceneClass = class StressTest extends Phaser.Scene { // https://github.com
     global.log("PHASERSCENE:: create():: this:: ",  this, );
     global.log("PHASERSCENE:: create():: data:: ",  data);
     global.log("PHASERSCENE:: create():: react:: ",  this.game.react, );
-    global.log("PHASERSCENE:: create():: mobx-store (phaser):: ",  this.game.react.store.game.get_all_observables(), );
 
     this.spritesgroup = this.add.group();
     this._addSprites(this.spritesgroup, 10);

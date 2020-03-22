@@ -12,10 +12,6 @@ import AppActionsMobx from './AppActionsMobx.js';
 //import UserMobx from './UserMobx.js';
 //import MobxUsercard from './MobxUsercard.js';
 
-// game-data
-import GameMobx from './GameMobx';
-import GameMap from './GameMap';
-
 // debug
 import sleep from "tools/debug/sleeper";
 
@@ -30,12 +26,9 @@ class Store extends MobxPrototype {
 
 		//user: null,
 		//usercard: null,
-
-		game: null,
 	};
 
 	_nonobervables = {
-		game: null,
 	};
 
 	_helpers = {
@@ -60,14 +53,6 @@ class Store extends MobxPrototype {
 		//this._obervables.user = new UserMobx(this);
 		//this._obervables.usercard = new MobxUsercard(this);
 
-		// stores data of running game
-		this._obervables.game = new GameMobx(this);
-
-
-		// *** NON-observables
-		this._nonobervables.game = new GameMap(this);
-
-
 		this.#__initDone = true;
 		resolve();
 
@@ -90,13 +75,6 @@ class Store extends MobxPrototype {
 
 	//get usercard() { return this._obervables.usercard }
 	//set usercard(o) { runInAction(() => { this._obervables.usercard = o; }) }
-
-	get game() { return this._obervables.game }
-	set game(o) { runInAction(() => { this._obervables.game = o; }) }
-
-	get gameMap() { return this._nonobervables.game }
-	set gameMap(o) { runInAction(() => { this._nonobervables.game = o; }) }
-
 };
 
 decorate(Store, {

@@ -128,31 +128,31 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
   ///////////////////////////////////////////////////////////
 
   // EXTERNAL DATA FROM GameMobxCollection.js
+  get externalData() { return rxdbStore.gameMobx } // <----------- adapter to external data (read-only)
+  //set externalData(v){ rxdbStore.gameMobx = v; }
+
   checkBufferWasUpdated = () => {
-    if (rxdbStore.gameMobx.bufferWasUpdated) {
-      //global.log("ISOTILEMAP:: checkBufferWasUpdated:: rxdbStore.gameMobx.data.bufferUpdate:: ", rxdbStore.gameMobx.data.bufferWasUpdated)
-      this.setBufferWasUpdated();
+    if (this.externalData.bufferWasUpdated) {
+      this.setBufferWasUpdated(false);
       this.triggerRender();
     }
   };
 
-  setBufferWasUpdated = (val) => { rxdbStore.gameMobx.bufferWasUpdated = val || false; }
+  setBufferWasUpdated = (val) => { this.externalData.bufferWasUpdated = val || false; }
 
-  //get bufferWasUpdated() { return rxdbStore.gameMobx.bufferWasUpdated || false; }
-  //set bufferWasUpdated(v){ rxdbStore.gameMobx.bufferWasUpdated = v; }  
+  //get bufferWasUpdated() { return this.externalData.bufferWasUpdated || false; }
+  //set bufferWasUpdated(v){ this.externalData.bufferWasUpdated = v; }
 
-  get mapWidth() { return rxdbStore.gameMobx.data.width || 2; }
-  get mapHeight(){ return rxdbStore.gameMobx.data.height|| 2; }
+  get mapWidth() { return this.externalData.mapWidth || 2; }
+  get mapHeight(){ return this.externalData.mapHeight|| 2; }
 
-  get bufferbytes() { return rxdbStore.gameMobx.bufferbytes || 1; }
+  get bufferbytes() { return this.externalData.bufferbytes || 1; }
 
-  get bufferString() { return rxdbStore.gameMobx.bufferString; }
-  set bufferString(v){ rxdbStore.gameMobx.bufferString = v; }
-  //get buffer() { return rxdbStore.gameMobx.buffer }
-  //set buffer(v){ rxdbStore.gameMobx.buffer = v; }
+  get bufferString() { return this.externalData.bufferString || "" }
+  //set bufferString(v){ this.externalData.bufferString = v; }
 
   getBufferString(idx) { return this.bufferString.charCodeAt(idx) }
-  setBufferString(idx, v){ this.bufferString[idx] = String.fromCharCode(v); }
+  //setBufferString(idx, v){ this.bufferString[idx] = String.fromCharCode(v); }
 
   get sumWidthHeight() { return this.mapWidth + this.mapHeight; }
   get width()  { return (this.sumWidthHeight === 1) ? this.tileWidth : this.sumWidthHeight * this.tileWidth2; }
@@ -160,7 +160,7 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
   get width2() { return this.width / 2 }
   get height2(){ return this.height/ 2 }
 
-
+  /*
   setDataProperty = (tileX, tileY, prop, value) => {
     const obj = this.getDataObject(tileX, tileY);
     if (!obj) return;
@@ -170,8 +170,6 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
 
   setDataObject = (tileX, tileY, obj) => {
     if (!this.bufferString || this.bufferString.length < 1) return;
-    //if (!this.buffer) return;
-    //if (!rxdbStore || !rxdbStore.hasOwnProperty("gameMobx") || !rxdbStore.gameMobx.hasOwnProperty("data") || !!rxdbStore.gameMobx.data.buffer ) return;
     try {
       switch (this.bufferbytes) {
         //arraybuffer:: case 2: this.dataview.setUint16(this.bufferbytes * (tileX + tileY * this.mapWidth), bytebuffer4Tilemap.groundlayer_objectToUint16(obj)); break; // setUint16 uses always big-endian
@@ -193,11 +191,10 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
       // fail silently
     }
   }
+  */
 
   getDataObject = (tileX, tileY) => {
     try {
-      //if (!this.dataview) return null;
-      //if (!rxdbStore || !rxdbStore.hasOwnProperty("gameMobx") || !rxdbStore.gameMobx.hasOwnProperty("data") || !!rxdbStore.gameMobx.data.buffer ) return null;
       if (!this.bufferString || this.bufferString.length < 1) return;
       if (tileX < 0 || tileY < 0 || tileX >= this.mapWidth || tileY >= this.mapHeight) return null;
       switch (this.bufferbytes) {

@@ -5,12 +5,10 @@ import RxDBPouchDBAdapterIDB from 'pouchdb-adapter-idb';
 //import RxDBNoValidateModule from 'rxdb/plugins/no-validate';
 import RxDBZSchemaValidateModule from 'rxdb/plugins/validate-z-schema';
 
-import AppMobxCollection from "./AppMobxCollection";
+import AppMobxCollection  from "./AppMobxCollection";
 import UserMobxCollection from "./UserMobxCollection";
 
 import GameMobxCollection from "./GameMobxCollection";
-import GameConfigCollection from "./GameConfigCollection";
-import GameMapCollection from "./GameMapCollection";
 
 class RXDBStore {
   get databaseURL()   { return ""; /*process.env.DATABASE_RXDB_URL;*/ }
@@ -22,27 +20,19 @@ class RXDBStore {
     this.app= null;
     this.user = null;
     this.gameMobx = null;
-    this.gameConfig = null;
-    this.gameMap = null;
   };
 
   get db() { return this._db; }
   set db(v){ this._db = v; }
 
-  get app() { return this.appMobxCollection; }
-  set app(v){ this.appMobxCollection = v; }
+  get app() { return this._appMobxCollection; }
+  set app(v){ this._appMobxCollection = v; }
 
-  get user() { return this.userMobxCollection; }
-  set user(v){ this.userMobxCollection = v; }
+  get user() { return this._userMobxCollection; }
+  set user(v){ this._userMobxCollection = v; }
 
-  get gameMobx() { return this.gameMobxCollection; }
-  set gameMobx(v){ this.gameMobxCollection = v; }
-
-  get gameConfig() { return this.gameConfigCollection; }
-  set gameConfig(v){ this.gameConfigCollection = v; }
-
-  get gameMap() { return this.gameMapCollection; }
-  set gameMap(v){ this.gameMapCollection = v; }
+  get gameMobx() { return this._gameMobxCollection; }
+  set gameMobx(v){ this._gameMobxCollection = v; }
 
   initDatabase = async () => {
     // ===============================================
@@ -57,14 +47,10 @@ class RXDBStore {
     this.app  = await new AppMobxCollection(this.db); // return collection-ref
     this.user = await new UserMobxCollection(this.db); // return collection-ref
     this.gameMobx = await new GameMobxCollection(this.db); // return collection-ref
-    this.gameConfig = await new GameConfigCollection(this.db); // return collection-ref
-    this.gameMap = await new GameMapCollection(this.db); // return collection-ref
 
     await this.app.initCollection();
     await this.user.initCollection();
     await this.gameMobx.initCollection();
-    await this.gameConfig.initCollection();
-    await this.gameMap.initCollection();
   }
 
   // ===============================================
