@@ -4,14 +4,13 @@ import { observer, }  from 'mobx-react';
 import { HashRouter/*BrowserRouter*/ as Router, } from 'react-router-dom';
 
 import CssBaseline from '@material-ui/core/CssBaseline';
-
 import Typography from '@material-ui/core/Typography';
 
 import * as watchers from "watchers/index.js";
 
+import AppLoadingScreen from "./AppLoadingScreen";
 import ErrorBoundary from "ui/components/errorhandler/ErrorBoundary";
 import GlobalSpinner from "ui/components/spinner/GlobalSpinner";
-import AppLoadingScreen from "./AppLoadingScreen";
 
 import DEBUGOBJECTPRETTY from 'ui/components/debug/DEBUGOBJECTPRETTY';
 
@@ -218,7 +217,6 @@ export default ( observer( class extends React.Component {
                 ]}
                 titleColors={["white", "cyan", "yellow", "cyan", ]}
                 data={{
-                	debugTime: global.debugTime(),
                 	appVersion: process.env.REACT_APP_APPVERSION,
                 	fingerprint: global.fingerprint.hash,
                   loadingNowStatus: store.appActions.loadingNowStatus,

@@ -1,0 +1,12 @@
+{
+  "couchdb": {
+    "uuid": "0f168b0a-b3d9-418a-9c95-bdd4e24d27a3"
+  },
+  "pouchdb_server": {
+    "sqlite": "true"
+  },
+  "log": {
+    "level": "debug",
+    "file": "_xdx_pouchdb-server-log.txt"
+  }
+}

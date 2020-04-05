@@ -60,6 +60,7 @@
     "cors": "^2.8.5",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
+    "express-pouchdb": "^4.2.0",
     "express-session": "^1.17.0",
     "fbgraph": "^1.4.4",
     "fs-extra": "^8.1.0",

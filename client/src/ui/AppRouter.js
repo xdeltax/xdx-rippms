@@ -39,6 +39,7 @@ import { updateRouteLocation } from "watchers/onRouteLocationChange";
 
 import rxdbStore from 'rxdbStore'; // rxdb-database
 
+//const GameContainer = React.lazy(() => import('ui/game/GameContainer.js'));
 
 const styles = theme => ({
   root: {
@@ -92,16 +93,16 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
     const RenderAGetMyHiddenToolbarBackArrowDownIconButton = () => (
       // display a button to click -> unhide top-toolbar (and navigation if auth-path)
       <div style={{ position: "fixed", right: 0, top: 0, }}>
-        <IconButton color="inherit" style={{ flexGrow: 0, }}  onClick={(event) => {
-          rxdbStore.app.setProp("state.header.visible", true);
-          rxdbStore.app.setProp("state.bottomNavigation.visible", true);
+        <IconButton color="inherit" style={{ flexGrow: 0, }}  onClick={async (event) => {
+          await rxdbStore.app.setProp("state.header.visible", true);
+          await rxdbStore.app.setProp("state.bottomNavigation.visible", true);
         }}>
           <KeyboardArrowDownICON />
         </IconButton>
       </div>
     );
 
-    const phaserGameVisible = Boolean(location.pathname === "/game/phaser")
+    const phaserGameVisible = Boolean(location.pathname === "/game/phaser");
     //const pixiGameVisible = Boolean(location.pathname === "/game/pixi")
 
     global.log("AppRouter:: render:: location.pathname:: ", location.pathname, );
@@ -125,7 +126,7 @@ export default withRouter( withStyles(styles)( observer( class extends React.Com
             <Route exact path="/register"     render={ (routeProps) => !rxdbStore.user.isValidUser ? (<Redirect to="/login" />) : rxdbStore.user.isValidUsercard ? (<Redirect to="/" />) : (<RouteRegister {...routeProps } />) } />
             <Route exact path="/logout"       render={ (routeProps) => (<AuthRouteLogout {...routeProps } />) } />
             <Route exact path="/game/pixi"    render={ (routeProps) => (<RoutePixiGame {...routeProps } />) } />
-            <Route exact path="/game/phaser"  render={ (routeProps) => (null/*<RoutePhaserGame {...routeProps } />*/)} />
+            <Route exact path="/game/phaser"  render={ (routeProps) => null/*<RoutePhaserGame {...routeProps } />*/ } />
 
             <Route exact path="/auth/home"    render={ (routeProps) => rxdbStore.user.isAuthenticated ? <AuthRouteHome {...routeProps } /> : <Redirect to="/login" /> } />
             <Route exact path="/auth/account" render={ (routeProps) => rxdbStore.user.isAuthenticated ? <AuthRouteAccount {...routeProps } /> : <Redirect to="/login" /> } />

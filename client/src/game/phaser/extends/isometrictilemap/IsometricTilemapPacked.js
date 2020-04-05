@@ -20,7 +20,7 @@ import IsoCanvasRenderer from "./IsoCanvasRenderer";
 
 import * as bytebuffer4Tilemap from "game/tools/bytebuffer4Tilemap";
 
-import rxdbStore from 'rxdbStore'; // rxdb-database
+import rxdbGameStore from 'game/phaser/rxdbGameStore'; // rxdb-database
 
 export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // based on blitter
   initDone = false;
@@ -28,7 +28,7 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
   constructor (scene, x, y, tilemapConfig) {
     if (!isNaN(x)) x = 0;
     if (!isNaN(y)) y = 0;
-    if (!tilemapConfig) tilemapConfig = { width:1, height:1, buffer: null, bufferbytes: 1, tileWidth : 64, tileHeight: 32, paddingBottom: 0, assetKeys: [], };
+    if (!tilemapConfig) tilemapConfig = { tileWidth : 64, tileHeight: 32, paddingBottom: 0, assetKeys: [], };
 
     super(scene, x, y);
     /*
@@ -127,9 +127,9 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
   ///
   ///////////////////////////////////////////////////////////
 
-  // EXTERNAL DATA FROM GameMobxCollection.js
-  get externalData() { return rxdbStore.gameMobx } // <----------- adapter to external data (read-only)
-  //set externalData(v){ rxdbStore.gameMobx = v; }
+  // EXTERNAL DATA FROM GameCollection.js
+  get externalData() { return rxdbGameStore.basemaps } // <----------- adapter to external data (read-only)
+  //set externalData(v){ rxdbGameStore.basemap = v; }
 
   checkBufferWasUpdated = () => {
     if (this.externalData.bufferWasUpdated) {
@@ -183,7 +183,7 @@ export default class IsometricTilemap extends Phaser.GameObjects.Blitter { // ba
           //this.buffer[bufferIndex] = bytebuffer4Tilemap.groundlayer_objectToUint8(obj);
 
           //this.dataview[bufferIndex] = bytebuffer4Tilemap.groundlayer_objectToUint8(obj);
-          //rxdbStore.gameMobx.data.buffer[bufferIndex] = bytebuffer4Tilemap.groundlayer_objectToUint8(obj);
+          //rxdbGameStore.basemap.data.buffer[bufferIndex] = bytebuffer4Tilemap.groundlayer_objectToUint8(obj);
 
           this.setBufferWasUpdated(true);
       }

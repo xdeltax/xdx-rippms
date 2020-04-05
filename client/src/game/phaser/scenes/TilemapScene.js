@@ -113,11 +113,6 @@ const SceneClass = class TilemapScene extends Phaser.Scene { // https://github.c
 
 
     const tilemapConfig = {
-      //width : rxdbStore.gameMobx.data.width,  // 10,
-      //height: rxdbStore.gameMobx.data.height, // 10,
-      //bufferbytes: rxdbStore.gameMobx.data.bufferbytes, // 1 // this.game.react.gameData.tilemap.bufferBytes
-      //buffer: direct access to buffer in rxdbStore in IsoTilemap, //rxdbStore.gameMobx.data.buffer, // bytebuffer4Tilemap.createBuffer === arraybuffer
-
       tileWidth : 512, // 256,
       tileHeight: 256, // 128,
       paddingBottom: 512 - 372, //19, // -1: sprite verticaly centered; 0: sprite bottom-based; >0:
@@ -241,7 +236,7 @@ const SceneClass = class TilemapScene extends Phaser.Scene { // https://github.c
     this.updateTicker++;
 
     if (this.updateTicker % 20 === 0) { // do something frame based here
-      global.log(">>TilemapScene:: ", rxdbStore.gameMobx.bufferString.length, rxdbStore.gameMobx.bufferString.charAt(0), rxdbStore.gameMobx.bufferString.charCodeAt(0), Buffer.from(rxdbStore.gameMobx.bufferString, "binary"))
+      //global.log(">>TilemapScene:: ", rxdbGameStore.basemap.bufferString.length, rxdbGameStore.basemap.bufferString.charAt(0), rxdbGameStore.basemap.bufferString.charCodeAt(0), Buffer.from(rxdbGameStore.basemap.bufferString, "binary"))
       const phaserGameVisible = Boolean(this.game.react.props.location.pathname === "/game/phaser"); // check if game-modal is visible
       this.input.enabled = phaserGameVisible; // enable / disable pointer/touch-events
       this.input.keyboard.enabled = phaserGameVisible; // enable / disable keyboard-events

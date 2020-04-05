@@ -28,6 +28,9 @@ import GuiScene from 'game/phaser/scenes/GuiScene';
 
 import store from 'store';
 import rxdbStore from 'rxdbStore'; // rxdb-database
+import rxdbGameStore from 'game/phaser/rxdbGameStore'; // rxdb-database
+
+//import debuglog from "debug/consolelog.js"; const clog = debuglog("GameContainer");
 
 const GameContainer = withRouter( observer( class GameContainer extends React.Component { //export default observer(class PhaserGameContainer extends React.Component {
   state = {
@@ -43,22 +46,35 @@ const GameContainer = withRouter( observer( class GameContainer extends React.Co
       this._game = null;
 
       this.store = null;
-      this.rxdbStore = null;
+      this.rxdbAppStore = null;
+      this.rxdbGameStore = null;
 
       global.log("GameContainer:: componentDidUnmount:: ", this._game);
     }
   };
 
   componentDidMount = async () => {
-    const { size } = this.props;
+    const { size, history } = this.props;
+
+    //global.log("XXXXXXXXXXXXXXX", history)
+    //history && history.push('/'); return;
 
     if (!this._game) {
       this.store = store; // mobx-store -> reachable in game -> this.game.react.store...
       this.rxdbStore = rxdbStore;
+      this.rxdbGameStore = rxdbGameStore;
+
 
       try {
         this.setState({ show: true, });
         store.appActions.loggerClear("game");
+
+
+        // mount database with all collections
+        await rxdbGameStore.initDatabase();
+
+        // load / sync local-rxdb to memory for the first time (its not done on init-collection for app-starting speed)
+        await rxdbGameStore.basemaps.syncCollection({mapid: 0, fakedata: true});
 
         // load assets here and store to indexedDB
         await this.loadGameAssets();
@@ -97,11 +113,9 @@ const GameContainer = withRouter( observer( class GameContainer extends React.Co
 
 
 
-    store.appActions.loggerAdd("game", "syncRxdbToMemory", "");
-    store.appActions.showSpinner("tilemap: syncRxdbToMemory",);
+    store.appActions.loggerAdd("game", "syncCollection", "");
+    store.appActions.showSpinner("tilemap: syncCollection",);
 
-    // load / sync local-rxdb to memory for the first time (its not done on init-collection for app-starting speed)
-    await rxdbStore.gameMobx.syncRxdbToMemory();
 
     store.appActions.showSpinner("tilemap: create buffer",);
 
@@ -133,34 +147,34 @@ const GameContainer = withRouter( observer( class GameContainer extends React.Co
   };
 
   initGameEvents = (game) => {
-    global.log('GameContainer:: initGameEvents', );
+    global.log('*** GameContainer:: initGameEvents', );
 
 	  window.addEventListener('resize', event => {
 	    this.onResize(event);
 	  })
 
     game.events.on('pause', () => { // Pause (window is invisible)
-      global.log('GameContainer:: Event:: pause ', );
+      global.log('*** GameContainer:: Event:: pause ', );
     });
 
     game.events.on('resize', () => { // Resume (window is visible)
-      global.log('GameContainer:: Event:: resize ', );
+      global.log('*** GameContainer:: Event:: resize ', );
     });
 
     game.events.on('resume', () => { // Resume (window is visible)
-      global.log('GameContainer:: Event:: resume ', );
+      global.log('*** GameContainer:: Event:: resume ', );
     });
 
     game.events.on('blur', () => { // The blur event is raised when the window loses focus
-      global.log('GameContainer:: Event:: blur ', );
+      global.log('*** GameContainer:: Event:: blur ', );
     });
 
     game.events.on('hidden', () => {
-      global.log('GameContainer:: Event:: hidden ', );
+      global.log('*** GameContainer:: Event:: hidden ', );
     });
 
     game.events.on('visible', () => {
-      global.log('GameContainer:: Event:: visible ', );
+      global.log('*** GameContainer:: Event:: visible ', );
     });
   };
 
@@ -235,26 +249,26 @@ const GameContainer = withRouter( observer( class GameContainer extends React.Co
 
           <Button variant="outlined" onClick={async () => {
             const rnd = global.random(7);
-            await rxdbStore.gameMobx.DEBUG_createTestData(rnd, rnd);
+            await rxdbGameStore.basemaps.DEBUG_createTestData(rnd, rnd);
 
 
-            const resMemoryMobx = await rxdbStore.gameMobx.getallmobx;
-            const resMemoryData = await rxdbStore.gameMobx.getalldata;
-            const resJsonDocumentArray = await rxdbStore.gameMobx.getDocumentsAsJson();
-            const resRxdbDocumentArray = await rxdbStore.gameMobx.getDocuments();
+            const resMemoryMobx = await rxdbGameStore.basemaps.getallmobx;
+            const resMemoryData = await rxdbGameStore.basemaps.getalldata;
+            const resJsonDocumentArray = await rxdbGameStore.basemaps.getDocumentsAsJson();
+            const resRxdbDocumentArray = await rxdbGameStore.basemaps.getDocuments();
             global.log("********** GAMECONTAINER MOBX:: ", resMemoryMobx, resMemoryData, resJsonDocumentArray, resRxdbDocumentArray);
           }}>xTEST</Button>
 
           <Button variant="outlined" onClick={async () => {
-            const resMemoryMobx = rxdbStore.gameMobx.getallmobx;
-            const resMemoryData = rxdbStore.gameMobx.getalldata;
-            const resDocArray = await rxdbStore.gameMobx.getDocumentsAsJson();
-            const resCollDump = await rxdbStore.gameMobx.getCollectionAsJson(); // = { name, docs: array[], ... }
+            const resMemoryMobx = rxdbGameStore.basemaps.getallmobx;
+            const resMemoryData = rxdbGameStore.basemaps.getalldata;
+            const resDocArray = await rxdbGameStore.basemaps.getDocumentsAsJson();
+            const resCollDump = await rxdbGameStore.basemaps.getCollectionAsJson(); // = { name, docs: array[], ... }
 
-            const rdbxDoc = await rxdbStore.gameMobx.collection.findOne().where("_id").eq("clientonly").exec();
+            const rdbxDoc = await rxdbGameStore.basemaps.collection.findOne().where("_id").eq("clientonly").exec();
             const resAttachmentArray = (rdbxDoc) ? await rdbxDoc.allAttachments() : null;
 
-            const rxdbDocArray = await rxdbStore.gameMobx.getDocuments(); // [] or [ {documentSchemaRxdb}, {documentSchemaRxdb}, ... ]
+            const rxdbDocArray = await rxdbGameStore.basemaps.getDocuments(); // [] or [ {documentSchemaRxdb}, {documentSchemaRxdb}, ... ]
             global.log("$$$$$$$$$$initCollection 1:: ", rxdbDocArray)
             // 3) sync to mobx and data (or init mobx and data with default if db is empty)
             if (rxdbDocArray.length > 0) {
@@ -277,7 +291,7 @@ const GameContainer = withRouter( observer( class GameContainer extends React.Co
               global.log("$$$$$$$$$$initCollection 7:: ", attachment, attAsString, buffer2, uint8);
             };
 
-            global.log("********** GAMECONTAINER MOBX:: ", rxdbStore.gameMobx.data.buffer, rxdbStore.gameMobx.data, resMemoryData, resMemoryMobx, resDocArray, rdbxDoc, resAttachmentArray, resCollDump);
+            global.log("********** GAMECONTAINER MOBX:: ", rxdbGameStore.basemaps.data.buffer, rxdbGameStore.basemaps.data, resMemoryData, resMemoryMobx, resDocArray, rdbxDoc, resAttachmentArray, resCollDump);
           }}>xGET</Button>
 
 
@@ -285,9 +299,9 @@ const GameContainer = withRouter( observer( class GameContainer extends React.Co
 
 
           <Button variant="outlined" onClick={async () => {
-            const mapwidth  = rxdbStore.game.getProp.tilemap.width;
-            const mapheight = rxdbStore.game.getProp.tilemap.height;
-            const bufferbytes = rxdbStore.game.getProp.tilemap.bufferbytes;
+            const mapwidth  = rxdbGameStore.basemaps.getProp.tilemap.width;
+            const mapheight = rxdbGameStore.basemaps.getProp.tilemap.height;
+            const bufferbytes = rxdbGameStore.basemaps.getProp.tilemap.bufferbytes;
 
             //const buffer = new ArrayBuffer(bufferbytes * mapwidth * mapheight); // bytebuffer4Tilemap.createBuffer(bufferbytes, mapwidth, mapheight);
             //const dataview = new DataView(buffer); // bytebuffer4Tilemap.createDataView(buffer);
@@ -326,27 +340,26 @@ const GameContainer = withRouter( observer( class GameContainer extends React.Co
 
             const buf2str = buffer.toString("binary");
 
-            //await rxdbStore.game.setProp("tilemap.buffer", mapbuffer); // save as Uint8Array
-            await rxdbStore.game.setProp("updatedAt", unixtime());
+            //await rxdbGameStore.basemaps.setProp("tilemap.buffer", mapbuffer); // save as Uint8Array
+            await rxdbGameStore.basemaps.setProp("updatedAt", unixtime());
 
-            const att = await rxdbStore.game.addAttachment(buf2str);
+            const att = await rxdbGameStore.basemaps.addAttachment(buf2str);
 
-            //const blob = await rxdbStore.game.getAttachmentAsBuffer();
+            //const blob = await rxdbGameStore.basemap.getAttachmentAsBuffer();
             //const buffer2 = await blob.arrayBuffer();
 
-            const attstr = await rxdbStore.game.getAttachmentAsString();
+            const attstr = await rxdbGameStore.basemaps.getAttachmentAsString();
             const buffer2 = Buffer.from(attstr, "binary");
 
             const uint8 = new Uint8Array(buffer2)
             //const dataview2 = new DataView(uint8);
             //const buffer2 = dataview2.buffer;
             //const newbuffer = Buffer.allocUnsafe(10000)
-            //const newbuffer = Buffer.from(blob, "binary")
 
 
-            //const newDataObject = await rxdbStore.game.setProp("tilemap.bufferBytes", 1);
-            //const mapbuffer2 = rxdbStore.game.getProp.tilemap.buffer; // get Uint8Array
-            //const getAll = await rxdbStore.game.getAll();
+            //const newDataObject = await rxdbGameStore.basemaps.setProp("tilemap.bufferBytes", 1);
+            //const mapbuffer2 = rxdbGameStore.basemaps.getProp.tilemap.buffer; // get Uint8Array
+            //const getAll = await rxdbGameStore.basemaps.getAll();
             //global.log("GAMECONTAINER:: ", mapbuffer, mapbuffer2, newbuffer, getAll, att, blob, newbuffer, mapbuffer[0],  mapbuffer2[0], newbuffer[0]);
             global.log("GAMECONTAINER:: ", buffer, dataview, buf2str, buf2str.length, attstr, attstr.length, buffer2, uint8, buffer[0], buffer2[0], dataview[0], uint8[0],);
           }}>fill</Button>

@@ -110,8 +110,8 @@ export default ( withStyles(styles)( observer( class extends React.Component {
 
         <div>
           <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
-          	rxdbStore.user.setProp("auth.userid", "TEST");
-            rxdbStore.user.setProp("auth.servertoken", "TEST");
+          	await rxdbStore.user.setProp("auth.userid", "TEST");
+            await rxdbStore.user.setProp("auth.servertoken", "TEST");
             global.log("setProp:: ", rxdbStore.user.getProp.auth.userid, rxdbStore.user.getProp.auth.servertoken,);
           }} startIcon={<AllInclusiveICON />} endIcon={<AllInclusiveICON />} >
           	TESTUSER

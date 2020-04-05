@@ -13,7 +13,7 @@ import AppActionsMobx from './AppActionsMobx.js';
 //import MobxUsercard from './MobxUsercard.js';
 
 // debug
-import sleep from "tools/debug/sleeper";
+import sleep from "tools/sleeper";
 
 class Store extends MobxPrototype {
 	#__initDone = false;

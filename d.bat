@@ -1,0 +1,2 @@
+cd db
+d.bat

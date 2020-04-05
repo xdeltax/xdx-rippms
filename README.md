@@ -134,8 +134,6 @@ socket.io
   npm i -s socket.io-client
 
 database
-  //npm i -s pouchdb
-
   npm i -s nedb
 
   //npm i -s mongodb
@@ -143,7 +141,12 @@ database
 
   npm i -s rxdb                 
   npm i -s rxjs                 #dependency
+  npm install --save rxdb-utils
   npm i -s pouchdb-adapter-idb  #adapter for indexeddb
+  npm i -s pouchdb-adapter-http  #adapter for replication
+
+  //npm install --save pouchdb-browser
+  npm install --save pouchdb-core pouchdb-adapter-idb pouchdb-adapter-http pouchdb-mapreduce pouchdb-replication pouchdb-find
 
 portals
 	npm i -s react-new-window
@@ -220,8 +223,9 @@ database
 
   npm i -s rxdb
   npm i -s rxjs
+  npm install --save rxdb-utils
   npm i -s pouchdb-adapter-node-websql
-  npm i -s express-pouchdb
+  npm i -s express-pouchdb              #for server-plugin
 
 gfx
   npm i -s jimp
@@ -269,6 +273,11 @@ or
 or
 
 	npx npm-check -u
+
+
+#### rebuild
+
+  npm rebuild
 
 
 ## dev-stuff

@@ -34,25 +34,25 @@ import DBUserobjects from '../database/DBUserobjects.mjs';
 import DBGamemaps from '../database/DBGamemaps.mjs';
 import DBGameGroundLayers from '../database/DBGameGroundLayers.mjs';
 
-import RXDBGame from '../database/RXDBGame.mjs';
+import rxdbStore from '../database/rxdb/index.mjs'; // rxdb-database
 
 import ServerToServerSocketIOClient from "./server2server/socketIOClient.mjs";
 
 import express_AuthMiddleware from "./express/auth.middleware.mjs";
 import express_Route_CatchAll from "./express/route.catchAll.mjs";
 
-import authSocketConnection from "./socket/auth.socket.connection.mjs";
-import authSocket from "./socket/auth.socket.mjs";
+import authSocketConnection from "../socket/auth.socket.connection.mjs";
+import authSocket from "../socket/auth.socket.mjs";
 
-import routesSocket from "./socket/routes.socket.mjs";
-import routesGameMapAPI from "./socket/routes.gameMapAPI.mjs";
-
-
+import routesSocket from "../socket/routes.socket.mjs";
+import routesGameMapAPI from "../socket/routes.gameMapAPI.mjs";
 
 export default async function mainServer(tryPort) {
   // ===============================================
   // DATABASE: load
   // ===============================================
+  clog("---DATABASE------------------------------------------------")
+
   const database = {
     dbSockets: new DBSockets(),
     dbUsers: new DBUsers(),
@@ -61,12 +61,18 @@ export default async function mainServer(tryPort) {
     dbGamemaps: new DBGamemaps(),
     dbGameGroundLayers: new DBGameGroundLayers(),
 
-    rxdbGame: await new RXDBGame().connect(),
+
   }
+
+  await rxdbStore.initDatabase(),
 
   //const db = await database.rxdbGame.connect();
   //const {dbApp} = db.server({ startServer: false });
   //app.use('/db', dbApp);
+  clog("rxdbStore::", await rxdbStore.database2json())
+  //clog("gameCollection::", await rxdbStore.game.getCollectionAsJson())
+  clog("gameCollection::", "count::", await rxdbStore.game.count())
+  clog("-----------------------------------------------------------")
 
 
 
@@ -342,23 +348,6 @@ export default async function mainServer(tryPort) {
     res.status(200).type('json').send(JSON.stringify({time: new Date(),}, null, 4));
   });
 
-  app.get('/create.groundlayer', async (req, res, next) => {
-    clog("CALL ", req.route.path);
-    const {
-      _database, // injected form express-middleware
-    } = req;
-
-    const {
-      dbGameGroundLayers
-    } = _database || { };
-
-    const result = await dbGameGroundLayers.set(1, 100, 100);
-    clog("XXXXXXXX", result);
-
-    res.status(200).type('json').send(JSON.stringify({time: new Date(),}, null, 4));
-  });
-
-
 
   app.get('/test', async (req, res, next) => {
     clog("CALL ", req.route.path);
@@ -367,6 +356,7 @@ export default async function mainServer(tryPort) {
     clog("/test:: ", await dbSockets.count(), dbSockets.client)
     res.status(200).type('json').send(JSON.stringify({time: new Date(),}, null, 4));
   });
+
 
   app.get('/debug/db.io', async (req, res, next) => {
     clog("CALL ", req.route.path);
@@ -518,6 +508,9 @@ export default async function mainServer(tryPort) {
     socket.use((packet, next) => routesSocket(socket, packet, next));
     socket.use((packet, next) => routesGameMapAPI(socket, packet, next));
 
+    socket.on('free/game/baselayer/getifnecessary', rxdbStore.game.servercall_getGameMapIfNecessary); // async (req, clientEmitCallback) => {
+
+
     /*
     socket.on('auth/store/user/logout', routeAuth_userLogout);
 
@@ -533,6 +526,36 @@ export default async function mainServer(tryPort) {
     socket.on('free/test/this', routeFree_testThis);
     */
   }); // of "connection"
+
+
+  app.get('/debugstatus', async (req, res, next) => {
+    // http://localhost:8080/debugstatus?mapid=5
+    const {mapid} = req.query;
+    clog("debugstatus::", await rxdbStore.database2json())
+    clog("debugstatus::", await rxdbStore.game.getDocumentsAsJson());
+    clog("debugstatus::", "count::", await rxdbStore.game.count())
+    const rxdoc = await rxdbStore.game.findOne({map_id: +mapid});
+    //const rxatt = await rxdoc.allAttachments();
+    clog("debugstatus::", "rxdoc::", rxdoc.toJSON()); // toJSON show all attachements too
+
+
+    res.status(200).type('json').send(JSON.stringify({time: new Date(),}, null, 4));
+  });
+
+  app.get('/debugcreatemap', async (req, res, next) => {
+    // http://localhost:8080/debugcreatemap?width=5000&height=5000&mapid=3
+    const {width, height, mapid} = req.query;
+    clog("debugcreatemap:: path:: ", req.route.path, req.query);
+    if (width>0) {
+      const t1 = unixtime();
+      const result = await rxdbStore.game.DEBUG_createTestData(+mapid || 0, +width, +height || +width);
+      const t2 = unixtime();
+      clog("debugcreatemap:: result:: ", width, height, mapid, t2 - t1);
+    }
+
+    res.status(200).type('json').send(JSON.stringify({time: new Date(),}, null, 4));
+  });
+
 
 
   // ===============================================

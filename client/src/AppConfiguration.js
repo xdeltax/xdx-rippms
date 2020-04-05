@@ -1,6 +1,7 @@
 import { configure, /*toJS*/ } from 'mobx';
 import {unixtime} from "tools/datetime";
 //import { install } from '@material-ui/core/styles';
+import debuglog from "debug/consolelog.js";
 
 //import '@ionic/core/css/core.css';
 //import '@ionic/core/css/ionic.bundle.css'; // kills scroll-events.
@@ -20,16 +21,20 @@ global.absRandom    = (value) => Math.floor(value * Math.random());
 global.randomHash   = (value) => "hash" + global.absRandom(100000000);
 global.random       = (range) => Math.floor((range || 100) * Math.random());
 
-global.consoleLog   = require('tools/debug/consoleLog');
-global.consoleWarn  = require('tools/debug/consoleWarn');
-global.consoleInfo  = require('tools/debug/consoleInfo');
-global.consoleError = require('tools/debug/consoleError');
+global.consoleLog   = require('debug/bind/consoleLog');
+global.consoleWarn  = require('debug/bind/consoleWarn');
+global.consoleInfo  = require('debug/bind/consoleInfo');
+global.consoleError = require('debug/bind/consoleError');
 
-global.debugTime = () => `${global.nowTimePretty()} (${global.now()-global.launchTime} ms)`;
-global.clog  = ( ...restArgs ) => { global.consoleLog  (global.debugTime(), restArgs); };
-global.log   = ( ...restArgs ) => { global.consoleLog  (global.debugTime(), restArgs); };
-global.debug = ( ...restArgs ) => { global.consoleLog  (global.debugTime(), restArgs); };
-global.warn  = ( ...restArgs ) => { global.consoleWarn (global.debugTime(), restArgs); };
+const _clog = debuglog("");
+
+//global.debugTime= () => `${global.nowTimePretty()} (${global.now()-global.launchTime} ms)`;
+//global.clog   = ( ...restArgs ) => { global.consoleLog  (global.debugTime(), ...restArgs); };
+global.clog     = ( mainArg, ...restArgs ) => { _clog(mainArg, ...restArgs); };
+global.log      = ( mainArg, ...restArgs ) => { _clog(mainArg, restArgs); };
+//global.log   = ( ...restArgs ) => { global.consoleLog  (global.debugTime(), restArgs); };
+//global.debug = ( ...restArgs ) => { global.consoleLog  (global.debugTime(), restArgs); };
+//global.warn  = ( ...restArgs ) => { global.consoleWarn (global.debugTime(), restArgs); };
 global.info  = ( ...restArgs ) => { global.consoleInfo (global.debugTime(), restArgs); };
 global.error = ( ...restArgs ) => { global.consoleError(global.debugTime(), restArgs); };
 

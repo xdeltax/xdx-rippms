@@ -1,0 +1,38 @@
+{
+  "name": "db",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./src/index.mjs",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "npm run nodemon",
+    "node": "node src/index.mjs",
+    "supervisor": "npx supervisor --watch src/. src/index.mjs",
+    "nodemon": "npx nodemon --watch src src/index.mjs",
+    "nossldevloc": "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=development&&set SERVERTARGET=localhost&&npm run node",
+    "nossldevlocnodemon": "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=development&&set SERVERTARGET=localhost&&npm run nodemon",
+    "nossldevlocsupervisor": "set NODE_PATH=&&set HTTPS=false&&set NODE_ENV=development&&set SERVERTARGET=localhost&&npm run supervisor",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "express-pouchdb": "^4.2.0",
+    "pouchdb-adapter-http": "^7.2.1",
+    "pouchdb-adapter-memory": "^7.2.1",
+    "pouchdb-adapter-node-websql": "^7.0.0",
+    "pouchdb-core": "^7.2.1",
+    "pouchdb-find": "^7.2.1",
+    "pouchdb-mapreduce": "^7.2.1",
+    "pouchdb-replication": "^7.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^1.19.4",
+    "supervisor": "^0.12.0"
+  }
+}

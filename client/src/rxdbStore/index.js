@@ -1,56 +1,52 @@
 import RxDB from 'rxdb';
 
+// database
 import RxDBPouchDBAdapterIDB from 'pouchdb-adapter-idb';
 //import RxDBPouchDBAdapterHTTP from 'pouchdb-adapter-http';
 //import RxDBNoValidateModule from 'rxdb/plugins/no-validate';
 import RxDBZSchemaValidateModule from 'rxdb/plugins/validate-z-schema';
 
-import AppMobxCollection  from "./AppMobxCollection";
-import UserMobxCollection from "./UserMobxCollection";
-
-import GameMobxCollection from "./GameMobxCollection";
+// collections
+import AppCollection  from "./AppCollection";
+import UserCollection from "./UserCollection";
 
 class RXDBStore {
   get databaseURL()   { return ""; /*process.env.DATABASE_RXDB_URL;*/ }
-  get databaseName()  { return "rxdb_xdx"; /*process.env.DATABASE_RXDB_DATABASENAME;*/ }
+  get databaseName()  { return "rxdb_xdxapp"; /*process.env.DATABASE_RXDB_DATABASENAME;*/ }
   get fullpath()      { return this.databaseURL + this.databaseName; /*abs_path(path.join("..", this.databaseURL, this.databaseName));*/ }
 
   constructor() {
+    // database
     this.db = null;
-    this.app= null;
+    // collections
+    this.app  = null;
     this.user = null;
-    this.gameMobx = null;
   };
 
   get db() { return this._db; }
   set db(v){ this._db = v; }
 
-  get app() { return this._appMobxCollection; }
-  set app(v){ this._appMobxCollection = v; }
+  get app() { return this._appCollection; }
+  set app(v){ this._appCollection = v; }
 
-  get user() { return this._userMobxCollection; }
-  set user(v){ this._userMobxCollection = v; }
+  get user() { return this._userCollection; }
+  set user(v){ this._userCollection = v; }
 
-  get gameMobx() { return this._gameMobxCollection; }
-  set gameMobx(v){ this._gameMobxCollection = v; }
-
-  initDatabase = async () => {
+  async initDatabase() {
     // ===============================================
     // create / open database
     // ===============================================
     await this.loadPlugins();
-    await this.openDatabase();
+    await this.openDatabase(); // create this._db
+
+    this.app  = new AppCollection(this.db);  // return collection-ref
+    this.user = new UserCollection(this.db); // return collection-ref
 
     // ===============================================
     // create / open collections
     // ===============================================
-    this.app  = await new AppMobxCollection(this.db); // return collection-ref
-    this.user = await new UserMobxCollection(this.db); // return collection-ref
-    this.gameMobx = await new GameMobxCollection(this.db); // return collection-ref
-
-    await this.app.initCollection();
-    await this.user.initCollection();
-    await this.gameMobx.initCollection();
+    await this.app.initCollection(); // return collection-ref
+    await this.user.initCollection();// return collection-ref
   }
 
   // ===============================================
@@ -58,6 +54,8 @@ class RXDBStore {
   // ===============================================
   async closeDatabase() {
     if (this.db) await this.db.destroy();
+    this.app = null;
+    this.user = null;
     this.db = null;
   }
 
@@ -66,11 +64,11 @@ class RXDBStore {
   }
 
   async database2json() { // export collection to json
-    return (!this.collection) ? null : await this.db.dump(true)
+    return (!this.db) ? null : await this.db.dump(true);
   }
 
   async json2database(json) {  // import json to collection
-    if (this.collection) await this.db.importDump(json)
+    if (this.db) await this.db.importDump(json);
   }
 
   // ===============================================
@@ -110,7 +108,7 @@ class RXDBStore {
 
     // check adapter
     const isUsable = await RxDB.checkAdapter('idb');
-    global.log("RXDBPrototype:: check if rxdb adapter:: isUsable:: ", isUsable, this.fullpath, this.databaseURL, this.databaseName);
+    //global.log("RXDBPrototype:: check if rxdb adapter:: isUsable:: ", isUsable, this.fullpath, this.databaseURL, this.databaseName);
     return isUsable;
   }; // of loadPlugins
 };

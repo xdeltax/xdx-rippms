@@ -9,6 +9,7 @@ import AppLoadingScreen from './AppLoadingScreen';
 
 import store from 'store'; // mobx-store
 import rxdbStore from 'rxdbStore'; // rxdb-database
+import dbStore from 'dbStore'; // pouchdb-database
 
 //import fp2 from "fingerprintjs2";
 import promiseToFingerprint from "tools/fingerprint";
@@ -42,22 +43,13 @@ const startApp = async () => {
 
   // init mobx-store
   await store.init();
-  global.log("index:: startApp:: init store:: ", store);
+  global.log("index:: startApp:: init mobxstore:: ", store);
 
   await rxdbStore.initDatabase();
-  global.log("index:: startApp:: init store:: ", rxdbStore);
-  /*
-  const db = await rxdbStore.connect();
-  global.log("index:: startApp:: init rxdbDatabase:: ", db);
+  global.log("index:: startApp:: init rxdbStore:: ", rxdbStore);
 
-  const r1 = await rxdbStore.collection.insert({ name: "test1", updatedAt: unixtime() });
-  const r2 = await rxdbStore.collection.dump(true);
-  global.log("XXXXXXXXXXXXXXXX", r1, r2)
-
-  const r1 = await rxdbStore.app.upsert({ name: "test1", obj: {t: "22", }, updatedAt: unixtime(), createdAt: unixtime() }).catch(error => global.log("XXXXXX", error));
-  const r2 = await rxdbStore.app.dump(true);
-  global.log("XXXXXXXXXXXXXXXX", r1, r2)
-  */
+  await dbStore.init();
+  clog("index:: startApp:: init dbStore::", dbStore);
 
 
 	global.fingerprint = await promiseToFingerprint({ });	// this is async! about 100 ms...

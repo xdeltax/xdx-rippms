@@ -13,6 +13,7 @@ import socketio from 'api/socket'; // socket
 
 import store from 'store';
 import rxdbStore from 'rxdbStore'; // rxdb-database
+import rxdbGameStore from 'game/phaser/rxdbGameStore'; // rxdb-database
 
 import * as serverAPI from "api/serverAPI.js";
 
@@ -149,8 +150,42 @@ export default ( withStyles(styles)( observer( class extends React.Component {
             const x = await rxdbStore.user.mobx;
             global.log("XXXXXXXXXXXXX", toJS(x))
           }}>{rxdbStore.user.getProp.updatedAt || "XXX"}</Button>
+
+          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
+            await rxdbStore.user.setProp("auth.userid", "TEST");
+            await rxdbStore.user.setProp("auth.servertoken", "TEST");
+            global.log("setProp:: ", rxdbStore.user.getProp.auth.userid, rxdbStore.user.getProp.auth.servertoken,);
+          }}>TESTUSER</Button>
+
+          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
+            await rxdbStore.app.setProp("watcher.testdb", "TEST1");
+            global.log("********* setProp:: ", rxdbStore.app.getProp.watcher.testdb);
+            await rxdbStore.app.setProp("watcher.testdb", "TEST2");
+            global.log("********* setProp:: ", rxdbStore.app.getProp.watcher.testdb);
+          }}>TESTRXDB</Button>
+
+          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
+            await rxdbGameStore.initDatabase();
+            const res = await rxdbGameStore.basemaps.getDocumentsAsJson();
+            global.log("********* gamestore:: ", res, rxdbGameStore);
+          }}>init gamestore</Button>
+
+          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
+            const res = await rxdbGameStore.basemaps.replicationFromServerToClient();
+            global.log("********* gamestore:: ", res, rxdbGameStore);
+          }}>sync gamestore</Button>
+
+          <Button className={classes.button} variant="contained" color="primary" onClick={ async (event) => {
+            const query = rxdbGameStore.basemaps.collection.findOne();
+            const removedDocs = await query.remove();
+            const count = (Array.isArray(removedDocs)) ? removedDocs.length : 0;
+            const res = await rxdbGameStore.basemaps.getDocumentsAsJson();
+            global.log("********* gamestore:: ", query, removedDocs, count, res);
+          }}>delete 1doc</Button>
+
         </div>
 
+rxdbGameStore
       </div>
     ) // of return
   } // of render
